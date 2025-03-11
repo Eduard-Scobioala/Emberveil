@@ -7,8 +7,6 @@ public class PlayerLocomotion : MonoBehaviour
     private Vector3 moveDirection;
 
     [HideInInspector]
-    public Transform myTransform;
-    [HideInInspector]
     public AnimatorHandler animatorHandler;
 
     public new Rigidbody rigidbody;
@@ -27,7 +25,6 @@ public class PlayerLocomotion : MonoBehaviour
         animatorHandler = GetComponentInChildren<AnimatorHandler>();
 
         cameraObject = Camera.main.transform;
-        myTransform = transform;
 
         animatorHandler.Initialize();
     }
@@ -42,6 +39,7 @@ public class PlayerLocomotion : MonoBehaviour
 
         moveDirection += cameraObject.right * inputHandler.horizontal;
         moveDirection.Normalize();
+        moveDirection.y = 0;
 
         float speed = movementSpeed;
 
@@ -76,13 +74,13 @@ public class PlayerLocomotion : MonoBehaviour
 
         if (targetDir == Vector3.zero)
         {
-            targetDir = myTransform.forward;
+            targetDir = transform.forward;
         }
 
         var tr = Quaternion.LookRotation(targetDir);
-        var targetRotation = Quaternion.Slerp(myTransform.rotation, tr, rotationSpeed * deltaTime);
+        var targetRotation = Quaternion.Slerp(transform.rotation, tr, rotationSpeed * deltaTime);
 
-        myTransform.rotation = targetRotation;
+        transform.rotation = targetRotation;
     }
 
     #endregion
