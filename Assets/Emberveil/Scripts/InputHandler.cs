@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Windows;
 
 public class InputHandler : MonoBehaviour
 {
@@ -6,6 +7,10 @@ public class InputHandler : MonoBehaviour
     public float vertical;
     public float moveAmount;
     public float mouseX;
+
+    public bool bInput;
+    public bool rollFlag;
+    public bool isInteracting;
 
     public float mouseY;
     PlayerControls inputActions;
@@ -52,6 +57,7 @@ public class InputHandler : MonoBehaviour
     public void TickInput(float deltaTime)
     {
         MoveInput(deltaTime);
+        HandleRollInput(deltaTime);
     }
 
     private void MoveInput(float deltaTime)
@@ -62,5 +68,15 @@ public class InputHandler : MonoBehaviour
 
         mouseX = cameraInput.x;
         mouseY = cameraInput.y;
+    }
+
+    private void HandleRollInput(float deltaTime)
+    {
+        bInput = inputActions.PlayerActions.Roll.phase == UnityEngine.InputSystem.InputActionPhase.Started;
+
+        if (bInput)
+        {
+            rollFlag = true;
+        }
     }
 }
