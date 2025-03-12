@@ -9,7 +9,9 @@ public class InputHandler : MonoBehaviour
     public float mouseX;
 
     public bool bInput;
+    public bool sprintFlag;
     public bool rollFlag;
+    public float rollInputTimer;
     public bool isInteracting;
 
     public float mouseY;
@@ -72,11 +74,22 @@ public class InputHandler : MonoBehaviour
 
     private void HandleRollInput(float deltaTime)
     {
-        bInput = inputActions.PlayerActions.Roll.phase == UnityEngine.InputSystem.InputActionPhase.Started;
+        bInput = inputActions.PlayerActions.Roll.IsPressed();
 
         if (bInput)
         {
-            rollFlag = true;
+            rollInputTimer += deltaTime;
+            sprintFlag = true;
+        }
+        else
+        {
+            if (rollInputTimer > 0 && rollInputTimer < 0.5f)
+            {
+                sprintFlag = false;
+                rollFlag = true;
+            }
+
+            rollInputTimer = 0;
         }
     }
 }
