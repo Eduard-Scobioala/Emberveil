@@ -5,9 +5,10 @@ public class AnimatorHandler : MonoBehaviour
     private int vertical;
     private int horizontal;
 
-    public Animator anim;
-    public InputHandler inputHandler;
-    public PlayerLocomotion playerLocomotion;
+    private Animator anim;
+    private InputHandler inputHandler;
+    private PlayerLocomotion playerLocomotion;
+    private PlayerManager playerManager;
     public bool canRotate;
 
     public void Initialize()
@@ -15,6 +16,7 @@ public class AnimatorHandler : MonoBehaviour
         anim = GetComponent<Animator>();
         inputHandler = GetComponentInParent<InputHandler>();
         playerLocomotion = GetComponentInParent<PlayerLocomotion>();
+        playerManager = GetComponentInParent<PlayerManager>();
 
         vertical = Animator.StringToHash("Vertical");
         horizontal = Animator.StringToHash("Horizontal");
@@ -72,7 +74,7 @@ public class AnimatorHandler : MonoBehaviour
         }
         #endregion
 
-        if (isSprinting)
+        if (isSprinting && verticalMovement > 0)
         {
             v = 2;
             h = horizontalMovement;
@@ -86,22 +88,16 @@ public class AnimatorHandler : MonoBehaviour
     {
         anim.applyRootMotion = isInteracting;
         anim.SetBool("isInteracting", isInteracting);
-        anim.CrossFade(targetAnim, 0.2f);
+        anim.CrossFade(targetAnim, 0.1f);
     }
 
-    public void EnableRotation()
-    {
-        canRotate = true;
-    }
+    public void EnableRotation() => canRotate = true;
 
-    public void DisableRotation()
-    {
-        canRotate = false;
-    }
+    public void DisableRotation() => canRotate = false;
 
     public void OnAnimatorMove()
     {
-        if (inputHandler.isInteracting == false)
+        if (playerManager.isInteracting == false)
             return;
 
         float deltaTime = Time.deltaTime;
@@ -112,4 +108,6 @@ public class AnimatorHandler : MonoBehaviour
         Vector3 velocity = deltaPosition / deltaTime;
         playerLocomotion.rigidbody.velocity = velocity;
     }
+
+    public bool IsInteracting() => anim.GetBool("isInteracting");
 }
