@@ -45,10 +45,10 @@ public class PlayerManager : MonoBehaviour
 
     private void LateUpdate()
     {
-        isSprinting = inputHandler.bInput;
-
         inputHandler.rollFlag = false;
         inputHandler.sprintFlag = false;
+        inputHandler.rightBumperInput = false;
+        inputHandler.rightTriggerInput = false;
 
         if (isInAir)
         {
