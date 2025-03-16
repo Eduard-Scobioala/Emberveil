@@ -16,7 +16,7 @@ public class PlayerLocomotion : MonoBehaviour
 
     [Header("Movement Stats")]
     [SerializeField] private float movementSpeed = 5;
-    [SerializeField] private float walkingSpeed = 1;
+    //[SerializeField] private float walkingSpeed = 1;
     [SerializeField] private float sprintSpeed = 8;
     [SerializeField] private float rotationSpeed = 18;
     [SerializeField] private float fallingSpeed = 80;

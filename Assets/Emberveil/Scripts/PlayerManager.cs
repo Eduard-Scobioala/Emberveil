@@ -4,7 +4,6 @@ public class PlayerManager : MonoBehaviour
 {
     InputHandler inputHandler;
     Animator animator;
-    CameraHandler cameraHandler;
     PlayerLocomotion playerLocomotion;
 
     [Header("Player Flags")]
@@ -12,11 +11,6 @@ public class PlayerManager : MonoBehaviour
     public bool isSprinting;
     public bool isInAir;
     public bool isGrounded;
-
-    private void Awake()
-    {
-        cameraHandler = CameraHandler.Instance;
-    }
 
     private void Start()
     {
@@ -42,10 +36,10 @@ public class PlayerManager : MonoBehaviour
     {
         float delta = Time.fixedDeltaTime;
 
-        if (cameraHandler != null)
+        if (CameraHandler.Instance != null)
         {
-            cameraHandler.FollowTarget(delta);
-            cameraHandler.HandleCameraRotation(delta, inputHandler.mouseX, inputHandler.mouseY);
+            CameraHandler.Instance.FollowTarget(delta);
+            CameraHandler.Instance.HandleCameraRotation(delta, inputHandler.mouseX, inputHandler.mouseY);
         }
     }
 
