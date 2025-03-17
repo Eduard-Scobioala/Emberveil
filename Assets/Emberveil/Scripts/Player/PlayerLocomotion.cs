@@ -210,11 +210,12 @@ public class PlayerLocomotion : MonoBehaviour
             }
         }
 
+        // Make sure the player keeps its position while in animations
         if (playerManager.isGrounded)
         {
             if (playerManager.isInteracting || inputHandler.moveAmount > 0)
             {
-                transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime / 0.1f);
             }
             else
             {
@@ -223,6 +224,5 @@ public class PlayerLocomotion : MonoBehaviour
         }
     }
     
-
     #endregion
 }
