@@ -8,6 +8,12 @@ public class WeaponSlotManager : MonoBehaviour
     private DamageCollider leftHandDamageCollider;
     private DamageCollider rightHandDamageCollider;
 
+    private Animator animator;
+    private QuickSlotsUI quickSlotsUI;
+    private PlayerStats playerStats;
+
+    public WeaponItem attackingWeapon = null;
+
     private void Awake()
     {
         WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
@@ -22,6 +28,10 @@ public class WeaponSlotManager : MonoBehaviour
                 rightHandSlot = weaponSlot;
             }
         }
+
+        animator = GetComponent<Animator>();
+        quickSlotsUI = FindObjectOfType<QuickSlotsUI>();
+        playerStats = GetComponentInParent<PlayerStats>();
     }
 
     public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isLeft)
@@ -30,11 +40,33 @@ public class WeaponSlotManager : MonoBehaviour
         {
             leftHandSlot.LoadWeaponModel(weaponItem);
             LoadLeftWeaponDamageCollider();
+            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, true);
+            #region Handle Left Weapon Idle Animations
+            if (weaponItem !=  null)
+            {
+                animator.CrossFade(weaponItem.Left_Arm_Idle, 0.2f);
+            }
+            else
+            {
+                animator.CrossFade("Left Arm Empty", 0.2f);
+            }
+            #endregion
         }
         else
         {
             rightHandSlot.LoadWeaponModel(weaponItem);
             LoadRightWeaponDamageCollider();
+            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
+            #region Handle Right Weapon Idle Animations
+            if (weaponItem != null)
+            {
+                animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
+            }
+            else
+            {
+                animator.CrossFade("Right Arm Empty", 0.2f);
+            }
+            #endregion
         }
     }
 
@@ -70,5 +102,23 @@ public class WeaponSlotManager : MonoBehaviour
         rightHandDamageCollider.DisableDamageCollider();
     }
 
+    #endregion
+
+    #region Handle Weapon's Stamina Consumption
+    public void DrainStaminaLightAttack()
+    {
+        if (attackingWeapon != null)
+        {
+            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackMultiplier));
+        }
+    }
+
+    public void DrainStaminaHeavyAttack()
+    {
+        if (attackingWeapon != null)
+        {
+            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.heavyAttackMultiplier));
+        }
+    }
     #endregion
 }

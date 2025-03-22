@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class HealthBar : MonoBehaviour
+public class StatUIBar : MonoBehaviour
 {
     private Slider slider;
 
@@ -16,8 +16,8 @@ public class HealthBar : MonoBehaviour
         slider.value = maxHealth;
     }
 
-    public void SetCurrentHealthValue(int currentHealth)
+    public void SetCurrentStatValue(int currentStatValue)
     {
-        slider.value = currentHealth;
+        slider.value = currentStatValue;
     }
 }

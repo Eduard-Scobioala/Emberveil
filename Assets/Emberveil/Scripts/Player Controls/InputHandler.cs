@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
@@ -9,16 +11,23 @@ public class InputHandler : MonoBehaviour
     public float mouseY;
 
     public bool bInput;
+    public bool interactInput;
     public bool rightBumperInput;
     public bool rightTriggerInput;
+    public bool dPadUp;
+    public bool dPadDown;
+    public bool dPadLeft;
+    public bool dPadRight;
 
     public bool sprintFlag;
     public bool rollFlag;
     public float rollInputTimer;
+    public bool comboFlag;
 
     PlayerControls inputActions;
     PlayerAttacker playerAttacker;
     PlayerInventory playerInventory;
+    PlayerManager playerManager;
 
     Vector2 movementInput;
     Vector2 cameraInput;
@@ -27,6 +36,7 @@ public class InputHandler : MonoBehaviour
     {
         playerAttacker = GetComponent<PlayerAttacker>();
         playerInventory = GetComponent<PlayerInventory>();
+        playerManager = GetComponent<PlayerManager>();
     }
 
     private void OnEnable()
@@ -41,6 +51,21 @@ public class InputHandler : MonoBehaviour
         }
 
         inputActions.Enable();
+        SubscribeInputEventsToHandlers();
+    }
+
+    private void SubscribeInputEventsToHandlers()
+    {
+        inputActions.PlayerActions.Roll.started += _ => bInput = true;
+        inputActions.PlayerActions.Roll.canceled += _ => bInput = false;
+
+        inputActions.PlayerActions.RB.performed += _ => rightBumperInput = true;
+        inputActions.PlayerActions.RT.performed += _ => rightTriggerInput = true;
+
+        inputActions.PlayerQuickSlots.DPadRight.performed += _ => dPadRight = true;
+        inputActions.PlayerQuickSlots.DPadLeft.performed += _ => dPadLeft = true;
+
+        inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
     }
 
     private void OnDisable()
@@ -53,6 +78,7 @@ public class InputHandler : MonoBehaviour
         HandleMoveInput(deltaTime);
         HandleRollInput(deltaTime);
         HandleAttackInput(deltaTime);
+        HandleQuickSlotsInput();
     }
 
     private void HandleMoveInput(float deltaTime)
@@ -67,8 +93,6 @@ public class InputHandler : MonoBehaviour
 
     private void HandleRollInput(float deltaTime)
     {
-        bInput = inputActions.PlayerActions.Roll.IsPressed();
-
         if (bInput)
         {
             rollInputTimer += deltaTime;
@@ -88,17 +112,39 @@ public class InputHandler : MonoBehaviour
 
     private void HandleAttackInput(float deltaTime)
     {
-        inputActions.PlayerActions.RB.performed += i => rightBumperInput = true;
-        inputActions.PlayerActions.RT.performed += i => rightTriggerInput = true;
-
         if (rightBumperInput)
         {
-            playerAttacker.HandleLightAttack(playerInventory.rightHandWeapon);
+            if (playerManager.canDoCombo)
+            {
+                comboFlag = true;
+                playerAttacker.HandleWeaponCombo(playerInventory.RightHandWeapon);
+                comboFlag = false;
+            }
+            else
+            {
+                if (playerManager.canDoCombo || playerManager.isInteracting)
+                    return;
+                playerAttacker.HandleLightAttack(playerInventory.RightHandWeapon);
+            }
         }
 
         if (rightTriggerInput)
         {
-            playerAttacker.HandleHeavyAttack(playerInventory.rightHandWeapon);
+            playerAttacker.HandleHeavyAttack(playerInventory.RightHandWeapon);
         }
     }
+
+    private void HandleQuickSlotsInput()
+    {
+        if (dPadRight)
+        {
+            playerInventory.ChangeRightWeapon();
+        }
+        else if (dPadLeft)
+        {
+            playerInventory.ChangeLeftWeapon();
+        }
+    }
+
+
 }

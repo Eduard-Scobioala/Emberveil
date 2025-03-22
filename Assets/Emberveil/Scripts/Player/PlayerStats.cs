@@ -6,11 +6,17 @@ public class PlayerStats : MonoBehaviour
     public int maxHealth;
     public int currentHealth;
 
-    public HealthBar healthBar;
+    public int staminaLevel = 10;
+    public int maxStamina;
+    public int currentStamina;
+
+    [SerializeField] private StatUIBar healthBar;
+    [SerializeField] private StatUIBar staminaBar;
 
     private AnimatorHandler animatorHandler;
 
     [SerializeField] private int baseHealthAmout = 300;
+    [SerializeField] private int baseStaminaAmout = 100;
 
     private void Awake()
     {
@@ -22,6 +28,10 @@ public class PlayerStats : MonoBehaviour
         maxHealth = GetMaxHealthBasedOnHealthLevel();
         currentHealth = maxHealth;
         healthBar.SetMaxSliderValue(maxHealth);
+
+        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
+        currentStamina = maxStamina;
+        staminaBar.SetMaxSliderValue(maxStamina);
     }
 
     private int GetMaxHealthBasedOnHealthLevel()
@@ -44,11 +54,16 @@ public class PlayerStats : MonoBehaviour
         return baseHealthAmout + levelBasedGainedHealth;
     }
 
+    private int GetMaxStaminaBasedOnStaminaLevel()
+    {
+        return baseStaminaAmout + staminaLevel * 5;
+    }
+
     public void TakeDamange(int damange)
     {
         currentHealth -= damange;
 
-        healthBar.SetCurrentHealthValue(currentHealth);
+        healthBar.SetCurrentStatValue(currentHealth);
 
         animatorHandler.PlayTargetAnimation("Damage_01", true);
 
@@ -59,5 +74,14 @@ public class PlayerStats : MonoBehaviour
 
             // Handle Player Death
         }
+    }
+
+    public void ConsumeStamina(int stamina)
+    {
+        currentStamina -= stamina;
+
+        if (currentStamina <= 0) currentHealth = 0;
+
+        staminaBar.SetCurrentStatValue(currentStamina);
     }
 }

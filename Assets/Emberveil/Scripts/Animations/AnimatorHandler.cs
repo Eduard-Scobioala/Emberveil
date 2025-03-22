@@ -5,7 +5,7 @@ public class AnimatorHandler : MonoBehaviour
     private int vertical;
     private int horizontal;
 
-    private Animator anim;
+    public Animator anim;
     private InputHandler inputHandler;
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
@@ -110,4 +110,14 @@ public class AnimatorHandler : MonoBehaviour
     }
 
     public bool IsInteracting() => anim.GetBool("isInteracting");
+
+    public void EnableCombo()
+    {
+        anim.SetBool("canDoCombo", true);
+    }
+
+    public void DisableCombo()
+    {
+        anim.SetBool("canDoCombo", false);
+    }
 }
