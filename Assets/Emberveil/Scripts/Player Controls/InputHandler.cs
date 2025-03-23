@@ -12,6 +12,7 @@ public class InputHandler : MonoBehaviour
 
     public bool bInput;
     public bool interactInput;
+    public bool jumpInput;
     public bool rightBumperInput;
     public bool rightTriggerInput;
     public bool dPadUp;
@@ -66,6 +67,7 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerQuickSlots.DPadLeft.performed += _ => dPadLeft = true;
 
         inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
+        inputActions.PlayerActions.Jump.performed += _ => jumpInput = true;
     }
 
     private void OnDisable()
@@ -79,6 +81,7 @@ public class InputHandler : MonoBehaviour
         HandleRollInput(deltaTime);
         HandleAttackInput(deltaTime);
         HandleQuickSlotsInput();
+        HandleJumpInput();
     }
 
     private void HandleMoveInput(float deltaTime)
@@ -146,5 +149,8 @@ public class InputHandler : MonoBehaviour
         }
     }
 
+    private void HandleJumpInput()
+    {
 
+    }
 }

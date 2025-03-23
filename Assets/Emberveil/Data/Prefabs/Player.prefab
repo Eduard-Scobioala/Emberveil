@@ -1383,7 +1383,7 @@ GameObject:
   - component: {fileID: 8842606515577052609}
   m_Layer: 10
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1489,6 +1489,7 @@ MonoBehaviour:
   mouseX: 0
   mouseY: 0
   bInput: 0
+  interactInput: 0
   rightBumperInput: 0
   rightTriggerInput: 0
   dPadUp: 0
@@ -1543,6 +1544,7 @@ MonoBehaviour:
   weaponsInLeftHandSlots:
   - {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
   - {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
+  weaponsInventary: []
 --- !u!114 &2719513274266845588
 MonoBehaviour:
   m_ObjectHideFlags: 0
