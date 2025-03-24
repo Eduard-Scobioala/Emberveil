@@ -151,6 +151,6 @@ public class InputHandler : MonoBehaviour
 
     private void HandleJumpInput()
     {
-
+        
     }
 }

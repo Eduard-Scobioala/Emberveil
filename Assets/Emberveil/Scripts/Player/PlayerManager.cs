@@ -34,12 +34,14 @@ public class PlayerManager : MonoBehaviour
 
         isInteracting = animator.GetBool("isInteracting");
         canDoCombo = animator.GetBool("canDoCombo");
+        animator.SetBool("isInAir", isInAir);
 
         inputHandler.TickInput(deltaTime);
 
         playerLocomotion.HandleMovement(deltaTime);
         playerLocomotion.HandleRollingAndSprinting(deltaTime);
         playerLocomotion.HandleFalling(deltaTime, playerLocomotion.moveDirection);
+        playerLocomotion.HandleJumping();
 
         HandleInteractableUI();
     }
