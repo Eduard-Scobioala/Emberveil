@@ -12,6 +12,7 @@ public class InputHandler : MonoBehaviour
 
     public bool bInput;
     public bool interactInput;
+    public bool optionsInput;
     public bool jumpInput;
     public bool rightBumperInput;
     public bool rightTriggerInput;
@@ -24,6 +25,8 @@ public class InputHandler : MonoBehaviour
     public bool rollFlag;
     public float rollInputTimer;
     public bool comboFlag;
+
+    public static event Action OnToggleOptions;
 
     PlayerControls inputActions;
     PlayerAttacker playerAttacker;
@@ -66,8 +69,10 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerQuickSlots.DPadRight.performed += _ => dPadRight = true;
         inputActions.PlayerQuickSlots.DPadLeft.performed += _ => dPadLeft = true;
 
-        inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
         inputActions.PlayerActions.Jump.performed += _ => jumpInput = true;
+        inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
+
+        inputActions.PlayerActions.Options.performed += _ => OnToggleOptions?.Invoke();
     }
 
     private void OnDisable()
@@ -81,7 +86,6 @@ public class InputHandler : MonoBehaviour
         HandleRollInput(deltaTime);
         HandleAttackInput(deltaTime);
         HandleQuickSlotsInput();
-        HandleJumpInput();
     }
 
     private void HandleMoveInput(float deltaTime)
@@ -147,10 +151,5 @@ public class InputHandler : MonoBehaviour
         {
             playerInventory.ChangeLeftWeapon();
         }
-    }
-
-    private void HandleJumpInput()
-    {
-        
     }
 }
