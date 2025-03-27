@@ -22,7 +22,7 @@ public class WeaponPickUp : Interactable
 
         playerLocomotion.rigidbody.velocity = Vector3.zero;
         animatorHandler.PlayTargetAnimation(pickUpAnimation, true);
-        playerInventory.weaponsInventary.Add(weapon);
+        playerInventory.weaponsInventory.Add(weapon);
 
         Invoke(nameof(DestroyGameObject), pickUpTime);
     }

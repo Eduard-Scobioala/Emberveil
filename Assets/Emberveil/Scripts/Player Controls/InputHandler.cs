@@ -26,7 +26,7 @@ public class InputHandler : MonoBehaviour
     public float rollInputTimer;
     public bool comboFlag;
 
-    public static event Action OnToggleOptions;
+    public static event Action OptionsButtonPressed;
 
     PlayerControls inputActions;
     PlayerAttacker playerAttacker;
@@ -72,7 +72,7 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerActions.Jump.performed += _ => jumpInput = true;
         inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
 
-        inputActions.PlayerActions.Options.performed += _ => OnToggleOptions?.Invoke();
+        inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
     }
 
     private void OnDisable()
