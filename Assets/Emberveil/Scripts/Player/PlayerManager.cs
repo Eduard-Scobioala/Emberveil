@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class PlayerManager : MonoBehaviour
+public class PlayerManager : CharacterManager
 {
     private InputHandler inputHandler;
     private Animator animator;
@@ -37,10 +37,9 @@ public class PlayerManager : MonoBehaviour
         animator.SetBool("isInAir", isInAir);
 
         inputHandler.TickInput(deltaTime);
-
-        playerLocomotion.HandleMovement(deltaTime);
+        
+        
         playerLocomotion.HandleRollingAndSprinting(deltaTime);
-        playerLocomotion.HandleFalling(deltaTime, playerLocomotion.moveDirection);
         playerLocomotion.HandleJumping();
 
         HandleInteractableUI();
@@ -48,19 +47,15 @@ public class PlayerManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        float delta = Time.fixedDeltaTime;
+        float deltaTime = Time.fixedDeltaTime;
 
-        if (CameraHandler.Instance != null)
-        {
-            CameraHandler.Instance.FollowTarget(delta);
-            CameraHandler.Instance.HandleCameraRotation(delta, inputHandler.mouseX, inputHandler.mouseY);
-        }
+        playerLocomotion.HandleMovement(deltaTime);
+        playerLocomotion.HandleFalling(deltaTime, playerLocomotion.moveDirection);
     }
 
     private void LateUpdate()
     {
         inputHandler.rollFlag = false;
-        inputHandler.sprintFlag = false;
         inputHandler.rightBumperInput = false;
         inputHandler.rightTriggerInput = false;
         inputHandler.dPadUp = false;
@@ -70,6 +65,14 @@ public class PlayerManager : MonoBehaviour
         inputHandler.interactInput = false;
         inputHandler.jumpInput = false;
         inputHandler.optionsInput = false;
+
+        float deltaTime = Time.fixedDeltaTime;
+
+        if (CameraHandler.Instance != null)
+        {
+            CameraHandler.Instance.FollowTarget(deltaTime);
+            CameraHandler.Instance.HandleCameraRotation(deltaTime, inputHandler.mouseX, inputHandler.mouseY);
+        }
 
         if (isInAir)
         {

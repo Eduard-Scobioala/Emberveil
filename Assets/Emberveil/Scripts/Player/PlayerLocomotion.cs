@@ -12,7 +12,6 @@ public class PlayerLocomotion : MonoBehaviour
     public AnimatorHandler animatorHandler;
 
     public new Rigidbody rigidbody;
-    public GameObject normalCamera;
 
     [Header("Movement Stats")]
     [SerializeField] private float movementSpeed = 5;

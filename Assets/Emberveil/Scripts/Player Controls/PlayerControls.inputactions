@@ -22,6 +22,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Lock On Target Left",
+                    "type": "Button",
+                    "id": "7ba9bed7-c7b8-4f0c-b76a-e7c0f8bcdd45",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Lock On Target Right",
+                    "type": "Button",
+                    "id": "b4b8fa8f-6ef5-47cf-b4d7-cbac25e43c4c",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -101,6 +119,28 @@
                     "action": "Camera",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6f799009-09f2-4f6c-aafa-aa36de1177f7",
+                    "path": "<Keyboard>/comma",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Lock On Target Left",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "cfbbf6e8-f690-4f55-8a69-2465d246fa85",
+                    "path": "<Keyboard>/period",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Lock On Target Right",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },
@@ -157,6 +197,15 @@
                     "name": "Options",
                     "type": "Button",
                     "id": "5d38eff5-be12-42af-b684-287515bbc8b5",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Lock On",
+                    "type": "Button",
+                    "id": "212c8576-6e69-42f3-8904-dce563112f7f",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -238,6 +287,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Options",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2a03d960-c7a4-4623-aedd-eb94f709e514",
+                    "path": "<Keyboard>/l",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Lock On",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

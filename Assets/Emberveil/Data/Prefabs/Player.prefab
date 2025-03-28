@@ -1490,6 +1490,8 @@ MonoBehaviour:
   mouseY: 0
   bInput: 0
   interactInput: 0
+  optionsInput: 0
+  jumpInput: 0
   rightBumperInput: 0
   rightTriggerInput: 0
   dPadUp: 0
@@ -1515,7 +1517,6 @@ MonoBehaviour:
   moveDirection: {x: 0, y: 0, z: 0}
   animatorHandler: {fileID: 0}
   rigidbody: {fileID: 0}
-  normalCamera: {fileID: 0}
   movementSpeed: 5
   walkingSpeed: 1
   sprintSpeed: 7
@@ -1544,7 +1545,7 @@ MonoBehaviour:
   weaponsInLeftHandSlots:
   - {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
   - {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
-  weaponsInventary: []
+  weaponsInventory: []
 --- !u!114 &2719513274266845588
 MonoBehaviour:
   m_ObjectHideFlags: 0

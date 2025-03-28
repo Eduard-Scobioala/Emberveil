@@ -23,15 +23,19 @@ public class InputHandler : MonoBehaviour
 
     public bool sprintFlag;
     public bool rollFlag;
-    public float rollInputTimer;
     public bool comboFlag;
+    public float rollInputTimer;
 
     public static event Action OptionsButtonPressed;
+    public static event Action LockOnButtonPressed;
+    public static event Action LeftLockOnTargetButtonPressed;
+    public static event Action RightLockOnTargetButtonPressed;
 
     PlayerControls inputActions;
     PlayerAttacker playerAttacker;
     PlayerInventory playerInventory;
     PlayerManager playerManager;
+    CameraHandler cameraHandler;
 
     Vector2 movementInput;
     Vector2 cameraInput;
@@ -41,6 +45,7 @@ public class InputHandler : MonoBehaviour
         playerAttacker = GetComponent<PlayerAttacker>();
         playerInventory = GetComponent<PlayerInventory>();
         playerManager = GetComponent<PlayerManager>();
+        cameraHandler = FindObjectOfType<CameraHandler>();
     }
 
     private void OnEnable()
@@ -73,6 +78,9 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
 
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
+        inputActions.PlayerActions.LockOn.performed += _ => LockOnButtonPressed?.Invoke();
+        inputActions.PlayerMovement.LockOnTargetLeft.performed += _ => LeftLockOnTargetButtonPressed?.Invoke();
+        inputActions.PlayerMovement.LockOnTargetRight.performed += _ => RightLockOnTargetButtonPressed?.Invoke();
     }
 
     private void OnDisable()
@@ -100,10 +108,11 @@ public class InputHandler : MonoBehaviour
 
     private void HandleRollInput(float deltaTime)
     {
+        sprintFlag = bInput;
+
         if (bInput)
         {
             rollInputTimer += deltaTime;
-            sprintFlag = true;
         }
         else
         {
