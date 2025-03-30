@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using static UnityEditor.Searcher.SearcherWindow.Alignment;
 
 public class PlayerLocomotion : MonoBehaviour
 {
@@ -27,6 +28,9 @@ public class PlayerLocomotion : MonoBehaviour
     private LayerMask ignoreForGroundCheck;
     public float inAirTimer;
 
+    [Header("Camera Reference")]
+    [SerializeField] private CameraHandler cameraHandler;
+
     void Start()
     {
         rigidbody = GetComponent<Rigidbody>();
@@ -49,19 +53,25 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void HandleRotation(float deltaTime)
     {
-        float moveOverride = inputHandler.moveAmount;
-
-        var targetDir =
-            cameraObject.forward * inputHandler.vertical
-            + cameraObject.right * inputHandler.horizontal;
-
-        targetDir.Normalize();
-        targetDir.y = 0;
-
-        if (targetDir == Vector3.zero)
+        Vector3 targetDir;
+        // If locked on and not sprinting or rolling - face the lock on target,
+        // else - rotate based on input
+        if (cameraHandler.lockOnFlag && !(inputHandler.sprintFlag || inputHandler.rollFlag))
         {
-            targetDir = transform.forward;
+            targetDir = cameraHandler.currentLockOnTarget.transform.position - transform.position;
         }
+        else
+        {
+            targetDir = cameraObject.forward * inputHandler.vertical + cameraObject.right * inputHandler.horizontal;
+
+            if (targetDir == Vector3.zero)
+            {
+                targetDir = transform.forward;
+            }
+        }
+
+        targetDir.y = 0;
+        targetDir.Normalize();
 
         var tr = Quaternion.LookRotation(targetDir);
         var targetRotation = Quaternion.Slerp(transform.rotation, tr, rotationSpeed * deltaTime);
@@ -107,7 +117,14 @@ public class PlayerLocomotion : MonoBehaviour
         Vector3 projectedVelocity = Vector3.ProjectOnPlane(moveDirection, normalVector);
         rigidbody.velocity = projectedVelocity;
 
-        animatorHandler.UpdateAnimatorValues(inputHandler.moveAmount, 0, playerManager.isSprinting);
+        if (cameraHandler.lockOnFlag && !inputHandler.sprintFlag)
+        {
+            animatorHandler.UpdateAnimatorValues(inputHandler.vertical, inputHandler.horizontal, playerManager.isSprinting);
+        }
+        else
+        {
+            animatorHandler.UpdateAnimatorValues(inputHandler.moveAmount, 0, playerManager.isSprinting);
+        }
 
         if (animatorHandler.canRotate)
         {

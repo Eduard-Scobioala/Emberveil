@@ -95,6 +95,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6704637929725717061}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &743826099620025106
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6191335808686067161}
+  m_Layer: 10
+  m_Name: Lock On Transform
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6191335808686067161
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743826099620025106}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.2, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6617811616378658093}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &843286863223029499
 GameObject:
   m_ObjectHideFlags: 0
@@ -1402,6 +1433,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1506167395937801292}
+  - {fileID: 6191335808686067161}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &6924507559270458254
@@ -1451,7 +1483,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &6831730101438527696
@@ -1466,6 +1498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3610c7ae61dc5c41bb0644629bcb769, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lockOnTransform: {fileID: 6191335808686067161}
   isInteracting: 0
   isSprinting: 0
   isInAir: 0
@@ -1500,8 +1533,8 @@ MonoBehaviour:
   dPadRight: 0
   sprintFlag: 0
   rollFlag: 0
-  rollInputTimer: 0
   comboFlag: 0
+  rollInputTimer: 0
 --- !u!114 &6907088894822583122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1521,11 +1554,12 @@ MonoBehaviour:
   walkingSpeed: 1
   sprintSpeed: 7
   rotationSpeed: 18
-  fallingSpeed: 45
+  fallingSpeed: 500
   groundDetectionRayStartPoint: 0.5
   minimumDistanceNeededToBeginFall: 1
   groundDirectionRayDistance: -0.6
   inAirTimer: 0
+  cameraHandler: {fileID: 0}
 --- !u!114 &5996394775482851198
 MonoBehaviour:
   m_ObjectHideFlags: 0
