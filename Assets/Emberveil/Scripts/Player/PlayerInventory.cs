@@ -1,6 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum EquipSlotType
+{
+    RightHandSlot01,
+    RightHandSlot02,
+    RightHandSlot03,
+    RightHandSlot04,
+    LeftHandSlot01,
+    LeftHandSlot02,
+    LeftHandSlot03,
+    LeftHandSlot04,
+}
+
 public class PlayerInventory : MonoBehaviour
 {
     WeaponSlotManager weaponSlotManager;
@@ -29,8 +41,20 @@ public class PlayerInventory : MonoBehaviour
 
     private void Start()
     {
-        EquipWeapon(unarmedWeapon, false);
-        EquipWeapon(unarmedWeapon, true);
+        EquipWeapon(TryGetWeapon(weaponsInRightHandSlots), false);
+        EquipWeapon(TryGetWeapon(weaponsInLeftHandSlots), true);
+    }
+
+    private WeaponItem TryGetWeapon(WeaponItem[] weaponItems)
+    {
+        if (weaponItems !=  null && weaponItems.Length > 0)
+        {
+            return weaponItems[0];
+        }
+        else
+        {
+            return unarmedWeapon;
+        }
     }
 
     public void ChangeRightWeapon()
@@ -72,5 +96,62 @@ public class PlayerInventory : MonoBehaviour
         }
 
         weaponSlotManager.LoadWeaponOnSlot(weapon, isLeftHand);
+    }
+
+    public Item GetItemFromEquipSlot(EquipSlotType slotType)
+    {
+        return slotType switch
+        {
+            EquipSlotType.RightHandSlot01 => weaponsInRightHandSlots[0],
+            EquipSlotType.RightHandSlot02 => weaponsInRightHandSlots[1],
+            EquipSlotType.RightHandSlot03 => weaponsInRightHandSlots[2],
+            EquipSlotType.RightHandSlot04 => weaponsInRightHandSlots[3],
+
+            EquipSlotType.LeftHandSlot01 => weaponsInLeftHandSlots[0],
+            EquipSlotType.LeftHandSlot02 => weaponsInLeftHandSlots[1],
+            EquipSlotType.LeftHandSlot03 => weaponsInLeftHandSlots[2],
+            EquipSlotType.LeftHandSlot04 => weaponsInLeftHandSlots[3],
+
+            _ => throw new System.NotImplementedException(),
+        };
+    }
+
+    public void SetItemFromEquipSlot(EquipSlotType slotType, WeaponItem item)
+    {
+        switch(slotType)
+        {
+            case EquipSlotType.RightHandSlot01:
+                weaponsInRightHandSlots[0] = item;
+                RightHandWeapon = item;
+                break;
+            case EquipSlotType.RightHandSlot02:
+                weaponsInRightHandSlots[1] = item;
+                RightHandWeapon = item;
+                break;
+            case EquipSlotType.RightHandSlot03:
+                weaponsInRightHandSlots[2] = item;
+                RightHandWeapon = item;
+                break;
+            case EquipSlotType.RightHandSlot04:
+                weaponsInRightHandSlots[3] = item;
+                RightHandWeapon = item;
+                break;
+            case EquipSlotType.LeftHandSlot01:
+                weaponsInLeftHandSlots[0] = item;
+                LeftHandWeapon = item;
+                break;
+            case EquipSlotType.LeftHandSlot02:
+                weaponsInLeftHandSlots[1] = item;
+                LeftHandWeapon = item;
+                break;
+            case EquipSlotType.LeftHandSlot03:
+                weaponsInLeftHandSlots[2] = item;
+                LeftHandWeapon = item;
+                break;
+            case EquipSlotType.LeftHandSlot04:
+                weaponsInLeftHandSlots[3] = item;
+                LeftHandWeapon = item;
+                break;
+        }
     }
 }

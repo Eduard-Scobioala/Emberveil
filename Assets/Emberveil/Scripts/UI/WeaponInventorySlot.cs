@@ -3,6 +3,10 @@ using UnityEngine.UI;
 
 public class WeaponInventorySlot : MonoBehaviour
 {
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private PlayerInventory playerInventory;
+    [SerializeField] private WeaponSlotManager weaponSlotManager;
+    [SerializeField] private EquipmentWindowUI equipmentWindowUI;
     [SerializeField] private Image weaponIcon;
     private WeaponItem weaponItem;
 
@@ -22,5 +26,18 @@ public class WeaponInventorySlot : MonoBehaviour
         weaponIcon.enabled = false;
 
         gameObject.SetActive(false);
+    }
+
+    public void EquipItem()
+    {
+        playerInventory.weaponsInventory.Add((WeaponItem)playerInventory.GetItemFromEquipSlot(uiManager.currentSelectedSlotType));
+        playerInventory.SetItemFromEquipSlot(uiManager.currentSelectedSlotType, weaponItem);
+        playerInventory.weaponsInventory.Remove(weaponItem);
+
+        weaponSlotManager.LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
+        weaponSlotManager.LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
+
+        equipmentWindowUI.LoadWeaponOnEquipementScreen(playerInventory);
+        uiManager.currentSelectedSlotType = 0;
     }
 }

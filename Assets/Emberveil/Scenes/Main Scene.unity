@@ -5228,6 +5228,7 @@ GameObject:
   - component: {fileID: 129079320}
   - component: {fileID: 129079319}
   - component: {fileID: 129079318}
+  - component: {fileID: 129079321}
   m_Layer: 5
   m_Name: Right Hand Slot 03
   m_TagString: Untagged
@@ -5298,7 +5299,43 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 129079319}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 129079321}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &129079319
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5337,6 +5374,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 129079316}
   m_CullTransparentMesh: 1
+--- !u!114 &129079321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129079316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
+  icon: {fileID: 491198104}
+  equipSlotType: 2
 --- !u!1 &129954241
 GameObject:
   m_ObjectHideFlags: 0
@@ -5629,9 +5681,45 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
       - m_Target: {fileID: 1925299366}
         m_TargetAssemblyTypeName: EquipmentWindowUI, Assembly-CSharp
         m_MethodName: SelectedRightHandSlot01
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 176853322}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5691,11 +5779,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 490268639}
-  rightHandSlot01: 1
-  rightHandSlot02: 0
-  leftHandSlot01: 0
-  leftHandSlot02: 0
+  equipSlotType: 0
 --- !u!1 &177006038
 GameObject:
   m_ObjectHideFlags: 0
@@ -5790,6 +5876,7 @@ GameObject:
   - component: {fileID: 283723001}
   - component: {fileID: 283723000}
   - component: {fileID: 283722999}
+  - component: {fileID: 283723002}
   m_Layer: 5
   m_Name: Left Hand Slot 04
   m_TagString: Untagged
@@ -5860,7 +5947,43 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 283723000}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 283723002}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &283723000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5899,6 +6022,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 283722997}
   m_CullTransparentMesh: 1
+--- !u!114 &283723002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 283722997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
+  icon: {fileID: 946321265}
+  equipSlotType: 7
 --- !u!1 &294404978
 GameObject:
   m_ObjectHideFlags: 0
@@ -6134,9 +6272,45 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
       - m_Target: {fileID: 1925299366}
         m_TargetAssemblyTypeName: EquipmentWindowUI, Assembly-CSharp
         m_MethodName: SelectedRightHandSlot02
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 373468222}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -6196,11 +6370,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 1520368339}
-  rightHandSlot01: 0
-  rightHandSlot02: 1
-  leftHandSlot01: 0
-  leftHandSlot02: 0
+  equipSlotType: 1
 --- !u!1 &399559881
 GameObject:
   m_ObjectHideFlags: 0
@@ -6283,7 +6455,31 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 399559884}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 773492920}
+        m_TargetAssemblyTypeName: WeaponInventorySlot, Assembly-CSharp
+        m_MethodName: EquipItem
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &399559884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6524,9 +6720,45 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
       - m_Target: {fileID: 1925299366}
         m_TargetAssemblyTypeName: EquipmentWindowUI, Assembly-CSharp
         m_MethodName: SelectedLeftHandSlot01
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 438059662}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -6586,11 +6818,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 1270562574}
-  rightHandSlot01: 0
-  rightHandSlot02: 0
-  leftHandSlot01: 1
-  leftHandSlot02: 0
+  equipSlotType: 4
 --- !u!1 &490268637
 GameObject:
   m_ObjectHideFlags: 0
@@ -7382,6 +7612,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31e9fea15b6314cd08c902c0eb58883b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
+  playerInventory: {fileID: 4669790225138417388}
+  weaponSlotManager: {fileID: 1940188308}
+  equipmentWindowUI: {fileID: 1925299366}
   weaponIcon: {fileID: 169735547}
 --- !u!1 &809736065 stripped
 GameObject:
@@ -8452,7 +8686,31 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1097134222}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 598977743}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1097134222
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9310,6 +9568,7 @@ GameObject:
   - component: {fileID: 1698109623}
   - component: {fileID: 1698109622}
   - component: {fileID: 1698109621}
+  - component: {fileID: 1698109624}
   m_Layer: 5
   m_Name: Right Hand Slot 04
   m_TagString: Untagged
@@ -9380,7 +9639,43 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1698109622}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1698109624}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1698109622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9419,6 +9714,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1698109619}
   m_CullTransparentMesh: 1
+--- !u!114 &1698109624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1698109619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
+  icon: {fileID: 1601581973}
+  equipSlotType: 3
 --- !u!1 &1746490734
 GameObject:
   m_ObjectHideFlags: 0
@@ -9545,6 +9855,7 @@ GameObject:
   - component: {fileID: 1842057412}
   - component: {fileID: 1842057411}
   - component: {fileID: 1842057410}
+  - component: {fileID: 1842057413}
   m_Layer: 5
   m_Name: Left Hand Slot 03
   m_TagString: Untagged
@@ -9615,7 +9926,43 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1842057411}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1842057413}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1842057411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9654,6 +10001,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1842057408}
   m_CullTransparentMesh: 1
+--- !u!114 &1842057413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1842057408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
+  icon: {fileID: 294404980}
+  equipSlotType: 6
 --- !u!1001 &1892815945
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9866,10 +10228,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb0793973b6cef84eb224aeb33a17935, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rightHandSlot01Selected: 0
-  rightHandSlot02Selected: 0
-  leftHandSlot01Selected: 0
-  leftHandSlot02Selected: 0
+  handEquipmentSlotsUI:
+  - {fileID: 176853322}
+  - {fileID: 373468222}
+  - {fileID: 438059662}
+  - {fileID: 2051534105}
 --- !u!1 &1926491824 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: bd39e079fffaabd4384d356e7713f050,
@@ -9898,6 +10261,18 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: bd39e079fffaabd4384d356e7713f050, type: 3}
+--- !u!114 &1940188308 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3621209575734056447, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+    type: 3}
+  m_PrefabInstance: {fileID: 4669790225138417387}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1df180205d10a443b5aef398a17ea1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1942180870
 GameObject:
   m_ObjectHideFlags: 0
@@ -14965,9 +15340,45 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
+      - m_Target: {fileID: 129954241}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 136832291}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
       - m_Target: {fileID: 1925299366}
         m_TargetAssemblyTypeName: EquipmentWindowUI, Assembly-CSharp
         m_MethodName: SelectedLeftHandSlot02
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 2051534105}
+        m_TargetAssemblyTypeName: HandEquipmentSlotUI, Assembly-CSharp
+        m_MethodName: SelectSlot
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -15027,11 +15438,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e41f4c70b63b5a94a9cc4e4f957ba5b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 937406306}
-  rightHandSlot01: 0
-  rightHandSlot02: 0
-  leftHandSlot01: 0
-  leftHandSlot02: 1
+  equipSlotType: 5
 --- !u!1 &2052189485
 GameObject:
   m_ObjectHideFlags: 0
@@ -15063,7 +15472,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactableInfoText: Legendary Item 2
-  weapon: {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
+  weapon: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
   pickUpAnimation: Pick_Up_Item
   pickUpTime: 1
 --- !u!135 &2052189487
@@ -15096,7 +15505,7 @@ Transform:
   m_GameObject: {fileID: 2052189485}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.045, y: 5.419, z: 1.508}
+  m_LocalPosition: {x: 2.045, y: 0, z: -9.117}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15713,7 +16122,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactableInfoText: Legendary Item
-  weapon: {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
+  weapon: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
   pickUpAnimation: Pick_Up_Item
   pickUpTime: 1
 --- !u!135 &2140602192
@@ -15746,7 +16155,7 @@ Transform:
   m_GameObject: {fileID: 2140602190}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.8626847, y: 5.419, z: 1.508}
+  m_LocalPosition: {x: 0.8626847, y: 0, z: -9.117}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -16804,6 +17213,45 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponItems.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponItems.Array.data[0]
+      value: 
+      objectReference: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0,
+        type: 2}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponItems.Array.data[1]
+      value: 
+      objectReference: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0,
+        type: 2}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponsInRightHandSlots.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponsInRightHandSlots.Array.data[0]
+      value: 
+      objectReference: {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560,
+        type: 2}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponsInRightHandSlots.Array.data[1]
+      value: 
+      objectReference: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0,
+        type: 2}
+    - target: {fileID: 5996394775482851198, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: weaponsInRightHandSlots.Array.data[2]
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 6617811616378658093, guid: d1d9d6542d224c74fab4e17d1e6f8596,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -18085,8 +18533,10 @@ MonoBehaviour:
   HUDInterface: {fileID: 823381570}
   optionsWindow: {fileID: 598977743}
   weaponInventoryWindow: {fileID: 129954241}
+  equipementInventoryWindow: {fileID: 136832291}
   weaponInventorySlotsParent: {fileID: 154137696}
   weaponInventorySlotPrefab: {fileID: 773492918}
+  currentSelectedSlotType: 0
 --- !u!1 &7823511045258030718
 GameObject:
   m_ObjectHideFlags: 0

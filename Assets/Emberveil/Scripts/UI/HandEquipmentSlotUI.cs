@@ -3,27 +3,31 @@ using UnityEngine.UI;
 
 public class HandEquipmentSlotUI : MonoBehaviour
 {
-    public Image icon;
-    WeaponItem weapon;
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private Image icon;
+    private Item item;
 
-    public bool rightHandSlot01;
-    public bool rightHandSlot02;
-    public bool leftHandSlot01;
-    public bool leftHandSlot02;
+    public EquipSlotType equipSlotType;
 
-    public void AddItem(WeaponItem newWeapon)
+
+    public void AddItem(Item newItem)
     {
-        weapon = newWeapon;
-        icon.sprite = weapon.itemIcon;
+        item = newItem;
+        icon.sprite = item.itemIcon;
         icon.enabled = true;
         gameObject.SetActive(true);
     }
 
     public void ClearItem()
     {
-        weapon = null;
+        item = null;
         icon.sprite = null;
         icon.enabled = false;
         gameObject.SetActive(false);
+    }
+
+    public void SelectSlot()
+    {
+        uiManager.currentSelectedSlotType = equipSlotType;
     }
 }

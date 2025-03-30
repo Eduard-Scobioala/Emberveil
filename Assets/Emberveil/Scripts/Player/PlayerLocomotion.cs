@@ -43,7 +43,7 @@ public class PlayerLocomotion : MonoBehaviour
         animatorHandler.Initialize();
 
         playerManager.isGrounded = true;
-        ignoreForGroundCheck = ~(1 << 8 |  1 << 11);
+        ignoreForGroundCheck = ~LayerMask.GetMask("Interactable");
     }
 
     #region Movement

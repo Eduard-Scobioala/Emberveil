@@ -9,11 +9,15 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject HUDInterface;
     [SerializeField] private GameObject optionsWindow;
     [SerializeField] private GameObject weaponInventoryWindow;
+    [SerializeField] private GameObject equipementInventoryWindow;
 
     [Header("Weapon Inventory")]
     [SerializeField] private Transform weaponInventorySlotsParent;
     [SerializeField] private GameObject weaponInventorySlotPrefab;
+
     private WeaponInventorySlot[] weaponInventorySlots;
+
+    public EquipSlotType currentSelectedSlotType;
 
     private void Start()
     {
@@ -85,6 +89,9 @@ public class UIManager : MonoBehaviour
 
     private void CloseAllInventoryWindows()
     {
+        currentSelectedSlotType = 0;
+
         weaponInventoryWindow.SetActive(false);
+        equipementInventoryWindow.SetActive(false);
     }
 }
