@@ -14,6 +14,9 @@ public class WeaponSlotManager : MonoBehaviour
 
     public WeaponItem attackingWeapon = null;
 
+    private bool isTwoHanding = false;
+    
+
     private void Awake()
     {
         WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
@@ -32,6 +35,16 @@ public class WeaponSlotManager : MonoBehaviour
         animator = GetComponent<Animator>();
         quickSlotsUI = FindObjectOfType<QuickSlotsUI>();
         playerStats = GetComponentInParent<PlayerStats>();
+    }
+
+    private void OnEnable()
+    {
+        InputHandler.TwoHandingButtonPressed += HandleTwoHandingButtonPressed;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.TwoHandingButtonPressed -= HandleTwoHandingButtonPressed;
     }
 
     public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isLeft)
@@ -54,20 +67,32 @@ public class WeaponSlotManager : MonoBehaviour
         }
         else
         {
-            rightHandSlot.LoadWeaponModel(weaponItem);
-            LoadRightWeaponDamageCollider();
-            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
-            #region Handle Right Weapon Idle Animations
-            if (weaponItem != null)
+            if (isTwoHanding)
             {
-                animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
+
             }
             else
             {
-                animator.CrossFade("Right Arm Empty", 0.2f);
+                rightHandSlot.LoadWeaponModel(weaponItem);
+                LoadRightWeaponDamageCollider();
+                quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
+                #region Handle Right Weapon Idle Animations
+                if (weaponItem != null)
+                {
+                    animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
+                }
+                else
+                {
+                    animator.CrossFade("Right Arm Empty", 0.2f);
+                }
+                #endregion
             }
-            #endregion
         }
+    }
+
+    private void HandleTwoHandingButtonPressed()
+    {
+        isTwoHanding = !isTwoHanding;
     }
 
     #region Handle Weapon's Damage Collider

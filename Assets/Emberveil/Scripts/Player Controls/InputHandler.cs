@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
@@ -30,6 +29,7 @@ public class InputHandler : MonoBehaviour
     public static event Action LockOnButtonPressed;
     public static event Action LeftLockOnTargetButtonPressed;
     public static event Action RightLockOnTargetButtonPressed;
+    public static event Action TwoHandingButtonPressed;
 
     PlayerControls inputActions;
     PlayerAttacker playerAttacker;
@@ -79,6 +79,8 @@ public class InputHandler : MonoBehaviour
 
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
         inputActions.PlayerActions.LockOn.performed += _ => LockOnButtonPressed?.Invoke();
+        inputActions.PlayerActions.TwoHanding.performed += _ => TwoHandingButtonPressed?.Invoke();
+
         inputActions.PlayerMovement.LockOnTargetLeft.performed += _ => LeftLockOnTargetButtonPressed?.Invoke();
         inputActions.PlayerMovement.LockOnTargetRight.performed += _ => RightLockOnTargetButtonPressed?.Invoke();
     }
