@@ -19,6 +19,7 @@ MonoBehaviour:
   isUnarmed: 0
   Right_Arm_Idle: Right_Arm_Weapon_Idle
   Left_Arm_Idle: Left_Arm_Weapon_Idle
+  Two_Handed_Idle: Two_Handed_Idle
   OH_Light_Attack_01: OH_Light_Attack_01
   OH_Light_Attack_02: OH_Light_Attack_02
   OH_Heavy_Attack_01: OH_Heavy_Attack_01

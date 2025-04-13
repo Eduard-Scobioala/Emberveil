@@ -1088,6 +1088,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1df180205d10a443b5aef398a17ea1c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerInventory: {fileID: 5996394775482851198}
   attackingWeapon: {fileID: 0}
 --- !u!1 &6059567129464112901
 GameObject:

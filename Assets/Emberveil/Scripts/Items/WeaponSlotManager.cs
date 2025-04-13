@@ -4,6 +4,7 @@ public class WeaponSlotManager : MonoBehaviour
 {
     private WeaponHolderSlot leftHandSlot;
     private WeaponHolderSlot rightHandSlot;
+    private WeaponHolderSlot backSlot;
 
     private DamageCollider leftHandDamageCollider;
     private DamageCollider rightHandDamageCollider;
@@ -11,6 +12,8 @@ public class WeaponSlotManager : MonoBehaviour
     private Animator animator;
     private QuickSlotsUI quickSlotsUI;
     private PlayerStats playerStats;
+
+    [SerializeField] private PlayerInventory playerInventory;
 
     public WeaponItem attackingWeapon = null;
 
@@ -29,6 +32,10 @@ public class WeaponSlotManager : MonoBehaviour
             else if (weaponSlot.isRightHandSlot)
             {
                 rightHandSlot = weaponSlot;
+            }
+            else if (weaponSlot.isBackSlot)
+            {
+                backSlot = weaponSlot;
             }
         }
 
@@ -51,6 +58,7 @@ public class WeaponSlotManager : MonoBehaviour
     {
         if (isLeft)
         {
+            leftHandSlot.currentWeapon = weaponItem;
             leftHandSlot.LoadWeaponModel(weaponItem);
             LoadLeftWeaponDamageCollider();
             quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, true);
@@ -69,14 +77,18 @@ public class WeaponSlotManager : MonoBehaviour
         {
             if (isTwoHanding)
             {
-
+                backSlot.LoadWeaponModel(leftHandSlot.currentWeapon);
+                leftHandSlot.UnloadWeaponAndDestroy();
+                animator.CrossFade(weaponItem.Two_Handed_Idle, 0.2f);
             }
             else
             {
-                rightHandSlot.LoadWeaponModel(weaponItem);
-                LoadRightWeaponDamageCollider();
-                quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
                 #region Handle Right Weapon Idle Animations
+
+                animator.CrossFade("Both Arms Empty", .2f);
+
+                backSlot.UnloadWeaponAndDestroy();
+
                 if (weaponItem != null)
                 {
                     animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
@@ -87,12 +99,27 @@ public class WeaponSlotManager : MonoBehaviour
                 }
                 #endregion
             }
+
+            rightHandSlot.currentWeapon = weaponItem;
+            rightHandSlot.LoadWeaponModel(weaponItem);
+            LoadRightWeaponDamageCollider();
+            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
         }
     }
 
     private void HandleTwoHandingButtonPressed()
     {
         isTwoHanding = !isTwoHanding;
+
+        if (isTwoHanding)
+        {
+            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
+        }
+        else
+        {
+            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
+            LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
+        }
     }
 
     #region Handle Weapon's Damage Collider
