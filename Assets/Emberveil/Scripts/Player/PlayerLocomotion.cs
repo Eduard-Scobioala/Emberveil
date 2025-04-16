@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Windows;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
 
 public class PlayerLocomotion : MonoBehaviour
@@ -31,7 +32,13 @@ public class PlayerLocomotion : MonoBehaviour
     [Header("Camera Reference")]
     [SerializeField] private CameraHandler cameraHandler;
 
-    void Start()
+    private bool isDodgeButtonPressed = false;
+    private bool isSprinting = false;
+    private bool isDoging = false;
+
+    private float dodgeInputTimer;
+
+    private void Start()
     {
         rigidbody = GetComponent<Rigidbody>();
         inputHandler = GetComponent<InputHandler>();
@@ -46,6 +53,39 @@ public class PlayerLocomotion : MonoBehaviour
         ignoreForGroundCheck = ~LayerMask.GetMask("Interactable");
     }
 
+    private void OnEnable()
+    {
+        InputHandler.DodgeButtonPressed += HandleDodgeButtonPressed;
+        InputHandler.DodgeButtonReleased += HandleDodgeButtonReleased;
+        InputHandler.JumpButtonPressed += HandleJumpButtonPressed;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.DodgeButtonPressed -= HandleDodgeButtonPressed;
+        InputHandler.DodgeButtonReleased -= HandleDodgeButtonReleased;
+        InputHandler.JumpButtonPressed -= HandleJumpButtonPressed;
+    }
+
+    private void Update()
+    {
+        var deltaTime = Time.deltaTime;
+
+        HandleRollingAndSprinting(deltaTime);
+    }
+
+    private void HandleDodgeButtonPressed()
+    {
+        isDodgeButtonPressed = true;
+        isSprinting = true;
+    }
+
+    private void HandleDodgeButtonReleased()
+    {
+        isDodgeButtonPressed = false;
+        isSprinting = false;
+    }
+
     #region Movement
 
     private Vector3 normalVector;
@@ -56,7 +96,7 @@ public class PlayerLocomotion : MonoBehaviour
         Vector3 targetDir;
         // If locked on and not sprinting or rolling - face the lock on target,
         // else - rotate based on input
-        if (cameraHandler.lockOnFlag && !(inputHandler.sprintFlag || inputHandler.rollFlag))
+        if (cameraHandler.lockOnFlag && !(isSprinting || isDoging))
         {
             targetDir = cameraHandler.currentLockOnTarget.transform.position - transform.position;
         }
@@ -81,7 +121,7 @@ public class PlayerLocomotion : MonoBehaviour
 
     public void HandleMovement(float deltaTime)
     {
-        if (inputHandler.rollFlag)
+        if (isDoging)
             return;
 
         if (playerManager.isInteracting)
@@ -94,7 +134,7 @@ public class PlayerLocomotion : MonoBehaviour
         moveDirection.y = 0;
 
         float speed = movementSpeed;
-        if (inputHandler.sprintFlag && inputHandler.moveAmount > 0.5f)
+        if (isSprinting && inputHandler.moveAmount > 0.5f)
         {
             speed = sprintSpeed;
             playerManager.isSprinting = true;
@@ -117,7 +157,7 @@ public class PlayerLocomotion : MonoBehaviour
         Vector3 projectedVelocity = Vector3.ProjectOnPlane(moveDirection, normalVector);
         rigidbody.velocity = projectedVelocity;
 
-        if (cameraHandler.lockOnFlag && !inputHandler.sprintFlag)
+        if (cameraHandler.lockOnFlag && !isSprinting)
         {
             animatorHandler.UpdateAnimatorValues(inputHandler.vertical, inputHandler.horizontal, playerManager.isSprinting);
         }
@@ -132,13 +172,17 @@ public class PlayerLocomotion : MonoBehaviour
         }
     }
 
-    public void HandleRollingAndSprinting(float deltaTime)
+    private void HandleRollingAndSprinting(float deltaTime)
     {
         if (animatorHandler.IsInteracting())
             return;
 
-        if (inputHandler.rollFlag)
+        HandleDodgeFlags(deltaTime);
+
+        if (isDoging)
         {
+            isDoging = false;
+
             moveDirection = cameraObject.forward * inputHandler.vertical;
             moveDirection += cameraObject.right * inputHandler.horizontal;
 
@@ -153,6 +197,24 @@ public class PlayerLocomotion : MonoBehaviour
             {
                 animatorHandler.PlayTargetAnimation("Backstep", true);
             }
+        }
+    }
+
+    private void HandleDodgeFlags(float deltaTime)
+    {
+        if (isDodgeButtonPressed)
+        {
+            dodgeInputTimer += deltaTime;
+        }
+        else
+        {
+            if (dodgeInputTimer > 0 && dodgeInputTimer < 0.5f)
+            {
+                isSprinting = false;
+                isDoging = true;
+            }
+
+            dodgeInputTimer = 0;
         }
     }
 
@@ -240,22 +302,20 @@ public class PlayerLocomotion : MonoBehaviour
         }
     }
     
-    public void HandleJumping() {
+    private void HandleJumpButtonPressed() {
         if (playerManager.isInteracting)
             return;
 
-        if (inputHandler.jumpInput) {
-            if (inputHandler.moveAmount > 0)
-            {
-                moveDirection = cameraObject.forward * inputHandler.vertical
-                    + cameraObject.right * inputHandler.horizontal;
-                moveDirection.y = 0;
-                
-                animatorHandler.PlayTargetAnimation("Jump", true);
+        if (inputHandler.moveAmount > 0)
+        {
+            moveDirection = cameraObject.forward * inputHandler.vertical
+                + cameraObject.right * inputHandler.horizontal;
+            moveDirection.y = 0;
+            
+            animatorHandler.PlayTargetAnimation("Jump", true);
 
-                Quaternion jumpRotation = Quaternion.LookRotation(moveDirection);
-                transform.rotation = jumpRotation;
-            }
+            Quaternion jumpRotation = Quaternion.LookRotation(moveDirection);
+            transform.rotation = jumpRotation;
         }
     }
 

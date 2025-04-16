@@ -38,10 +38,6 @@ public class PlayerManager : CharacterManager
 
         inputHandler.TickInput(deltaTime);
         
-        
-        playerLocomotion.HandleRollingAndSprinting(deltaTime);
-        playerLocomotion.HandleJumping();
-
         HandleInteractableUI();
     }
 
@@ -55,7 +51,6 @@ public class PlayerManager : CharacterManager
 
     private void LateUpdate()
     {
-        inputHandler.rollFlag = false;
         inputHandler.rightBumperInput = false;
         inputHandler.rightTriggerInput = false;
         inputHandler.dPadUp = false;
@@ -63,7 +58,6 @@ public class PlayerManager : CharacterManager
         inputHandler.dPadLeft = false;
         inputHandler.dPadRight = false;
         inputHandler.interactInput = false;
-        inputHandler.jumpInput = false;
         inputHandler.optionsInput = false;
 
         float deltaTime = Time.fixedDeltaTime;

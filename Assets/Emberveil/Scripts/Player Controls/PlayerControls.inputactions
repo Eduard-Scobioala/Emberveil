@@ -149,7 +149,7 @@
             "id": "ed307b72-f575-4ec4-9a85-93c3d844b1d6",
             "actions": [
                 {
-                    "name": "Roll",
+                    "name": "Dodge",
                     "type": "Button",
                     "id": "8f6d1d1a-fb58-4f4b-87f2-6f3b977e51ce",
                     "expectedControlType": "",
@@ -229,7 +229,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Roll",
+                    "action": "Dodge",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -240,7 +240,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Roll",
+                    "action": "Dodge",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

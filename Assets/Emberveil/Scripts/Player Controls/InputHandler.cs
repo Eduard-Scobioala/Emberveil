@@ -9,10 +9,8 @@ public class InputHandler : MonoBehaviour
     public float mouseX;
     public float mouseY;
 
-    public bool bInput;
     public bool interactInput;
     public bool optionsInput;
-    public bool jumpInput;
     public bool rightBumperInput;
     public bool rightTriggerInput;
     public bool dPadUp;
@@ -20,11 +18,12 @@ public class InputHandler : MonoBehaviour
     public bool dPadLeft;
     public bool dPadRight;
 
-    public bool sprintFlag;
-    public bool rollFlag;
     public bool comboFlag;
     public float rollInputTimer;
 
+    public static event Action DodgeButtonPressed;
+    public static event Action DodgeButtonReleased;
+    public static event Action JumpButtonPressed;
     public static event Action OptionsButtonPressed;
     public static event Action LockOnButtonPressed;
     public static event Action LeftLockOnTargetButtonPressed;
@@ -35,7 +34,6 @@ public class InputHandler : MonoBehaviour
     PlayerAttacker playerAttacker;
     PlayerInventory playerInventory;
     PlayerManager playerManager;
-    CameraHandler cameraHandler;
 
     Vector2 movementInput;
     Vector2 cameraInput;
@@ -45,7 +43,6 @@ public class InputHandler : MonoBehaviour
         playerAttacker = GetComponent<PlayerAttacker>();
         playerInventory = GetComponent<PlayerInventory>();
         playerManager = GetComponent<PlayerManager>();
-        cameraHandler = FindObjectOfType<CameraHandler>();
     }
 
     private void OnEnable()
@@ -63,10 +60,15 @@ public class InputHandler : MonoBehaviour
         SubscribeInputEventsToHandlers();
     }
 
+    private void OnDisable()
+    {
+        inputActions.Disable();
+    }
+
     private void SubscribeInputEventsToHandlers()
     {
-        inputActions.PlayerActions.Roll.started += _ => bInput = true;
-        inputActions.PlayerActions.Roll.canceled += _ => bInput = false;
+        inputActions.PlayerActions.Dodge.started += _ => DodgeButtonPressed?.Invoke();
+        inputActions.PlayerActions.Dodge.canceled += _ => DodgeButtonReleased?.Invoke();
 
         inputActions.PlayerActions.RB.performed += _ => rightBumperInput = true;
         inputActions.PlayerActions.RT.performed += _ => rightTriggerInput = true;
@@ -74,7 +76,7 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerQuickSlots.DPadRight.performed += _ => dPadRight = true;
         inputActions.PlayerQuickSlots.DPadLeft.performed += _ => dPadLeft = true;
 
-        inputActions.PlayerActions.Jump.performed += _ => jumpInput = true;
+        inputActions.PlayerActions.Jump.performed += _ => JumpButtonPressed?.Invoke();
         inputActions.PlayerActions.Interact.performed += _ => interactInput = true;
 
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
@@ -85,15 +87,9 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerMovement.LockOnTargetRight.performed += _ => RightLockOnTargetButtonPressed?.Invoke();
     }
 
-    private void OnDisable()
-    {
-        inputActions.Disable();
-    }
-
     public void TickInput(float deltaTime)
     {
         HandleMoveInput(deltaTime);
-        HandleRollInput(deltaTime);
         HandleAttackInput(deltaTime);
         HandleQuickSlotsInput();
     }
@@ -106,26 +102,6 @@ public class InputHandler : MonoBehaviour
 
         mouseX = cameraInput.x;
         mouseY = cameraInput.y;
-    }
-
-    private void HandleRollInput(float deltaTime)
-    {
-        sprintFlag = bInput;
-
-        if (bInput)
-        {
-            rollInputTimer += deltaTime;
-        }
-        else
-        {
-            if (rollInputTimer > 0 && rollInputTimer < 0.5f)
-            {
-                sprintFlag = false;
-                rollFlag = true;
-            }
-
-            rollInputTimer = 0;
-        }
     }
 
     private void HandleAttackInput(float deltaTime)
