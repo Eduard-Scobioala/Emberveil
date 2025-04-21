@@ -84,10 +84,10 @@ public class AnimatorHandler : MonoBehaviour
         anim.SetFloat(horizontal, h, 0.1f, Time.deltaTime);
     }
 
-    public void PlayTargetAnimation(string targetAnim, bool isInteracting)
+    public void PlayTargetAnimation(string targetAnim, bool isInMidAction)
     {
-        anim.applyRootMotion = isInteracting;
-        anim.SetBool("isInteracting", isInteracting);
+        anim.applyRootMotion = isInMidAction;
+        anim.SetBool("isInMidAction", isInMidAction);
         anim.CrossFade(targetAnim, 0.1f);
     }
 
@@ -97,7 +97,7 @@ public class AnimatorHandler : MonoBehaviour
 
     public void OnAnimatorMove()
     {
-        if (playerManager.isInteracting == false)
+        if (playerManager.isInMidAction == false)
             return;
 
         float deltaTime = Time.deltaTime;
@@ -109,7 +109,7 @@ public class AnimatorHandler : MonoBehaviour
         playerLocomotion.rigidbody.velocity = velocity;
     }
 
-    public bool IsInteracting() => anim.GetBool("isInteracting");
+    public bool IsInMidAction() => anim.GetBool("isInMidAction");
 
     public void EnableCombo()
     {

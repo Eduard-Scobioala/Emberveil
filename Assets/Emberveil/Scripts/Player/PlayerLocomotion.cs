@@ -124,7 +124,7 @@ public class PlayerLocomotion : MonoBehaviour
         if (isDoging)
             return;
 
-        if (playerManager.isInteracting)
+        if (playerManager.isInMidAction)
             return;
 
         moveDirection = cameraObject.forward * inputHandler.vertical;
@@ -174,7 +174,7 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void HandleRollingAndSprinting(float deltaTime)
     {
-        if (animatorHandler.IsInteracting())
+        if (animatorHandler.IsInMidAction())
             return;
 
         HandleDodgeFlags(deltaTime);
@@ -276,7 +276,7 @@ public class PlayerLocomotion : MonoBehaviour
 
             if (playerManager.isInAir == false)
             {
-                if (playerManager.isInteracting == false)
+                if (playerManager.isInMidAction == false)
                 {
                     animatorHandler.PlayTargetAnimation("Falling", true);
                 }
@@ -291,7 +291,7 @@ public class PlayerLocomotion : MonoBehaviour
         // Make sure the player keeps its position while in animations
         if (playerManager.isGrounded)
         {
-            if (playerManager.isInteracting || inputHandler.moveAmount > 0)
+            if (playerManager.isInMidAction || inputHandler.moveAmount > 0)
             {
                 transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime / 0.1f);
             }
@@ -303,7 +303,7 @@ public class PlayerLocomotion : MonoBehaviour
     }
     
     private void HandleJumpButtonPressed() {
-        if (playerManager.isInteracting)
+        if (playerManager.isInMidAction)
             return;
 
         if (inputHandler.moveAmount > 0)

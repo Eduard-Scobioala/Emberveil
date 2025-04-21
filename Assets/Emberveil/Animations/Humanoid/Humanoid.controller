@@ -581,7 +581,7 @@ AnimatorController:
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
-  - m_Name: isInteracting
+  - m_Name: isInMidAction
     m_Type: 4
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -839,7 +839,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f3740e71bb4b8c43af45bd5e8ef3ded, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetBool: isInteracting
+  targetBool: isInMidAction
   status: 0
 --- !u!1107 &3238382670554598858
 AnimatorStateMachine:

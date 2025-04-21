@@ -12,13 +12,14 @@ public class PlayerManager : CharacterManager
     private List<Interactable> nearbyInteractables = new ();
 
     [Header("Player Flags")]
-    public bool isInteracting;
+    public bool isInMidAction;
     public bool isSprinting;
     public bool isInAir;
     public bool isGrounded;
     public bool canDoCombo;
 
     private bool pickedUpItem = false;
+    private bool isInteracting = false;
 
     private void Start()
     {
@@ -28,11 +29,21 @@ public class PlayerManager : CharacterManager
         interactableUI = FindObjectOfType<InteractableUI>();
     }
 
+    private void OnEnable()
+    {
+        InputHandler.InteractButtonPressed += HandleInteractButtonPressed;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.InteractButtonPressed -= HandleInteractButtonPressed;
+    }
+
     private void Update()
     {
         var deltaTime = Time.deltaTime;
 
-        isInteracting = animator.GetBool("isInteracting");
+        isInMidAction = animator.GetBool("isInMidAction");
         canDoCombo = animator.GetBool("canDoCombo");
         animator.SetBool("isInAir", isInAir);
 
@@ -51,15 +62,6 @@ public class PlayerManager : CharacterManager
 
     private void LateUpdate()
     {
-        inputHandler.rightBumperInput = false;
-        inputHandler.rightTriggerInput = false;
-        inputHandler.dPadUp = false;
-        inputHandler.dPadDown = false;
-        inputHandler.dPadLeft = false;
-        inputHandler.dPadRight = false;
-        inputHandler.interactInput = false;
-        inputHandler.optionsInput = false;
-
         float deltaTime = Time.fixedDeltaTime;
 
         if (CameraHandler.Instance != null)
@@ -70,8 +72,13 @@ public class PlayerManager : CharacterManager
 
         if (isInAir)
         {
-            playerLocomotion.inAirTimer = playerLocomotion.inAirTimer + Time.deltaTime;
+            playerLocomotion.inAirTimer += Time.deltaTime;
         }
+    }
+
+    private void HandleInteractButtonPressed()
+    {
+        isInteracting = true;
     }
 
     #region Handle Interactables UI
@@ -102,8 +109,10 @@ public class PlayerManager : CharacterManager
                 interactableUI.interactableInfoText.text = closest.interactableInfoText;
                 interactableUI.EnableInteractionPopUpGameObject(true);
 
-                if (inputHandler.interactInput)
+                if (isInteracting)
                 {
+                    isInteracting = false;
+
                     interactableUI.itemInfoText.text = closest.GetItemName();
                     interactableUI.itemImage.sprite = closest.GetItemIcon();
 
@@ -119,8 +128,10 @@ public class PlayerManager : CharacterManager
         {
             interactableUI.EnableInteractionPopUpGameObject(false);
 
-            if (inputHandler.interactInput)
+            if (isInteracting)
             {
+                isInteracting = false;
+
                 interactableUI.EnableItemPopUpGameObject(false);
                 pickedUpItem = false;
             }

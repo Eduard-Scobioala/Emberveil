@@ -25,8 +25,8 @@ public class PlayerInventory : MonoBehaviour
     public WeaponItem[] weaponsInRightHandSlots = new WeaponItem[1];
     public WeaponItem[] weaponsInLeftHandSlots = new WeaponItem[1];
 
-    private int currentRightWeaponIndex = -1;
-    private int currentLeftWeaponIndex = -1;
+    private int currentRightWeaponIndex = 0;
+    private int currentLeftWeaponIndex = 0;
 
     public List<WeaponItem> weaponsInventory;
 
@@ -45,6 +45,28 @@ public class PlayerInventory : MonoBehaviour
         EquipWeapon(TryGetWeapon(weaponsInLeftHandSlots), true);
     }
 
+    private void OnEnable()
+    {
+        InputHandler.DPadLeftButtonPressed += HandleDPadLeftButtonPressed;
+        InputHandler.DPadRightButtonPressed += HandleDPadRightButtonPressed;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.DPadLeftButtonPressed -= HandleDPadLeftButtonPressed;
+        InputHandler.DPadRightButtonPressed -= HandleDPadRightButtonPressed;
+    }
+
+    private void HandleDPadLeftButtonPressed()
+    {
+        ChangeLeftWeapon();
+    }
+
+    private void HandleDPadRightButtonPressed()
+    {
+        ChangeRightWeapon();
+    }
+
     private WeaponItem TryGetWeapon(WeaponItem[] weaponItems)
     {
         if (weaponItems !=  null && weaponItems.Length > 0)
@@ -57,14 +79,14 @@ public class PlayerInventory : MonoBehaviour
         }
     }
 
-    public void ChangeRightWeapon()
-    {
-        ChangeWeapon(ref currentRightWeaponIndex, weaponsInRightHandSlots, false);
-    }
-
     public void ChangeLeftWeapon()
     {
         ChangeWeapon(ref currentLeftWeaponIndex, weaponsInLeftHandSlots, true);
+    }
+
+    public void ChangeRightWeapon()
+    {
+        ChangeWeapon(ref currentRightWeaponIndex, weaponsInRightHandSlots, false);
     }
 
     private void ChangeWeapon(ref int currentWeaponIndex, WeaponItem[] weaponSlots, bool isLeftHand)
@@ -118,38 +140,15 @@ public class PlayerInventory : MonoBehaviour
 
     public void SetItemFromEquipSlot(EquipSlotType slotType, WeaponItem item)
     {
-        switch(slotType)
+        switch (slotType)
         {
-            case EquipSlotType.RightHandSlot01:
-                weaponsInRightHandSlots[0] = item;
+            case >= EquipSlotType.RightHandSlot01 and <= EquipSlotType.RightHandSlot04:
+                weaponsInRightHandSlots[(int)slotType - (int)EquipSlotType.RightHandSlot01] = item;
                 RightHandWeapon = item;
                 break;
-            case EquipSlotType.RightHandSlot02:
-                weaponsInRightHandSlots[1] = item;
-                RightHandWeapon = item;
-                break;
-            case EquipSlotType.RightHandSlot03:
-                weaponsInRightHandSlots[2] = item;
-                RightHandWeapon = item;
-                break;
-            case EquipSlotType.RightHandSlot04:
-                weaponsInRightHandSlots[3] = item;
-                RightHandWeapon = item;
-                break;
-            case EquipSlotType.LeftHandSlot01:
-                weaponsInLeftHandSlots[0] = item;
-                LeftHandWeapon = item;
-                break;
-            case EquipSlotType.LeftHandSlot02:
-                weaponsInLeftHandSlots[1] = item;
-                LeftHandWeapon = item;
-                break;
-            case EquipSlotType.LeftHandSlot03:
-                weaponsInLeftHandSlots[2] = item;
-                LeftHandWeapon = item;
-                break;
-            case EquipSlotType.LeftHandSlot04:
-                weaponsInLeftHandSlots[3] = item;
+
+            case >= EquipSlotType.LeftHandSlot01 and <= EquipSlotType.LeftHandSlot04:
+                weaponsInLeftHandSlots[(int)slotType - (int)EquipSlotType.LeftHandSlot01] = item;
                 LeftHandWeapon = item;
                 break;
         }
