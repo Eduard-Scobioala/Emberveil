@@ -25,10 +25,7 @@ public class InputHandler : MonoBehaviour
 
     private void OnEnable()
     {
-        if (inputActions == null)
-        {
-            inputActions = new PlayerControls();
-        }
+        inputActions ??= new PlayerControls();
 
         inputActions.Enable();
         SubscribeInputEventsToHandlers();

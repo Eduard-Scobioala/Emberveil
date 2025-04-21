@@ -1,10 +1,8 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class PlayerManager : CharacterManager
 {
-    private InputHandler inputHandler;
     private Animator animator;
     private PlayerLocomotion playerLocomotion;
     private InteractableUI interactableUI;
@@ -23,7 +21,6 @@ public class PlayerManager : CharacterManager
 
     private void Start()
     {
-        inputHandler = GetComponent<InputHandler>();
         animator = GetComponentInChildren<Animator>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         interactableUI = FindObjectOfType<InteractableUI>();
