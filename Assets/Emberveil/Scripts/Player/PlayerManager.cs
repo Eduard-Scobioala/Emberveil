@@ -46,8 +46,6 @@ public class PlayerManager : CharacterManager
         isInMidAction = animator.GetBool("isInMidAction");
         canDoCombo = animator.GetBool("canDoCombo");
         animator.SetBool("isInAir", isInAir);
-
-        inputHandler.TickInput(deltaTime);
         
         HandleInteractableUI();
     }
@@ -62,14 +60,6 @@ public class PlayerManager : CharacterManager
 
     private void LateUpdate()
     {
-        float deltaTime = Time.fixedDeltaTime;
-
-        if (CameraHandler.Instance != null)
-        {
-            CameraHandler.Instance.FollowTarget(deltaTime);
-            CameraHandler.Instance.HandleCameraRotation(deltaTime, inputHandler.mouseX, inputHandler.mouseY);
-        }
-
         if (isInAir)
         {
             playerLocomotion.inAirTimer += Time.deltaTime;

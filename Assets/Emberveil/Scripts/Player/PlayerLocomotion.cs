@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 using UnityEngine.Windows;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
@@ -6,7 +7,6 @@ using static UnityEditor.Searcher.SearcherWindow.Alignment;
 public class PlayerLocomotion : MonoBehaviour
 {
     private Transform cameraObject;
-    private InputHandler inputHandler;
     private PlayerManager playerManager;
     public Vector3 moveDirection;
 
@@ -37,11 +37,15 @@ public class PlayerLocomotion : MonoBehaviour
     private bool isDoging = false;
 
     private float dodgeInputTimer;
+    private float horizontal;
+    private float vertical;
+    private float moveAmount;
+    private float mouseX;
+    private float mouseY;
 
     private void Start()
     {
         rigidbody = GetComponent<Rigidbody>();
-        inputHandler = GetComponent<InputHandler>();
         playerManager = GetComponent<PlayerManager>();
         animatorHandler = GetComponentInChildren<AnimatorHandler>();
 
@@ -55,13 +59,20 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void OnEnable()
     {
+        InputHandler.PlayerMovementPerformed += HandleMovementInput;
+        InputHandler.CameraMovementPerformed += HandleCameraInput;
+
         InputHandler.DodgeButtonPressed += HandleDodgeButtonPressed;
         InputHandler.DodgeButtonReleased += HandleDodgeButtonReleased;
         InputHandler.JumpButtonPressed += HandleJumpButtonPressed;
+
     }
 
     private void OnDisable()
     {
+        InputHandler.PlayerMovementPerformed -= HandleMovementInput;
+        InputHandler.CameraMovementPerformed -= HandleCameraInput;
+
         InputHandler.DodgeButtonPressed -= HandleDodgeButtonPressed;
         InputHandler.DodgeButtonReleased -= HandleDodgeButtonReleased;
         InputHandler.JumpButtonPressed -= HandleJumpButtonPressed;
@@ -72,6 +83,30 @@ public class PlayerLocomotion : MonoBehaviour
         var deltaTime = Time.deltaTime;
 
         HandleRollingAndSprinting(deltaTime);
+    }
+
+    private void LateUpdate()
+    {
+        float deltaTime = Time.fixedDeltaTime;
+
+        if (CameraHandler.Instance != null)
+        {
+            CameraHandler.Instance.FollowTarget(deltaTime);
+            CameraHandler.Instance.HandleCameraRotation(deltaTime, mouseX, mouseY);
+        }
+    }
+
+    private void HandleMovementInput(Vector2 movementInput)
+    {
+        horizontal = movementInput.x;
+        vertical = movementInput.y;
+        moveAmount = Mathf.Clamp01(Mathf.Abs(horizontal) + Mathf.Abs(vertical));
+    }
+
+    private void HandleCameraInput(Vector2 cameraInput)
+    {
+        mouseX = cameraInput.x;
+        mouseY = cameraInput.y;
     }
 
     private void HandleDodgeButtonPressed()
@@ -102,7 +137,7 @@ public class PlayerLocomotion : MonoBehaviour
         }
         else
         {
-            targetDir = cameraObject.forward * inputHandler.vertical + cameraObject.right * inputHandler.horizontal;
+            targetDir = cameraObject.forward * vertical + cameraObject.right * horizontal;
 
             if (targetDir == Vector3.zero)
             {
@@ -127,14 +162,14 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerManager.isInMidAction)
             return;
 
-        moveDirection = cameraObject.forward * inputHandler.vertical;
+        moveDirection = cameraObject.forward * vertical;
 
-        moveDirection += cameraObject.right * inputHandler.horizontal;
+        moveDirection += cameraObject.right * horizontal;
         moveDirection.Normalize();
         moveDirection.y = 0;
 
         float speed = movementSpeed;
-        if (isSprinting && inputHandler.moveAmount > 0.5f)
+        if (isSprinting && moveAmount > 0.5f)
         {
             speed = sprintSpeed;
             playerManager.isSprinting = true;
@@ -142,7 +177,7 @@ public class PlayerLocomotion : MonoBehaviour
         }
         else
         {
-            if (inputHandler.moveAmount <= 0.5f)
+            if (moveAmount <= 0.5f)
             {
                 moveDirection *= walkingSpeed;
             }
@@ -159,11 +194,11 @@ public class PlayerLocomotion : MonoBehaviour
 
         if (cameraHandler.lockOnFlag && !isSprinting)
         {
-            animatorHandler.UpdateAnimatorValues(inputHandler.vertical, inputHandler.horizontal, playerManager.isSprinting);
+            animatorHandler.UpdateAnimatorValues(vertical, horizontal, playerManager.isSprinting);
         }
         else
         {
-            animatorHandler.UpdateAnimatorValues(inputHandler.moveAmount, 0, playerManager.isSprinting);
+            animatorHandler.UpdateAnimatorValues(moveAmount, 0, playerManager.isSprinting);
         }
 
         if (animatorHandler.canRotate)
@@ -183,10 +218,10 @@ public class PlayerLocomotion : MonoBehaviour
         {
             isDoging = false;
 
-            moveDirection = cameraObject.forward * inputHandler.vertical;
-            moveDirection += cameraObject.right * inputHandler.horizontal;
+            moveDirection = cameraObject.forward * vertical;
+            moveDirection += cameraObject.right * horizontal;
 
-            if (inputHandler.moveAmount > 0)
+            if (moveAmount > 0)
             {
                 animatorHandler.PlayTargetAnimation("Roll", true);
                 moveDirection.y = 0;
@@ -291,7 +326,7 @@ public class PlayerLocomotion : MonoBehaviour
         // Make sure the player keeps its position while in animations
         if (playerManager.isGrounded)
         {
-            if (playerManager.isInMidAction || inputHandler.moveAmount > 0)
+            if (playerManager.isInMidAction || moveAmount > 0)
             {
                 transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime / 0.1f);
             }
@@ -306,10 +341,10 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerManager.isInMidAction)
             return;
 
-        if (inputHandler.moveAmount > 0)
+        if (moveAmount > 0)
         {
-            moveDirection = cameraObject.forward * inputHandler.vertical
-                + cameraObject.right * inputHandler.horizontal;
+            moveDirection = cameraObject.forward * vertical
+                + cameraObject.right * horizontal;
             moveDirection.y = 0;
             
             animatorHandler.PlayTargetAnimation("Jump", true);

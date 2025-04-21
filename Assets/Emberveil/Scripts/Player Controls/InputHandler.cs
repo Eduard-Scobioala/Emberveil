@@ -3,12 +3,8 @@ using UnityEngine;
 
 public class InputHandler : MonoBehaviour
 {
-    public float horizontal;
-    public float vertical;
-    public float moveAmount;
-    public float mouseX;
-    public float mouseY;
-
+    public static event Action<Vector2> PlayerMovementPerformed;
+    public static event Action<Vector2> CameraMovementPerformed;
     public static event Action DodgeButtonPressed;
     public static event Action DodgeButtonReleased;
     public static event Action JumpButtonPressed;
@@ -27,18 +23,11 @@ public class InputHandler : MonoBehaviour
 
     PlayerControls inputActions;
 
-    Vector2 movementInput;
-    Vector2 cameraInput;
-
     private void OnEnable()
     {
         if (inputActions == null)
         {
             inputActions = new PlayerControls();
-            inputActions.PlayerMovement.Movement.performed +=
-                context => movementInput = context.ReadValue<Vector2>();
-            inputActions.PlayerMovement.Camera.performed +=
-                context => cameraInput = context.ReadValue<Vector2>();
         }
 
         inputActions.Enable();
@@ -52,6 +41,12 @@ public class InputHandler : MonoBehaviour
 
     private void SubscribeInputEventsToHandlers()
     {
+        inputActions.PlayerMovement.Movement.performed +=
+            context => PlayerMovementPerformed?.Invoke(context.ReadValue<Vector2>());
+
+        inputActions.PlayerMovement.Camera.performed +=
+            context => CameraMovementPerformed?.Invoke(context.ReadValue<Vector2>());
+
         inputActions.PlayerActions.Dodge.started += _ => DodgeButtonPressed?.Invoke();
         inputActions.PlayerActions.Dodge.canceled += _ => DodgeButtonReleased?.Invoke();
 
@@ -70,20 +65,5 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerMovement.LockOnTargetRight.performed += _ => RightLockOnTargetButtonPressed?.Invoke();
 
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
-    }
-
-    public void TickInput(float deltaTime)
-    {
-        HandleMoveInput(deltaTime);
-    }
-
-    private void HandleMoveInput(float deltaTime)
-    {
-        horizontal = movementInput.x;
-        vertical = movementInput.y;
-        moveAmount = Mathf.Clamp01(Mathf.Abs(horizontal) + Mathf.Abs(vertical));
-
-        mouseX = cameraInput.x;
-        mouseY = cameraInput.y;
     }
 }
