@@ -61,21 +61,12 @@ public class PlayerLocomotion : MonoBehaviour
     {
         InputHandler.PlayerMovementPerformed += HandleMovementInput;
         InputHandler.CameraMovementPerformed += HandleCameraInput;
-
-        InputHandler.DodgeButtonPressed += HandleDodgeButtonPressed;
-        InputHandler.DodgeButtonReleased += HandleDodgeButtonReleased;
-        InputHandler.JumpButtonPressed += HandleJumpButtonPressed;
-
     }
 
     private void OnDisable()
     {
         InputHandler.PlayerMovementPerformed -= HandleMovementInput;
         InputHandler.CameraMovementPerformed -= HandleCameraInput;
-
-        InputHandler.DodgeButtonPressed -= HandleDodgeButtonPressed;
-        InputHandler.DodgeButtonReleased -= HandleDodgeButtonReleased;
-        InputHandler.JumpButtonPressed -= HandleJumpButtonPressed;
     }
 
     private void Update()
@@ -109,13 +100,13 @@ public class PlayerLocomotion : MonoBehaviour
         mouseY = cameraInput.y;
     }
 
-    private void HandleDodgeButtonPressed()
+    public void HandleDodgeButtonPressed()
     {
         isDodgeButtonPressed = true;
         isSprinting = true;
     }
 
-    private void HandleDodgeButtonReleased()
+    public void HandleDodgeButtonReleased()
     {
         isDodgeButtonPressed = false;
         isSprinting = false;
@@ -337,7 +328,7 @@ public class PlayerLocomotion : MonoBehaviour
         }
     }
     
-    private void HandleJumpButtonPressed() {
+    public void HandleJumpButtonPressed() {
         if (playerManager.isInMidAction)
             return;
 

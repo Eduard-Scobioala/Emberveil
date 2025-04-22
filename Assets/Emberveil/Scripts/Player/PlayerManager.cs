@@ -6,8 +6,7 @@ public class PlayerManager : CharacterManager
     private Animator animator;
     private PlayerLocomotion playerLocomotion;
     private InteractableUI interactableUI;
-
-    private List<Interactable> nearbyInteractables = new ();
+    private PlayerAttacker playerAttacker;
 
     [Header("Player Flags")]
     public bool isInMidAction;
@@ -19,30 +18,53 @@ public class PlayerManager : CharacterManager
     private bool pickedUpItem = false;
     private bool isInteracting = false;
 
+    private List<Interactable> nearbyInteractables = new ();
+
+    // Command buffering
+    private ICommand pendingCommand;
+    private bool wasInMidAction = false;
+
     private void Start()
     {
         animator = GetComponentInChildren<Animator>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
+        playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
     }
 
     private void OnEnable()
     {
         InputHandler.InteractButtonPressed += HandleInteractButtonPressed;
+        InputHandler.LightAttackButtonPressed += HandleLightAttackInput;
+        InputHandler.HeavyAttackButtonPressed += HandleHeavyAttackInput;
+        InputHandler.JumpButtonPressed += HandleJumpInput;
+        InputHandler.DodgeButtonPressed += HandleDodgeButtonPressed;
+        InputHandler.DodgeButtonReleased += HandleDodgeButtonReleased;
     }
 
     private void OnDisable()
     {
         InputHandler.InteractButtonPressed -= HandleInteractButtonPressed;
+        InputHandler.LightAttackButtonPressed -= HandleLightAttackInput;
+        InputHandler.HeavyAttackButtonPressed -= HandleHeavyAttackInput;
+        InputHandler.JumpButtonPressed -= HandleJumpInput;
+        InputHandler.DodgeButtonPressed -= HandleDodgeButtonPressed;
+        InputHandler.DodgeButtonReleased -= HandleDodgeButtonReleased;
     }
 
     private void Update()
     {
-        var deltaTime = Time.deltaTime;
-
         isInMidAction = animator.GetBool("isInMidAction");
         canDoCombo = animator.GetBool("canDoCombo");
         animator.SetBool("isInAir", isInAir);
+
+        // Execute pending command when action ends
+        if (wasInMidAction && !isInMidAction && pendingCommand != null)
+        {
+            pendingCommand.Execute();
+            pendingCommand = null;
+        }
+        wasInMidAction = isInMidAction;
         
         HandleInteractableUI();
     }
@@ -63,10 +85,54 @@ public class PlayerManager : CharacterManager
         }
     }
 
+    #region Handle Commands
+    private void HandleCommand(ICommand command)
+    {
+        if (!isInMidAction)
+        {
+            command.Execute();
+        }
+        else
+        {
+            pendingCommand = command;
+        }
+    }
+
+    private void HandleLightAttackInput()
+    {
+        ICommand command = new LightAttackCommand(playerAttacker);
+        HandleCommand(command);
+    }
+
+    private void HandleHeavyAttackInput()
+    {
+        ICommand command = new HeavyAttackCommand(playerAttacker);
+        HandleCommand(command);
+    }
+
+    private void HandleJumpInput()
+    {
+        ICommand command = new JumpCommand(playerLocomotion);
+        HandleCommand(command);
+    }
+
+    private void HandleDodgeButtonPressed()
+    {
+        ICommand command = new DodgeCommand(playerLocomotion, true);
+        HandleCommand(command);
+    }
+
+    private void HandleDodgeButtonReleased()
+    {
+        ICommand command = new DodgeCommand(playerLocomotion, false);
+        command.Execute();
+    }
+    
     private void HandleInteractButtonPressed()
     {
         isInteracting = true;
     }
+    #endregion
 
     #region Handle Interactables UI
     public void AddInteractable(Interactable interactable)

@@ -21,19 +21,7 @@ public class PlayerAttacker : MonoBehaviour
         playerInventory = GetComponent<PlayerInventory>();
     }
 
-    private void OnEnable()
-    {
-        InputHandler.LightAttackButtonPressed += HandleLightAttackButtonPressed;
-        InputHandler.HeavyAttackButtonPressed += HandleHeavyAttackButtonPressed;
-    }
-
-    private void OnDisable()
-    {
-        InputHandler.LightAttackButtonPressed -= HandleLightAttackButtonPressed;
-        InputHandler.HeavyAttackButtonPressed += HandleHeavyAttackButtonPressed;
-    }
-
-    private void HandleLightAttackButtonPressed()
+    public void HandleLightAttackButtonPressed()
     {
         if (playerManager.canDoCombo)
         {
@@ -49,7 +37,7 @@ public class PlayerAttacker : MonoBehaviour
         }
     }
 
-    private void HandleHeavyAttackButtonPressed()
+    public void HandleHeavyAttackButtonPressed()
     {
         HeavyAttack(playerInventory.RightHandWeapon);
     }
