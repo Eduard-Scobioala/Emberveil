@@ -17,9 +17,8 @@ public class WeaponSlotManager : MonoBehaviour
 
     public WeaponItem attackingWeapon = null;
 
-    private bool isTwoHanding = false;
+    public bool isTwoHanding = false;
     
-
     private void Awake()
     {
         WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();

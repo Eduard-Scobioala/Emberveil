@@ -22,6 +22,8 @@ MonoBehaviour:
   Two_Handed_Idle: Two_Handed_Idle
   OH_Light_Attack_01: OH_Light_Attack_01
   OH_Light_Attack_02: OH_Light_Attack_02
+  TH_Light_Attack_01: TH_Light_Attack_01
+  TH_Light_Attack_02: TH_Light_Attack_02
   OH_Heavy_Attack_01: OH_Heavy_Attack_01
   baseStamina: 0
   lightAttackMultiplier: 0

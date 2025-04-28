@@ -48,8 +48,7 @@ public class WeaponHolderSlot : MonoBehaviour
                 model.transform.parent = transform;
             }
 
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
+            model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             model.transform.localScale = Vector3.one;
         }
 

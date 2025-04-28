@@ -1,12 +1,10 @@
 using UnityEngine;
 
-public class AnimatorHandler : MonoBehaviour
+public class AnimatorHandler : AnimatorManager
 {
     private int vertical;
     private int horizontal;
 
-    public Animator anim;
-    private InputHandler inputHandler;
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
     public bool canRotate;
@@ -14,7 +12,6 @@ public class AnimatorHandler : MonoBehaviour
     public void Initialize()
     {
         anim = GetComponent<Animator>();
-        inputHandler = GetComponentInParent<InputHandler>();
         playerLocomotion = GetComponentInParent<PlayerLocomotion>();
         playerManager = GetComponentInParent<PlayerManager>();
 
@@ -82,13 +79,6 @@ public class AnimatorHandler : MonoBehaviour
 
         anim.SetFloat(vertical, v, 0.1f, Time.deltaTime);
         anim.SetFloat(horizontal, h, 0.1f, Time.deltaTime);
-    }
-
-    public void PlayTargetAnimation(string targetAnim, bool isInMidAction)
-    {
-        anim.applyRootMotion = isInMidAction;
-        anim.SetBool("isInMidAction", isInMidAction);
-        anim.CrossFade(targetAnim, 0.1f);
     }
 
     public void EnableRotation() => canRotate = true;

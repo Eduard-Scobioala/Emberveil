@@ -14,6 +14,8 @@ public class WeaponItem : Item
     [Header("One Handed Attack Animations")]
     public string OH_Light_Attack_01;
     public string OH_Light_Attack_02;
+    public string TH_Light_Attack_01;
+    public string TH_Light_Attack_02;
     public string OH_Heavy_Attack_01;
 
     [Header("Stamina Costs")]
