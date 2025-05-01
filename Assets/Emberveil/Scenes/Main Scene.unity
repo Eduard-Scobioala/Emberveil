@@ -352,7 +352,7 @@ GameObject:
   - component: {fileID: 110089552}
   - component: {fileID: 110089554}
   - component: {fileID: 110089553}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Aura
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5637,7 +5637,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 171620247}
-  - component: {fileID: 171620246}
+  - component: {fileID: 171620248}
   m_Layer: 0
   m_Name: Navmesh Baker
   m_TagString: Untagged
@@ -5645,7 +5645,22 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &171620246
+--- !u!4 &171620247
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 171620245}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &171620248
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5674,23 +5689,8 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: a0eff652162b84d31959cfd021fbdf4e, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 46f3311a0406de741aa06e25fae468bd, type: 2}
   m_BuildHeightMesh: 0
---- !u!4 &171620247
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 171620245}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &176853316
 GameObject:
   m_ObjectHideFlags: 0
@@ -8332,6 +8332,7 @@ MonoBehaviour:
   minDetectionAngle: -50
   maxDetectionAngle: 50
   isPerformingAction: 0
+  enemyAttacks: []
 --- !u!1 &907832603 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: caed417d0c17a134696ff2ef8b52a764,
@@ -9456,6 +9457,9 @@ MonoBehaviour:
   minDetectionAngle: -50
   maxDetectionAngle: 50
   isPerformingAction: 0
+  enemyAttacks:
+  - {fileID: 11400000, guid: f130458bd5797784fb0162bacf927ab3, type: 2}
+  - {fileID: 11400000, guid: 479a0ce69ee4cca4b895742056777b8c, type: 2}
 --- !u!114 &1455925449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10592,7 +10596,7 @@ GameObject:
   - component: {fileID: 1966264702}
   - component: {fileID: 1966264704}
   - component: {fileID: 1966264703}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Aura
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -15742,7 +15746,7 @@ GameObject:
   - component: {fileID: 2052189488}
   - component: {fileID: 2052189487}
   - component: {fileID: 2052189486}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Item
   m_TagString: Interactable
   m_Icon: {fileID: 0}
@@ -16209,6 +16213,7 @@ MonoBehaviour:
   minDetectionAngle: -50
   maxDetectionAngle: 50
   isPerformingAction: 0
+  enemyAttacks: []
 --- !u!1 &2135467186
 GameObject:
   m_ObjectHideFlags: 0
@@ -16401,7 +16406,7 @@ GameObject:
   - component: {fileID: 2140602193}
   - component: {fileID: 2140602192}
   - component: {fileID: 2140602191}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Item
   m_TagString: Interactable
   m_Icon: {fileID: 0}
@@ -17635,6 +17640,11 @@ PrefabInstance:
       propertyPath: cameraHandler
       value: 
       objectReference: {fileID: 8058746314346374715}
+    - target: {fileID: 6907088894822583122, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: ignoreForGroundCheck.m_Bits
+      value: 15415
+      objectReference: {fileID: 0}
     - target: {fileID: 7392619686556425504, guid: d1d9d6542d224c74fab4e17d1e6f8596,
         type: 3}
       propertyPath: m_Name

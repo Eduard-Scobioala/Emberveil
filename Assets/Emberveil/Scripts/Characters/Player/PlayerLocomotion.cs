@@ -26,7 +26,7 @@ public class PlayerLocomotion : MonoBehaviour
     [SerializeField] private float groundDetectionRayStartPoint = 0.5f;
     [SerializeField] private float minimumDistanceNeededToBeginFall = 1f;
     [SerializeField] private float groundDirectionRayDistance = 0.2f;
-    private LayerMask ignoreForGroundCheck;
+    [SerializeField] private LayerMask ignoreForGroundCheck;
     public float inAirTimer;
 
     [Header("Camera Reference")]
@@ -54,7 +54,6 @@ public class PlayerLocomotion : MonoBehaviour
         animatorHandler.Initialize();
 
         playerManager.isGrounded = true;
-        ignoreForGroundCheck = ~LayerMask.GetMask("Interactable");
     }
 
     private void OnEnable()
