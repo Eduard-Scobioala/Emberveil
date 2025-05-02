@@ -20,6 +20,6 @@ public class EnemyAnimator : AnimatorManager
         deltaPosition.y = 0;
 
         Vector3 velocity = deltaPosition / deltaTime;
-        enemyLocomotion.enemyRigidbody.velocity = velocity;  
+        //enemyLocomotion.enemyRigidbody.velocity = velocity;  
     }
 }

@@ -10,8 +10,6 @@ public class ChaseState : EnemyState
         base.EnterState(enemy);
         Debug.Log($"{enemy.gameObject.name} entered CHASE state");
 
-        enemyAnimator.anim.SetFloat("Vertical", 1, 0.1f, Time.deltaTime);
-        enemyLocomotion.EnableNavMeshAgent();
         targetLossTimer = 0f;
     }
 
@@ -49,50 +47,40 @@ public class ChaseState : EnemyState
         {
             enemyLocomotion.HandleMoveToTarget();
         }
-        else
-        {
-            // If target became null (e.g., from UpdateState checks), switch to idle
-            if (enemyLocomotion.currentTarget == null)
-            {
-                enemyManager.SwitchState(enemyManager.idleState);
-            }
-        }
     }
 
     public override void ExitState()
     {
-        enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
         enemyLocomotion.DisableNavMeshAgent();
+        enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
         targetLossTimer = 0f;
     }
 
-    public override void CheckStateTransitions()
+    public override void CheckStateTransitions() // Called from Update
     {
-        // Condition 1: Target Lost (Timer expired or became null)
+        // Condition 1: Target Lost
         if (enemyLocomotion.currentTarget == null || targetLossTimer >= timeUntilTargetLoss)
         {
-            if (enemyLocomotion.currentTarget != null)
+            if (enemyLocomotion.currentTarget != null && targetLossTimer >= timeUntilTargetLoss)
             {
-                Debug.Log($"{enemyManager.gameObject.name} lost target: Timer expired ({targetLossTimer}s >= {timeUntilTargetLoss}s). Returning to Idle.");
+                Debug.Log($"{enemyManager.gameObject.name} lost target: Timer expired. Returning to Idle.");
             }
-            enemyLocomotion.currentTarget = null;
+            enemyLocomotion.currentTarget = null; // Ensure target is nullified
             enemyManager.SwitchState(enemyManager.idleState);
             return;
         }
 
-        // Condition 2: Target still valid, check for combat range
-        if (enemyLocomotion.currentTarget != null)
-        {
-            enemyLocomotion.distanceFromTarget = Vector3.Distance(
-                enemyLocomotion.currentTarget.transform.position,
-                enemyManager.transform.position);
+        // Condition 2: Target valid, check combat range
+        // distanceFromTarget is updated within HandleMoveToTarget, but we might need it here too
+        enemyLocomotion.distanceFromTarget = Vector3.Distance(
+               enemyLocomotion.currentTarget.transform.position,
+               enemyManager.transform.position);
 
-            // If close enough, switch to combat
-            if (enemyLocomotion.distanceFromTarget <= enemyLocomotion.stoppingDistance)
-            {
-                enemyManager.SwitchState(enemyManager.combatState);
-            }
-            // Else: Continue chasing (handled by FixedUpdateState)
+        // Use the NavMeshAgent's stopping distance for consistency
+        if (enemyLocomotion.distanceFromTarget <= enemyLocomotion.navMeshAgent.stoppingDistance)
+        {
+            enemyManager.SwitchState(enemyManager.combatState);
         }
+        // Else: Continue chasing (handled by FixedUpdateState calling HandleMoveToTarget)
     }
 }

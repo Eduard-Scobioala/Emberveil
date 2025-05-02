@@ -8,7 +8,7 @@ public class EnemyLocomotion : MonoBehaviour
 
     private EnemyManager enemyManager;
     private EnemyAnimator enemyAnimator;
-    private NavMeshAgent navMeshAgent;
+    public NavMeshAgent navMeshAgent;
 
     [Header("Locomotion Settings")]
     public CharacterStats currentTarget;
@@ -24,14 +24,25 @@ public class EnemyLocomotion : MonoBehaviour
     {
         enemyManager = GetComponent<EnemyManager>();
         enemyAnimator = GetComponentInChildren<EnemyAnimator>();
-        navMeshAgent = GetComponentInChildren<NavMeshAgent>();
+        navMeshAgent = GetComponent<NavMeshAgent>();
         enemyRigidbody = GetComponent<Rigidbody>();
+
+        if (navMeshAgent == null)
+        {
+            Debug.LogError("NavMeshAgent component not found on " + gameObject.name + " or its children!", this);
+        }
+        
+        if (enemyRigidbody == null)
+        {
+            Debug.LogError("Rigidbody component not found on " + gameObject.name + "!", this);
+        }
     }
 
     private void Start()
     {
+        // Start with Rigidbody non-kinematic and Agent disabled (idle state)
+        if (enemyRigidbody != null) enemyRigidbody.isKinematic = false;
         DisableNavMeshAgent();
-        enemyRigidbody.isKinematic = false;
     }
 
     public void FindAndVerifyTarget()
@@ -125,14 +136,20 @@ public class EnemyLocomotion : MonoBehaviour
     {
         if (currentTarget == null) return false;
 
-        Vector3 targetPoint = currentTarget.transform.position + Vector3.up * 1.5f;
-        Vector3 originPoint = transform.position + Vector3.up * 1.5f;
+        // Use a point slightly above the enemy's base for the origin
+        Vector3 originPoint = transform.position + Vector3.up * navMeshAgent.height * 0.8f; // e.g., 80% of agent height
+        // Use a point around the center of the target
+        Vector3 targetCenterPoint = currentTarget.transform.position + Vector3.up * 1.0f; // Adjust based on target size/pivot
 
-        if (Physics.Linecast(originPoint, targetPoint, out RaycastHit hit, occlusionLayer))
+        // Debug Draw Line
+        // Debug.DrawLine(originPoint, targetCenterPoint, Color.yellow);
+
+        if (Physics.Linecast(originPoint, targetCenterPoint, out RaycastHit hit, occlusionLayer))
         {
-            // If hit something, check if it WASN'T the target
+            // If hit something, check if it WASN'T the target or a child of the target
             if (hit.transform != currentTarget.transform && !hit.transform.IsChildOf(currentTarget.transform))
             {
+                // Debug.Log($"LoS blocked by {hit.collider.name}");
                 return false; // LoS blocked
             }
         }
@@ -144,88 +161,119 @@ public class EnemyLocomotion : MonoBehaviour
     {
         if (currentTarget == null || enemyManager.isPerformingAction)
         {
-            if (navMeshAgent.enabled) navMeshAgent.ResetPath(); // Stop moving if target lost
+            // If we stop moving, disable the agent and make RB non-kinematic
+            if (IsAgentEnabled())
+            {
+                DisableNavMeshAgent();
+            }
             enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
             return;
         }
 
         distanceFromTarget = Vector3.Distance(currentTarget.transform.position, transform.position);
 
-        // If we are performing an action, stop the movement
-        if (enemyManager.isPerformingAction)
-        {
-            enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
-            DisableNavMeshAgent();
-        }
-        else
-        {
-            if (distanceFromTarget > stoppingDistance)
-            {
-                enemyAnimator.anim.SetFloat("Vertical", 1, 0.1f, Time.deltaTime);
-                EnableNavMeshAgent(); // Make sure agent is enabled for chasing
+        // Stopping distance for NavMeshAgent should be slightly LARGER than
+        // the distance check here to prevent jittering at the destination.
+        // Or handle stopping purely based on agent's remainingDistance.
+        // Let's use the agent's stopping distance primarily.
 
-                if (navMeshAgent.enabled)
-                {
-                    navMeshAgent.SetDestination(currentTarget.transform.position);
-                }
-            }
-            else if (distanceFromTarget <= stoppingDistance)
+        // Make sure agent is enabled for chasing
+        EnableNavMeshAgent(); // This now handles setting Rigidbody kinematic
+
+        if (navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.SetDestination(currentTarget.transform.position);
+
+            // Check if agent has reached the destination (or very close)
+            // Use remainingDistance which is more reliable than manual distance check sometimes
+            if (navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance) // Use agent's stopping distance
             {
+                // Reached destination (or close enough based on agent settings)
                 enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
-                if (navMeshAgent.enabled) navMeshAgent.ResetPath();
+                // Don't disable agent here yet, CombatState might need rotation or fine positioning
+                // CombatState entry will handle disabling if needed.
+                // Stop the agent from moving further by setting velocity to 0 maybe? Or ResetPath?
+                // Let's rely on the state transition to Combat to handle full stop.
+                navMeshAgent.velocity = Vector3.zero; // Try stopping velocity explicitly
+            }
+            else
+            {
+                // Still moving
+                enemyAnimator.anim.SetFloat("Vertical", navMeshAgent.desiredVelocity.magnitude > 0.1f ? 1 : 0, 0.1f, Time.deltaTime); // Use agent velocity for anim
             }
         }
 
-        HandleRotateTowardsTarget();
+        // --- Rotation Handling ---
+        // OPTION A: Agent handles rotation (Remove this block)
+        // HandleRotateTowardsTarget();
 
-        // Ensure NavMeshAgent stays at root position
-        //if (navMeshAgent.enabled)
-        //{
-        //    navMeshAgent.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-        //}
+        // OPTION B: Manual rotation (Keep this block, disable agent rotation in Inspector)
+        // HandleRotateTowardsTarget();
     }
 
     public void HandleRotateTowardsTarget()
     {
         if (currentTarget == null) return;
-
-        HandleRotateTowardsPosition(currentTarget.transform.position);
+        // Only rotate manually if the agent ISN'T handling rotation
+        if (navMeshAgent != null && !navMeshAgent.updateRotation)
+        {
+            HandleRotateTowardsPosition(currentTarget.transform.position);
+        }
     }
 
     public void HandleRotateTowardsPosition(Vector3 targetPosition)
     {
-        float deltaTime = Time.deltaTime;
-
-        // Calculate the direction to the target position
-        Vector3 direction = targetPosition - transform.position;
-        direction.y = 0; // Keep rotation horizontal (on the XZ plane)
-        direction.Normalize();
-
-        // If the direction is effectively zero (we are already at the target), use the current forward direction
-        if (direction == Vector3.zero)
+        // Only rotate manually if the agent ISN'T handling rotation OR if the agent is disabled
+        if (navMeshAgent != null && (!navMeshAgent.updateRotation || !navMeshAgent.enabled))
         {
-            direction = transform.forward;
+            float deltaTime = Time.deltaTime;
+            Vector3 direction = targetPosition - transform.position;
+            direction.y = 0;
+            direction.Normalize();
+
+            if (direction == Vector3.zero) return; // Already facing or at the point
+
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
         }
-
-        // Calculate the target rotation looking towards the direction
-        Quaternion targetRotation = Quaternion.LookRotation(direction);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
     }
 
     public void EnableNavMeshAgent()
     {
-        if (!navMeshAgent.enabled)
+        if (navMeshAgent != null && !navMeshAgent.enabled)
         {
             navMeshAgent.enabled = true;
+            if (enemyRigidbody != null)
+            {
+                // Make Rigidbody kinematic when Agent is active
+                enemyRigidbody.isKinematic = true;
+            }
         }
     }
 
     public void DisableNavMeshAgent()
     {
-        if (navMeshAgent.enabled)
+        if (navMeshAgent != null && navMeshAgent.enabled)
         {
+            // Reset path before disabling to stop residual movement/velocity
+            if (navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.ResetPath();
+                // Optional: Explicitly stop agent velocity if needed
+                // navMeshAgent.velocity = Vector3.zero;
+            }
             navMeshAgent.enabled = false;
+            if (enemyRigidbody != null)
+            {
+                // Make Rigidbody non-kinematic when Agent is inactive
+                // Allows physics interaction (like falling, being pushed if needed)
+                enemyRigidbody.isKinematic = false;
+            }
+        }
+        // Also ensure rigidbody is non-kinematic if agent was already disabled
+        else if (enemyRigidbody != null && enemyRigidbody.isKinematic)
+        {
+            enemyRigidbody.isKinematic = false;
         }
     }
 

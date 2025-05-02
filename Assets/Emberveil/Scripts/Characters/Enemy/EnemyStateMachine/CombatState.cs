@@ -12,19 +12,27 @@ public class CombatState : EnemyState
         Debug.Log($"{enemy.gameObject.name} entered COMBAT state");
 
         // === Ensure Stopping on Entry ===
-        enemyAnimator.anim.SetFloat("Vertical", 0, 0.05f, Time.deltaTime); // Faster damp time to stop sooner
+        enemyAnimator.anim.SetFloat("Vertical", 0, 0.05f, Time.deltaTime);
+
+        // CRITICAL: Disable agent and make RB non-kinematic for combat physics/stability
         enemyLocomotion.DisableNavMeshAgent();
 
+        // Explicitly stop any remaining Rigidbody movement from Chase state
         if (enemyLocomotion.enemyRigidbody != null)
         {
             enemyLocomotion.enemyRigidbody.velocity = Vector3.zero;
-            enemyLocomotion.enemyRigidbody.angularVelocity = Vector3.zero; // Also stop rotation momentum
+            enemyLocomotion.enemyRigidbody.angularVelocity = Vector3.zero;
         }
-
 
         isAttacking = false;
         enemyManager.isPerformingAction = false;
-        attackCooldownTimer = 0f;
+        attackCooldownTimer = 0f; // Start ready to attack potentially
+
+        // Rotate towards target immediately on entering combat if not attacking
+        if (enemyLocomotion.currentTarget != null)
+        {
+            enemyLocomotion.HandleRotateTowardsTarget(); // Use manual rotation here as agent is disabled
+        }
     }
 
     public override void UpdateState()
@@ -134,6 +142,9 @@ public class CombatState : EnemyState
                 enemyManager.isPerformingAction = true;
                 isAttacking = true;
                 attackCooldownTimer = selectedAttack.recoveryTime;
+
+                // Ensure agent is disabled before attack animation
+                enemyLocomotion.DisableNavMeshAgent(); // Redundant maybe, but safe
 
                 enemyAnimator.anim.SetFloat("Vertical", 0);
                 if (enemyLocomotion.enemyRigidbody != null)

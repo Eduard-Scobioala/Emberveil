@@ -16,18 +16,18 @@ public class IdleState : EnemyState
         enemyAnimator.PlayTargetAnimation("Idle", true);
         Debug.Log($"{enemy.gameObject.name} entered IDLE state");
 
-        base.EnterState(enemy);
-        Debug.Log($"{enemy.gameObject.name} entered IDLE state");
-        enemyAnimator.PlayTargetAnimation("Idle", true);
+        // Make sure agent is disabled and RB is non-kinematic on entering Idle
         enemyLocomotion.DisableNavMeshAgent();
 
-        if (startPosition == Vector3.zero)
+        // Capture start position ONLY if it hasn't been set yet
+        if (startPosition == Vector3.zero) // Use a better check? Maybe a bool flag?
         {
             startPosition = enemy.transform.position;
+            Debug.Log($"{enemyManager.gameObject.name} setting start position: {startPosition}");
         }
         returningToStart = false;
 
-        // Check if far from start and need to return
+        // Check immediately if we need to return
         HandleReturnToStartLogic();
     }
 
@@ -35,42 +35,50 @@ public class IdleState : EnemyState
     {
         if (returningToStart)
         {
-            float distToStart = Vector3.Distance(enemyManager.transform.position, startPosition);
-            if (distToStart <= returnStoppingDistance)
+            // Rely on agent's path completion or proximity check
+            if (enemyLocomotion.IsAgentEnabled() && enemyLocomotion.navMeshAgent.isOnNavMesh)
             {
-                Debug.Log($"{enemyManager.gameObject.name} returned to start position.");
+                if (enemyLocomotion.navMeshAgent.remainingDistance <= enemyLocomotion.navMeshAgent.stoppingDistance && !enemyLocomotion.navMeshAgent.pathPending)
+                {
+                    Debug.Log($"{enemyManager.gameObject.name} reached start position via agent.");
+                    returningToStart = false;
+                    enemyLocomotion.DisableNavMeshAgent(); // Stop agent, make RB non-kinematic
+                    enemyAnimator.anim.SetFloat("Vertical", 0);
+                }
+                else
+                {
+                    // Still moving - update animation based on agent velocity
+                    enemyAnimator.anim.SetFloat("Vertical", enemyLocomotion.navMeshAgent.desiredVelocity.magnitude > 0.1f ? 1 : 0, 0.1f, Time.deltaTime);
+                }
+            }
+            else if (!enemyLocomotion.IsAgentEnabled()) // Agent got disabled somehow? Try re-enabling.
+            {
+                Debug.LogWarning($"{enemyManager.gameObject.name} agent disabled while returning to start. Re-enabling.");
+                HandleReturnToStartLogic(); // Re-initiate return
+            }
+            // Maybe add a fallback distance check just in case agent gets stuck?
+            float distToStartFallback = Vector3.Distance(enemyManager.transform.position, startPosition);
+            if (distToStartFallback <= returnStoppingDistance)
+            {
+                Debug.Log($"{enemyManager.gameObject.name} reached start position via fallback distance check.");
                 returningToStart = false;
                 enemyLocomotion.DisableNavMeshAgent();
-                enemyAnimator.anim.SetFloat("Vertical", 0); // Stop moving anim
+                enemyAnimator.anim.SetFloat("Vertical", 0);
             }
-            else
-            {
-                // Continue moving towards start
-                if (enemyLocomotion.IsAgentEnabled())
-                {
-                    enemyLocomotion.SetAgentDestination(startPosition);
-                }
-                else // Agent got disabled, re-enable
-                {
-                    HandleReturnToStartLogic();
-                }
 
-            }
             return; // Skip detection while returning
         }
 
-
         // Default Idle Behavior: Look for Target
         detectionCheckCounter += Time.deltaTime;
-
         if (detectionCheckCounter >= detectionCheckInterval)
         {
             enemyLocomotion.FindAndVerifyTarget();
             detectionCheckCounter = 0f;
-
-            CheckStateTransitions();
+            CheckStateTransitions(); // Check transitions AFTER finding target
         }
     }
+
 
     public override void FixedUpdateState()
     {
@@ -84,9 +92,9 @@ public class IdleState : EnemyState
     {
         if (returningToStart) // If exiting while returning, stop the agent
         {
+            returningToStart = false;
             enemyLocomotion.DisableNavMeshAgent();
             enemyAnimator.anim.SetFloat("Vertical", 0);
-            returningToStart = false;
         }
     }
 
@@ -106,13 +114,21 @@ public class IdleState : EnemyState
 
     void HandleReturnToStartLogic()
     {
-        if (!returningToStart && Vector3.Distance(enemyManager.transform.position, startPosition) > returnStoppingDistance)
+        // Check distance before initiating return
+        float distCheck = Vector3.Distance(enemyManager.transform.position, startPosition);
+        if (!returningToStart && distCheck > returnStoppingDistance)
         {
-            Debug.Log($"{enemyManager.gameObject.name} is returning to start position.");
+            Debug.Log($"{enemyManager.gameObject.name} initiating return to start. Distance: {distCheck}");
             returningToStart = true;
-            enemyLocomotion.EnableNavMeshAgent();
+            enemyLocomotion.EnableNavMeshAgent(); // Enable agent, make RB kinematic
             enemyLocomotion.SetAgentDestination(startPosition);
-            enemyAnimator.anim.SetFloat("Vertical", 1, 0.1f, Time.deltaTime);
+            // Animation set in Update based on agent velocity
+            // enemyAnimator.anim.SetFloat("Vertical", 1, 0.1f, Time.deltaTime); // Less ideal than using velocity
+        }
+        else if (!returningToStart)
+        {
+            // Already at start or close enough, ensure agent is disabled
+            enemyLocomotion.DisableNavMeshAgent();
         }
     }
 }
