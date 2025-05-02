@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using EnemyStateMachine;
+using Unity.VisualScripting;
 
 public class EnemyManager : CharacterManager
 {
@@ -10,84 +12,74 @@ public class EnemyManager : CharacterManager
     public bool isPerformingAction;
     public EnemyAttackAction[] enemyAttacks;
 
-    private EnemyAttackAction currentEnemyAttack;
-    private EnemyLocomotion enemyLocomotion;
-    private EnemyAnimator enemyAnimator;
+    [Header("State Machine")]
+    private EnemyState currentState;
 
-    private float currentRecoveryTime = 0;
+    // Available States
+    [HideInInspector] public IdleState idleState;
+    [HideInInspector] public ChaseState chaseState;
+    [HideInInspector] public CombatState combatState;
+    [HideInInspector] public DeadState deadState;
+    [HideInInspector] public StunnedState stunnedState;
+
+    // Component references
+    [HideInInspector] public EnemyLocomotion enemyLocomotion;
+    [HideInInspector] public EnemyAnimator enemyAnimator;
+    [HideInInspector] public EnemyStats enemyStats;
 
     private void Awake()
     {
         enemyLocomotion = GetComponent<EnemyLocomotion>();
         enemyAnimator = GetComponentInChildren<EnemyAnimator>();
+        enemyStats = GetComponent<EnemyStats>();
+
+        // Initialize states
+        idleState = new IdleState();
+        chaseState = new ChaseState();
+        combatState = new CombatState();
+        deadState = new DeadState();
+        stunnedState = new StunnedState();
+    }
+
+    private void Start()
+    {
+        SwitchState(idleState);
+    }
+
+    private void OnEnable()
+    {
+        enemyStats.OnDamageReceived += HandleDamageReceived;
+        enemyStats.OnDeath += HandleDeath;
+    }
+
+    private void OnDisable()
+    {
+        enemyStats.OnDamageReceived -= HandleDamageReceived;
+        enemyStats.OnDeath -= HandleDeath;
     }
 
     private void Update()
     {
-        HandleRecoveryTime();
+        currentState?.UpdateState();
     }
 
     private void FixedUpdate()
     {
-        HandleCurrentAction();
+        currentState?.FixedUpdateState();
     }
 
-    private void HandleCurrentAction()
+    public void SwitchState(EnemyState newState)
     {
-        if (enemyLocomotion.currentTarget != null)
-        {
-            enemyLocomotion.distanceFromTarget = Vector3.Distance(enemyLocomotion.currentTarget.transform.position, transform.position);
-        }
+        currentState?.ExitState();
 
+        currentState = newState;
+        currentState.EnterState(this);
+    }
+
+    public EnemyAttackAction GetRandomAttack()
+    {
         if (enemyLocomotion.currentTarget == null)
-        {
-            enemyLocomotion.HandleDetection();
-        }
-        else if (enemyLocomotion.distanceFromTarget > enemyLocomotion.stoppingDistance)
-        {
-            enemyLocomotion.HandleMoveToTarget();
-        }
-        else if (enemyLocomotion.distanceFromTarget <= enemyLocomotion.stoppingDistance)
-        {
-            AttackTarget();
-        }
-    }
-
-    private void HandleRecoveryTime()
-    {
-        if (currentRecoveryTime > 0)
-        {
-            currentRecoveryTime -= Time.deltaTime;
-        }
-
-        if (isPerformingAction)
-        {
-            if (currentRecoveryTime <= 0)
-            {
-                isPerformingAction = false;
-            }
-        }
-    }
-
-    #region Attacks
-    private void AttackTarget()
-    {
-        if (isPerformingAction)
-            return;
-
-        GetNewAttack();
-
-        isPerformingAction = true;
-        currentRecoveryTime = currentEnemyAttack.recoveryTime;
-        enemyAnimator.PlayTargetAnimation(currentEnemyAttack.actionAnimation, true);
-        
-        currentEnemyAttack = null;
-    }
-
-    private void GetNewAttack()
-    {
-        if (currentEnemyAttack != null)
-            return;
+            return null;
 
         // Target information
         Transform targetTransform = enemyLocomotion.currentTarget.transform;
@@ -98,12 +90,9 @@ public class EnemyManager : CharacterManager
         float angleToTarget = Vector3.Angle(directionToTarget, transform.forward);
         float distanceToTarget = Vector3.Distance(targetPosition, transform.position);
 
-        // Update locomotion data
-        enemyLocomotion.distanceFromTarget = distanceToTarget;
-
         // Find valid attacks and their total score
-        List<(EnemyAttackAction, int)> validAttacks = new();
-        int currentAttackScore = 0;
+        List<(EnemyAttackAction, int)> validAttacks = new ();
+        int totalScore = 0;
 
         foreach (EnemyAttackAction attack in enemyAttacks)
         {
@@ -116,28 +105,44 @@ public class EnemyManager : CharacterManager
 
             if (isInRangeDistance && isInRangeAngle)
             {
-                currentAttackScore += attack.attackScore;
-                validAttacks.Add((attack, currentAttackScore));
+                totalScore += attack.attackScore;
+                validAttacks.Add((attack, totalScore));
             }
         }
 
-        // If no valid attacks found, return
+        // If no valid attacks found, return null
         if (validAttacks.Count == 0)
-            return;
+            return null;
 
         // Select a random attack based on weighted scores
-        int randomValue = Random.Range(0, currentAttackScore);
+        int randomValue = Random.Range(0, totalScore);
 
         foreach (var (attack, runningScore) in validAttacks)
         {
-            if (runningScore > randomValue)
+            if (randomValue < runningScore)
             {
-                currentEnemyAttack = attack;
-                break;
+                return attack;
             }
         }
+        throw new System.Exception("Wtff? Your attacks score are screwed.");
     }
-    #endregion
+
+    private void HandleDamageReceived(int damage)
+    {
+        if (currentState != deadState) // Only react if not already dead
+        {
+            // Notify current state of damage
+            currentState.OnDamageReceived();
+
+            // Immediately switch to stunned state
+            SwitchState(stunnedState);
+        }
+    }
+
+    private void HandleDeath()
+    {
+        SwitchState(deadState);
+    }
 
     #region Gizmos
     private void OnDrawGizmosSelected()

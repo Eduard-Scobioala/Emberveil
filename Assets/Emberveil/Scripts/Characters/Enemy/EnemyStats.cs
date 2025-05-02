@@ -1,10 +1,14 @@
+using System;
 using UnityEngine;
 
 public class EnemyStats : CharacterStats
 {
+    [SerializeField] private int baseHealthAmout = 0;
+
     private Animator animator;
 
-    [SerializeField] private int baseHealthAmout = 0;
+    public event Action<int> OnDamageReceived;
+    public event Action OnDeath;
 
     private void Awake()
     {
@@ -48,6 +52,23 @@ public class EnemyStats : CharacterStats
             currentHealth = 0;
             animator.Play("Death_01");
             // Handle Death
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        if (currentHealth <= 0)
+            return; // Already dead
+
+        currentHealth -= damage;
+
+        OnDamageReceived?.Invoke(damage);
+
+        if (currentHealth <= 0)
+        {
+            currentHealth = 0;
+            // Invoke death event
+            OnDeath?.Invoke();
         }
     }
 }

@@ -25,7 +25,7 @@ public class EnemyLocomotion : MonoBehaviour
 
     private void Start()
     {
-        navMeshAgent.enabled = false;
+        DisableNavMeshAgent();
         enemyRigidbody.isKinematic = false;
     }
 
@@ -47,6 +47,7 @@ public class EnemyLocomotion : MonoBehaviour
                 if (viewableAngle > enemyManager.minDetectionAngle && viewableAngle < enemyManager.maxDetectionAngle)
                 {
                     currentTarget = characterStats;
+                    return; // Found a valid target, exit early
                 }
             }
         }
@@ -54,18 +55,16 @@ public class EnemyLocomotion : MonoBehaviour
 
     public void HandleMoveToTarget()
     {
-        if (enemyManager.isPerformingAction)
+        if (currentTarget == null || enemyManager.isPerformingAction)
             return;
 
-        //Vector3 targetDirection = currentTarget.transform.position - transform.position;
-        //float viewableAngle = Vector3.Angle(targetDirection, transform.forward);
         distanceFromTarget = Vector3.Distance(currentTarget.transform.position, transform.position);
 
         // If we are performing an action, stop the movement
         if (enemyManager.isPerformingAction)
         {
             enemyAnimator.anim.SetFloat("Vertical", 0, 0.1f, Time.deltaTime);
-            navMeshAgent.enabled = false;
+            DisableNavMeshAgent();
         }
         else
         {
@@ -81,12 +80,18 @@ public class EnemyLocomotion : MonoBehaviour
 
         HandleRotateTowardsTarget();
 
-        navMeshAgent.transform.localPosition = Vector3.zero;
-        navMeshAgent.transform.rotation = Quaternion.identity;
+        // Ensure NavMeshAgent stays at root position
+        if (navMeshAgent.enabled)
+        {
+            navMeshAgent.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+        }
     }
 
     public void HandleRotateTowardsTarget()
     {
+        if (currentTarget == null)
+            return;
+
         float deltaTime = Time.deltaTime;
 
         // Rotate manually (when performing an action)
@@ -105,13 +110,8 @@ public class EnemyLocomotion : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
         }
         // Move and rotate with pathfinding
-        else
+        else if (navMeshAgent.enabled)
         {
-            // Ensure NavMeshAgent is enabled and set destination
-            if (!navMeshAgent.enabled)
-            {
-                navMeshAgent.enabled = true;
-            }
             navMeshAgent.SetDestination(currentTarget.transform.position);
 
             // Rotate toward the NavMeshAgent's desired velocity
@@ -122,6 +122,22 @@ public class EnemyLocomotion : MonoBehaviour
                 Quaternion targetRotation = Quaternion.LookRotation(direction);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
             }
+        }
+    }
+
+    public void EnableNavMeshAgent()
+    {
+        if (!navMeshAgent.enabled)
+        {
+            navMeshAgent.enabled = true;
+        }
+    }
+
+    public void DisableNavMeshAgent()
+    {
+        if (navMeshAgent.enabled)
+        {
+            navMeshAgent.enabled = false;
         }
     }
 }
