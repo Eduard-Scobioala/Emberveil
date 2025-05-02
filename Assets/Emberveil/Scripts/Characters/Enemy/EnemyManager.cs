@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using EnemyStateMachine;
-using Unity.VisualScripting;
 
 public class EnemyManager : CharacterManager
 {
@@ -60,11 +58,17 @@ public class EnemyManager : CharacterManager
 
     private void Update()
     {
+        if (currentState == deadState)
+            return;
+
         currentState?.UpdateState();
     }
 
     private void FixedUpdate()
     {
+        if (currentState == deadState)
+            return;
+
         currentState?.FixedUpdateState();
     }
 
@@ -124,6 +128,7 @@ public class EnemyManager : CharacterManager
                 return attack;
             }
         }
+
         throw new System.Exception("Wtff? Your attacks score are screwed.");
     }
 
@@ -142,6 +147,11 @@ public class EnemyManager : CharacterManager
     private void HandleDeath()
     {
         SwitchState(deadState);
+    }
+
+    public EnemyState GetCurrentState()
+    {
+        return currentState;
     }
 
     #region Gizmos

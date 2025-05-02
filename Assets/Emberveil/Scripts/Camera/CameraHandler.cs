@@ -201,7 +201,7 @@ public class CameraHandler : MonoBehaviour
         foreach (var collider in colliders)
         {
             CharacterManager character = collider.GetComponent<CharacterManager>();
-            if (character != null)
+            if (character != null && character.lockOnTransform)
             {
                 //var lockOnConePosition = cameraTransform.position + cameraTransform.forward;
                 float targetAngle = Vector3.Angle(cameraTransform.forward, character.lockOnTransform.position - cameraTransform.position);

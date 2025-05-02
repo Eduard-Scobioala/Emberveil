@@ -8333,6 +8333,9 @@ MonoBehaviour:
   maxDetectionAngle: 50
   isPerformingAction: 0
   enemyAttacks: []
+  enemyLocomotion: {fileID: 0}
+  enemyAnimator: {fileID: 0}
+  enemyStats: {fileID: 0}
 --- !u!1 &907832603 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: caed417d0c17a134696ff2ef8b52a764,
@@ -9460,6 +9463,9 @@ MonoBehaviour:
   enemyAttacks:
   - {fileID: 11400000, guid: f130458bd5797784fb0162bacf927ab3, type: 2}
   - {fileID: 11400000, guid: 479a0ce69ee4cca4b895742056777b8c, type: 2}
+  enemyLocomotion: {fileID: 0}
+  enemyAnimator: {fileID: 0}
+  enemyStats: {fileID: 0}
 --- !u!114 &1455925449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9475,11 +9481,15 @@ MonoBehaviour:
   detectionLayer:
     serializedVersion: 2
     m_Bits: 8192
+  occlusionLayer:
+    serializedVersion: 2
+    m_Bits: 4096
   currentTarget: {fileID: 0}
   enemyRigidbody: {fileID: 0}
   distanceFromTarget: 0
   stoppingDistance: 1
   rotationSpeed: 15
+  maxChaseDistance: 30
 --- !u!1 &1501720957
 GameObject:
   m_ObjectHideFlags: 0
@@ -15482,6 +15492,10 @@ PrefabInstance:
       value: SM_Buildings_Block_1x1_02 (1)
       objectReference: {fileID: 0}
     - target: {fileID: 100000, guid: d6432d0969107d640bf77b6507ea972d, type: 3}
+      propertyPath: m_Layer
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: d6432d0969107d640bf77b6507ea972d, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -16214,6 +16228,9 @@ MonoBehaviour:
   maxDetectionAngle: 50
   isPerformingAction: 0
   enemyAttacks: []
+  enemyLocomotion: {fileID: 0}
+  enemyAnimator: {fileID: 0}
+  enemyStats: {fileID: 0}
 --- !u!1 &2135467186
 GameObject:
   m_ObjectHideFlags: 0
@@ -18316,6 +18333,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Constraints
       value: 112
+      objectReference: {fileID: 0}
+    - target: {fileID: 8547315513930846340, guid: 8336ec74c6af39c4a865cb796636c09b,
+        type: 3}
+      propertyPath: m_IsKinematic
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8878006314741117990, guid: 8336ec74c6af39c4a865cb796636c09b,
         type: 3}

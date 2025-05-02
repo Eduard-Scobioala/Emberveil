@@ -41,20 +41,6 @@ public class EnemyStats : CharacterStats
         return baseHealthAmout + levelBasedGainedHealth;
     }
 
-    public void TakeDamange(int damange)
-    {
-        currentHealth -= damange;
-
-        animator.Play("Damage_01");
-
-        if (currentHealth <= 0)
-        {
-            currentHealth = 0;
-            animator.Play("Death_01");
-            // Handle Death
-        }
-    }
-
     public void TakeDamage(int damage)
     {
         if (currentHealth <= 0)
