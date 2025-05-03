@@ -63,10 +63,10 @@ public class ChaseState : EnemyState
         {
             if (enemyLocomotion.currentTarget != null && targetLossTimer >= timeUntilTargetLoss)
             {
-                Debug.Log($"{enemyManager.gameObject.name} lost target: Timer expired. Returning to Idle.");
+                Debug.Log($"{enemyManager.gameObject.name} lost target: Timer expired. Returning to default state.");
             }
-            enemyLocomotion.currentTarget = null; // Ensure target is nullified
-            enemyManager.SwitchState(enemyManager.idleState);
+            enemyLocomotion.currentTarget = null;
+            enemyManager.SwitchState(enemyManager.defaultState);
             return;
         }
 

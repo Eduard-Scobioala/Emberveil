@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum InitialStateType { Idle, Patrol }
+
 public class EnemyManager : CharacterManager
 {
     [Header("AI Settings")]
@@ -10,7 +12,14 @@ public class EnemyManager : CharacterManager
     public bool isPerformingAction;
     public EnemyAttackAction[] enemyAttacks;
 
+    [Header("Patrol Settings")]
+    public List<Transform> patrolPoints;
+    public float patrolWaitTime = 2f;
+
+    
     [Header("State Machine")]
+    public InitialStateType initialState = InitialStateType.Idle;
+    [HideInInspector] public EnemyState defaultState;
     private EnemyState currentState;
 
     // Available States
@@ -19,6 +28,7 @@ public class EnemyManager : CharacterManager
     [HideInInspector] public CombatState combatState;
     [HideInInspector] public DeadState deadState;
     [HideInInspector] public StunnedState stunnedState;
+    [HideInInspector] public PatrollingState patrolState;
 
     // Component references
     [HideInInspector] public EnemyLocomotion enemyLocomotion;
@@ -37,11 +47,21 @@ public class EnemyManager : CharacterManager
         combatState = new CombatState();
         deadState = new DeadState();
         stunnedState = new StunnedState();
+        patrolState = new PatrollingState();
     }
 
     private void Start()
     {
-        SwitchState(idleState);
+        if (initialState == InitialStateType.Idle)
+        {
+            defaultState = idleState;
+            SwitchState(idleState);
+        }
+        else if (initialState == InitialStateType.Patrol)
+        {
+            defaultState = patrolState;
+            SwitchState(patrolState);
+        }
     }
 
     private void OnEnable()

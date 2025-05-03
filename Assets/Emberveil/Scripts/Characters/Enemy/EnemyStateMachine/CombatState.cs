@@ -96,7 +96,7 @@ public class CombatState : EnemyState
         // --- Target Lost ---
         if (enemyLocomotion.currentTarget == null)
         {
-            enemyManager.SwitchState(enemyManager.idleState);
+            enemyManager.SwitchState(enemyManager.defaultState);
             return;
         }
 

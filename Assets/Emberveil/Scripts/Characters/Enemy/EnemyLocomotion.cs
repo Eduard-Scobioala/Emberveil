@@ -204,11 +204,7 @@ public class EnemyLocomotion : MonoBehaviour
         }
 
         // --- Rotation Handling ---
-        // OPTION A: Agent handles rotation (Remove this block)
-        // HandleRotateTowardsTarget();
-
-        // OPTION B: Manual rotation (Keep this block, disable agent rotation in Inspector)
-        // HandleRotateTowardsTarget();
+        HandleRotateTowardsTarget();
     }
 
     public void HandleRotateTowardsTarget()
@@ -243,6 +239,7 @@ public class EnemyLocomotion : MonoBehaviour
         if (navMeshAgent != null && !navMeshAgent.enabled)
         {
             navMeshAgent.enabled = true;
+            navMeshAgent.updateRotation = true;
             if (enemyRigidbody != null)
             {
                 // Make Rigidbody kinematic when Agent is active
@@ -263,6 +260,7 @@ public class EnemyLocomotion : MonoBehaviour
                 // navMeshAgent.velocity = Vector3.zero;
             }
             navMeshAgent.enabled = false;
+            navMeshAgent.updateRotation = false;
             if (enemyRigidbody != null)
             {
                 // Make Rigidbody non-kinematic when Agent is inactive
