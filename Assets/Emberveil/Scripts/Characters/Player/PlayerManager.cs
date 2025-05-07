@@ -14,6 +14,8 @@ public class PlayerManager : CharacterManager
     public bool isInAir;
     public bool isGrounded;
     public bool canDoCombo;
+    public bool isUsingRightHand;
+    public bool isUsingLeftHand;
 
     private bool pickedUpItem = false;
     private bool isInteracting = false;
@@ -56,6 +58,8 @@ public class PlayerManager : CharacterManager
     {
         isInMidAction = animator.GetBool("isInMidAction");
         canDoCombo = animator.GetBool("canDoCombo");
+        isUsingRightHand = animator.GetBool("isUsingRightHand");
+        isUsingLeftHand = animator.GetBool("isUsingLeftHand");
         animator.SetBool("isInAir", isInAir);
 
         // Execute pending command when action ends
