@@ -10,13 +10,13 @@ public class StatUIBar : MonoBehaviour
         slider = GetComponent<Slider>();
     }
 
-    public void SetMaxSliderValue(int maxHealth)
+    public void SetMaxSliderValue(float maxHealth)
     {
         slider.maxValue = maxHealth;
         slider.value = maxHealth;
     }
 
-    public void SetCurrentStatValue(int currentStatValue)
+    public void SetCurrentStatValue(float currentStatValue)
     {
         slider.value = currentStatValue;
     }

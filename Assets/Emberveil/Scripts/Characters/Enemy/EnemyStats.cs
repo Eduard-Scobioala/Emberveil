@@ -43,8 +43,8 @@ public class EnemyStats : CharacterStats
 
     public void TakeDamage(int damage)
     {
-        if (currentHealth <= 0)
-            return; // Already dead
+        if (isDead)
+            return;
 
         currentHealth -= damage;
 

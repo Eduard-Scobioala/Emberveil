@@ -6,6 +6,7 @@ public class PlayerStats : CharacterStats
     [SerializeField] private StatUIBar staminaBar;
 
     private AnimatorHandler animatorHandler;
+    private PlayerManager playerManager;
 
     [SerializeField] private int baseHealthAmout = 300;
     [SerializeField] private int baseStaminaAmout = 100;
@@ -13,6 +14,7 @@ public class PlayerStats : CharacterStats
     private void Awake()
     {
         animatorHandler = GetComponentInChildren<AnimatorHandler>();
+        playerManager = GetComponent<PlayerManager>();
     }
 
     private void Start()
@@ -46,15 +48,20 @@ public class PlayerStats : CharacterStats
         return baseHealthAmout + levelBasedGainedHealth;
     }
 
-    private int GetMaxStaminaBasedOnStaminaLevel()
+    private float GetMaxStaminaBasedOnStaminaLevel()
     {
         return baseStaminaAmout + staminaLevel * 5;
     }
 
     public void TakeDamange(int damange)
     {
-        currentHealth -= damange;
+        if (isDead)
+            return;
 
+        if (playerManager.isInvulnerable)
+            return;
+
+        currentHealth -= damange;
         healthBar.SetCurrentStatValue(currentHealth);
 
         animatorHandler.PlayTargetAnimation("Damage_01", true);
@@ -65,6 +72,7 @@ public class PlayerStats : CharacterStats
             animatorHandler.PlayTargetAnimation("Death_01", true);
 
             // Handle Player Death
+            isDead = true;
         }
     }
 
@@ -75,5 +83,10 @@ public class PlayerStats : CharacterStats
         if (currentStamina <= 0) currentHealth = 0;
 
         staminaBar.SetCurrentStatValue(currentStamina);
+    }
+
+    public void RegenerateStamina()
+    {
+
     }
 }

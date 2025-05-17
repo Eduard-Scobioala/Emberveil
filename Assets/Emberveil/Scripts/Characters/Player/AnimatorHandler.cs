@@ -110,4 +110,14 @@ public class AnimatorHandler : AnimatorManager
     {
         anim.SetBool("canDoCombo", false);
     }
+
+    public void EnableInvulnerability()
+    {
+        anim.SetBool("isInvulnerable", true);
+    }
+
+    public void DisableInvulnerability()
+    {
+        anim.SetBool("isInvulnerable", false);
+    }
 }

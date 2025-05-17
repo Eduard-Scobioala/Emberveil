@@ -81,4 +81,26 @@ public class EnemyWeaponSlotManager : MonoBehaviour
     {
         rightHandDamageCollider.DisableDamageCollider();
     }
+
+    #region Handle Weapon's Stamina Consumption
+    public void DrainStaminaLightAttack()
+    {
+
+    }
+
+    public void DrainStaminaHeavyAttack()
+    {
+
+    }
+    #endregion
+
+    public void EnableCombo()
+    {
+        //anim.SetBool("canDoCombo", true);
+    }
+
+    public void DisableCombo()
+    {
+        //anim.SetBool("canDoCombo", false);
+    }
 }

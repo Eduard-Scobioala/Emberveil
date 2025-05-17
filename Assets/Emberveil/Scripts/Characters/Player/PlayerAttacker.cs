@@ -33,6 +33,8 @@ public class PlayerAttacker : MonoBehaviour
         {
             if (playerManager.canDoCombo || playerManager.isInMidAction)
                 return;
+
+            animatorHandler.anim.SetBool("isUsingRightHand", true);
             LightAttack(playerInventory.RightHandWeapon);
         }
     }
