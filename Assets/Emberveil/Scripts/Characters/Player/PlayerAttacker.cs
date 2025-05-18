@@ -1,11 +1,9 @@
-using System;
 using UnityEngine;
 
 public class PlayerAttacker : MonoBehaviour
 {
     private AnimatorHandler animatorHandler;
     private WeaponSlotManager weaponSlotManager;
-    private InputHandler inputHandler;
     private PlayerManager playerManager;
     private PlayerInventory playerInventory;
 
@@ -16,7 +14,6 @@ public class PlayerAttacker : MonoBehaviour
     {
         animatorHandler = GetComponentInChildren<AnimatorHandler>();
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
-        inputHandler = GetComponent<InputHandler>();
         playerManager = GetComponent<PlayerManager>();
         playerInventory = GetComponent<PlayerInventory>();
     }

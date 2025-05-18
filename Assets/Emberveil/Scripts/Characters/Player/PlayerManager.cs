@@ -65,12 +65,13 @@ public class PlayerManager : CharacterManager
         animator.SetBool("isInAir", isInAir);
 
         // Execute pending command when action ends
-        if (wasInMidAction && !isInMidAction && pendingCommand != null)
+        //if (wasInMidAction && !isInMidAction && pendingCommand != null)
+        if (pendingCommand != null && pendingCommand.CanExecute())
         {
             pendingCommand.Execute();
             pendingCommand = null;
         }
-        wasInMidAction = isInMidAction;
+        //wasInMidAction = isInMidAction;
         
         HandleInteractableUI();
     }
@@ -94,7 +95,7 @@ public class PlayerManager : CharacterManager
     #region Handle Commands
     private void HandleCommand(ICommand command)
     {
-        if (!isInMidAction)
+        if (command.CanExecute())
         {
             command.Execute();
         }
@@ -106,31 +107,31 @@ public class PlayerManager : CharacterManager
 
     private void HandleLightAttackInput()
     {
-        ICommand command = new LightAttackCommand(playerAttacker);
+        ICommand command = new LightAttackCommand(playerAttacker, () => (isInMidAction, canDoCombo));
         HandleCommand(command);
     }
 
     private void HandleHeavyAttackInput()
     {
-        ICommand command = new HeavyAttackCommand(playerAttacker);
+        ICommand command = new HeavyAttackCommand(playerAttacker, () => (isInMidAction, canDoCombo));
         HandleCommand(command);
     }
 
     private void HandleJumpInput()
     {
-        ICommand command = new JumpCommand(playerLocomotion);
+        ICommand command = new JumpCommand(playerLocomotion, () => isInMidAction);
         HandleCommand(command);
     }
 
     private void HandleDodgeButtonPressed()
     {
-        ICommand command = new DodgeCommand(playerLocomotion, true);
+        ICommand command = new DodgeCommand(playerLocomotion, true, () => isInMidAction);
         HandleCommand(command);
     }
 
     private void HandleDodgeButtonReleased()
     {
-        ICommand command = new DodgeCommand(playerLocomotion, false);
+        ICommand command = new DodgeCommand(playerLocomotion, false, () => isInMidAction);
         command.Execute();
     }
     

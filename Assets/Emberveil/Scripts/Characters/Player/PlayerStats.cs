@@ -8,8 +8,13 @@ public class PlayerStats : CharacterStats
     private AnimatorHandler animatorHandler;
     private PlayerManager playerManager;
 
+    [Header("Stats Settings")]
     [SerializeField] private int baseHealthAmout = 300;
     [SerializeField] private int baseStaminaAmout = 100;
+    [SerializeField] private float staminaRegenAmount = 10;
+    [SerializeField] private float staminaRegenDelay = 1;
+
+    private float staminaRegenTimer = 0;
 
     private void Awake()
     {
@@ -26,6 +31,11 @@ public class PlayerStats : CharacterStats
         maxStamina = GetMaxStaminaBasedOnStaminaLevel();
         currentStamina = maxStamina;
         staminaBar.SetMaxSliderValue(maxStamina);
+    }
+
+    private void Update()
+    {
+        RegenerateStamina();
     }
 
     private int GetMaxHealthBasedOnHealthLevel()
@@ -80,13 +90,31 @@ public class PlayerStats : CharacterStats
     {
         currentStamina -= stamina;
 
-        if (currentStamina <= 0) currentHealth = 0;
+        if (currentStamina <= 0) currentStamina = 0;
 
         staminaBar.SetCurrentStatValue(currentStamina);
+
+        // Reset regen timer after consuming stamina
+        staminaRegenTimer = 0;
     }
 
     public void RegenerateStamina()
     {
+        if (playerManager.isInMidAction)
+            return;
 
+        staminaRegenTimer += Time.deltaTime;
+
+        if (currentStamina < maxStamina && staminaRegenTimer > staminaRegenDelay)
+        {
+            currentStamina += staminaRegenAmount * Time.deltaTime;
+
+            if (currentStamina > maxStamina)
+            {
+                currentStamina = maxStamina;
+            }
+            
+            staminaBar.SetCurrentStatValue(currentStamina);
+        }
     }
 }
