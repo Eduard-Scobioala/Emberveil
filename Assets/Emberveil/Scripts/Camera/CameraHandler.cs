@@ -147,22 +147,32 @@ public class CameraHandler : MonoBehaviour
         cameraTransform.localPosition = cameraTransformPosition;
     }
 
+    private void SetLockOnTarget(CharacterManager target)
+    {
+        if (target != null)
+        {
+            currentLockOnTarget = target;
+            currentLockOnTarget.OnDeath += ClearLockOnTarget;
+            lockOnFlag = true;
+        }
+    }
+
+    private void ClearLockOnTarget()
+    {
+        currentLockOnTarget.OnDeath -= ClearLockOnTarget;
+        currentLockOnTarget = null;
+        lockOnFlag = false;
+    }
+
     private void HandleLockOnButtonPressed()
     {
         if (!lockOnFlag)
         {
-            var nearestLockOnTarget = FindNearestLockOnTarget();
-
-            if (nearestLockOnTarget != null)
-            {
-                currentLockOnTarget = nearestLockOnTarget;
-                lockOnFlag = true;
-            }
+            SetLockOnTarget(FindNearestLockOnTarget());
         }
         else
         {
-            lockOnFlag = false;
-            currentLockOnTarget = null;
+            ClearLockOnTarget();
         }
     }
 
@@ -170,12 +180,7 @@ public class CameraHandler : MonoBehaviour
     {
         if (lockOnFlag)
         {
-            var leftLockOnTarget = FindLeftOfLockOnTarget();
-
-            if (leftLockOnTarget != null)
-            {
-                currentLockOnTarget = leftLockOnTarget;
-            }
+            SetLockOnTarget(FindLeftOfLockOnTarget());
         }
     }
 
@@ -183,12 +188,7 @@ public class CameraHandler : MonoBehaviour
     {
         if (lockOnFlag)
         {
-            var rightLockOnTarget = FindRightOfLockOnTarget();
-
-            if (rightLockOnTarget != null)
-            {
-                currentLockOnTarget = rightLockOnTarget;
-            }
+            SetLockOnTarget(FindRightOfLockOnTarget());
         }
     }
 

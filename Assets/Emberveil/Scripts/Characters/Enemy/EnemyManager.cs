@@ -166,6 +166,7 @@ public class EnemyManager : CharacterManager
 
     private void HandleDeath()
     {
+        RaiseDeath();
         SwitchState(deadState);
     }
 
