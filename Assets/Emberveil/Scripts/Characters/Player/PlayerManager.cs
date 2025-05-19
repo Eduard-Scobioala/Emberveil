@@ -65,13 +65,11 @@ public class PlayerManager : CharacterManager
         animator.SetBool("isInAir", isInAir);
 
         // Execute pending command when action ends
-        //if (wasInMidAction && !isInMidAction && pendingCommand != null)
         if (pendingCommand != null && pendingCommand.CanExecute())
         {
             pendingCommand.Execute();
             pendingCommand = null;
         }
-        //wasInMidAction = isInMidAction;
         
         HandleInteractableUI();
     }
