@@ -1,6 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public struct Commands
+{
+    public ICommand LightAttackCommand;
+    public ICommand HeavyAttackCommand;
+    public ICommand JumpCommand;
+    public ICommand DodgeCommand;
+    public ICommand DodgeReleaseCommand;
+};
+
 public class PlayerManager : CharacterManager
 {
     private Animator animator;
@@ -26,6 +35,7 @@ public class PlayerManager : CharacterManager
     // Command buffering
     private ICommand pendingCommand;
     private bool wasInMidAction = false;
+    private Commands commands;
 
     private void Start()
     {
@@ -33,6 +43,8 @@ public class PlayerManager : CharacterManager
         playerLocomotion = GetComponent<PlayerLocomotion>();
         playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
+
+        InitCommands();
     }
 
     private void OnEnable()
@@ -90,6 +102,32 @@ public class PlayerManager : CharacterManager
         }
     }
 
+    private void InitCommands()
+    {
+        commands = new Commands
+        {
+            LightAttackCommand = new RelayCommand(
+                () => !isInMidAction || canDoCombo,
+                playerAttacker.HandleLightAttackButtonPressed),
+
+            HeavyAttackCommand = new RelayCommand(
+                () => !isInMidAction || canDoCombo,
+                playerAttacker.HandleHeavyAttackButtonPressed),
+
+            JumpCommand = new RelayCommand(
+                () => !isInMidAction,
+                playerLocomotion.HandleJumpButtonPressed),
+
+            DodgeCommand = new RelayCommand(
+                () => !isInMidAction,
+                playerLocomotion.HandleDodgeButtonPressed),
+
+            DodgeReleaseCommand = new RelayCommand(
+                null,
+                playerLocomotion.HandleDodgeButtonReleased)
+        };
+    }
+
     #region Handle Commands
     private void HandleCommand(ICommand command)
     {
@@ -105,32 +143,27 @@ public class PlayerManager : CharacterManager
 
     private void HandleLightAttackInput()
     {
-        ICommand command = new LightAttackCommand(playerAttacker, () => (isInMidAction, canDoCombo));
-        HandleCommand(command);
+        HandleCommand(commands.LightAttackCommand);
     }
 
     private void HandleHeavyAttackInput()
     {
-        ICommand command = new HeavyAttackCommand(playerAttacker, () => (isInMidAction, canDoCombo));
-        HandleCommand(command);
+        HandleCommand(commands.HeavyAttackCommand);
     }
 
     private void HandleJumpInput()
     {
-        ICommand command = new JumpCommand(playerLocomotion, () => isInMidAction);
-        HandleCommand(command);
+        HandleCommand(commands.JumpCommand);
     }
 
     private void HandleDodgeButtonPressed()
     {
-        ICommand command = new DodgeCommand(playerLocomotion, true, () => isInMidAction);
-        HandleCommand(command);
+        HandleCommand(commands.DodgeCommand);
     }
 
     private void HandleDodgeButtonReleased()
     {
-        ICommand command = new DodgeCommand(playerLocomotion, false, () => isInMidAction);
-        command.Execute();
+        commands.DodgeReleaseCommand.Execute();
     }
     
     private void HandleInteractButtonPressed()
