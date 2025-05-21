@@ -1,8 +1,4 @@
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.UIElements;
-using UnityEngine.Windows;
-using static UnityEditor.Searcher.SearcherWindow.Alignment;
 
 public class PlayerLocomotion : MonoBehaviour
 {
@@ -40,8 +36,6 @@ public class PlayerLocomotion : MonoBehaviour
     private float horizontal;
     private float vertical;
     private float moveAmount;
-    private float mouseX;
-    private float mouseY;
 
     private void Start()
     {
@@ -59,13 +53,11 @@ public class PlayerLocomotion : MonoBehaviour
     private void OnEnable()
     {
         InputHandler.PlayerMovementPerformed += HandleMovementInput;
-        InputHandler.CameraMovementPerformed += HandleCameraInput;
     }
 
     private void OnDisable()
     {
         InputHandler.PlayerMovementPerformed -= HandleMovementInput;
-        InputHandler.CameraMovementPerformed -= HandleCameraInput;
     }
 
     private void Update()
@@ -75,28 +67,11 @@ public class PlayerLocomotion : MonoBehaviour
         HandleRollingAndSprinting(deltaTime);
     }
 
-    private void LateUpdate()
-    {
-        float deltaTime = Time.fixedDeltaTime;
-
-        if (CameraHandler.Instance != null)
-        {
-            CameraHandler.Instance.FollowTarget(deltaTime);
-            CameraHandler.Instance.HandleCameraRotation(deltaTime, mouseX, mouseY);
-        }
-    }
-
     private void HandleMovementInput(Vector2 movementInput)
     {
         horizontal = movementInput.x;
         vertical = movementInput.y;
         moveAmount = Mathf.Clamp01(Mathf.Abs(horizontal) + Mathf.Abs(vertical));
-    }
-
-    private void HandleCameraInput(Vector2 cameraInput)
-    {
-        mouseX = cameraInput.x;
-        mouseY = cameraInput.y;
     }
 
     public void HandleDodgeButtonPressed()

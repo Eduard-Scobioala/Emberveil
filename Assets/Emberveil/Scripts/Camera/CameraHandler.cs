@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraHandler : MonoBehaviour
 {
@@ -23,6 +24,8 @@ public class CameraHandler : MonoBehaviour
     private float defaultPosition;
     private float lookAngle;
     private float pivotAngle;
+    private float mouseX;
+    private float mouseY;
 
     [SerializeField] private float minimumPivot = -35;
     [SerializeField] private float maximumPivot = 35;
@@ -42,26 +45,23 @@ public class CameraHandler : MonoBehaviour
 
     public bool lockOnFlag = false;
 
-    public static CameraHandler Instance { get; private set; }
-
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            //DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-
         defaultPosition = cameraTransform.localPosition.z;
         ignoreLayers = ~(1 << 8 | 1 << 9 | 1 << 10);
     }
 
+    private void LateUpdate()
+    {
+        float deltaTime = Time.fixedDeltaTime;
+
+        FollowTarget(deltaTime);
+        HandleCameraRotation(deltaTime, mouseX, mouseY);
+    }
+
     private void OnEnable()
     {
+        InputHandler.CameraMovementPerformed += HandleCameraInput;
         InputHandler.LockOnButtonPressed += HandleLockOnButtonPressed;
         InputHandler.LeftLockOnTargetButtonPressed += HandleLeftLockOnButtonPressed;
         InputHandler.RightLockOnTargetButtonPressed += HandleRightLockOnButtonPressed;
@@ -69,9 +69,16 @@ public class CameraHandler : MonoBehaviour
 
     private void OnDisable()
     {
+        InputHandler.CameraMovementPerformed -= HandleCameraInput;
         InputHandler.LockOnButtonPressed -= HandleLockOnButtonPressed;
         InputHandler.LeftLockOnTargetButtonPressed -= HandleLeftLockOnButtonPressed;
         InputHandler.RightLockOnTargetButtonPressed -= HandleRightLockOnButtonPressed;
+    }
+
+    private void HandleCameraInput(Vector2 cameraInput)
+    {
+        mouseX = cameraInput.x;
+        mouseY = cameraInput.y;
     }
 
     public void FollowTarget(float deltaTime)

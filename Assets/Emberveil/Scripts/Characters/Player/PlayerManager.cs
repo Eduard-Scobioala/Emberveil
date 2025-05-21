@@ -34,7 +34,6 @@ public class PlayerManager : CharacterManager
 
     // Command buffering
     private ICommand pendingCommand;
-    private bool wasInMidAction = false;
     private Commands commands;
 
     private void Start()
