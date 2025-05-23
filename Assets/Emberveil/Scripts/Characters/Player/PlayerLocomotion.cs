@@ -3,6 +3,7 @@ using UnityEngine;
 public class PlayerLocomotion : MonoBehaviour
 {
     private Transform cameraObject;
+    private Transform Orientation => cameraHandler.IsLockedOn ? transform : cameraObject;
     private PlayerManager playerManager;
     public Vector3 moveDirection;
 
@@ -26,7 +27,7 @@ public class PlayerLocomotion : MonoBehaviour
     public float inAirTimer;
 
     [Header("Camera Reference")]
-    [SerializeField] private CameraHandler cameraHandler;
+    [SerializeField] private CameraController cameraHandler;
 
     private bool isDodgeButtonPressed = false;
     private bool isSprinting = false;
@@ -96,9 +97,9 @@ public class PlayerLocomotion : MonoBehaviour
         Vector3 targetDir;
         // If locked on and not sprinting or rolling - face the lock on target,
         // else - rotate based on input
-        if (cameraHandler.lockOnFlag && !(isSprinting || isDoging))
+        if (cameraHandler.IsLockedOn && !(isSprinting || isDoging))
         {
-            targetDir = cameraHandler.currentLockOnTarget.transform.position - transform.position;
+            targetDir = cameraHandler.CurrentLockOnTarget.transform.position - transform.position;
         }
         else
         {
@@ -127,9 +128,9 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerManager.isInMidAction)
             return;
 
-        moveDirection = cameraObject.forward * vertical;
+        moveDirection = Orientation.forward * vertical;
 
-        moveDirection += cameraObject.right * horizontal;
+        moveDirection += Orientation.right * horizontal;
         moveDirection.Normalize();
         moveDirection.y = 0;
 
@@ -157,7 +158,7 @@ public class PlayerLocomotion : MonoBehaviour
         Vector3 projectedVelocity = Vector3.ProjectOnPlane(moveDirection, normalVector);
         rigidbody.velocity = projectedVelocity;
 
-        if (cameraHandler.lockOnFlag && !isSprinting)
+        if (cameraHandler.IsLockedOn && !isSprinting)
         {
             animatorHandler.UpdateAnimatorValues(vertical, horizontal, playerManager.isSprinting);
         }
@@ -183,8 +184,8 @@ public class PlayerLocomotion : MonoBehaviour
         {
             isDoging = false;
 
-            moveDirection = cameraObject.forward * vertical;
-            moveDirection += cameraObject.right * horizontal;
+            moveDirection = Orientation.forward * vertical;
+            moveDirection += Orientation.right * horizontal;
 
             if (moveAmount > 0)
             {
@@ -308,8 +309,8 @@ public class PlayerLocomotion : MonoBehaviour
 
         if (moveAmount > 0)
         {
-            moveDirection = cameraObject.forward * vertical
-                + cameraObject.right * horizontal;
+            moveDirection = Orientation.forward * vertical
+                + Orientation.right * horizontal;
             moveDirection.y = 0;
             
             animatorHandler.PlayTargetAnimation("Jump", true);
