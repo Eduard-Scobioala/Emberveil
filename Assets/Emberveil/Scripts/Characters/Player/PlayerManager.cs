@@ -7,7 +7,8 @@ public struct Commands
     public ICommand HeavyAttackCommand;
     public ICommand JumpCommand;
     public ICommand DodgeCommand;
-    public ICommand DodgeReleaseCommand;
+    public ICommand SprintHoldCommand;
+    public ICommand SprintReleaseCommand;
 };
 
 public class PlayerManager : CharacterManager
@@ -52,8 +53,9 @@ public class PlayerManager : CharacterManager
         InputHandler.LightAttackButtonPressed += HandleLightAttackInput;
         InputHandler.HeavyAttackButtonPressed += HandleHeavyAttackInput;
         InputHandler.JumpButtonPressed += HandleJumpInput;
-        InputHandler.DodgeButtonPressed += HandleDodgeButtonPressed;
-        InputHandler.DodgeButtonReleased += HandleDodgeButtonReleased;
+        InputHandler.DodgeTapped += HandleDodgeButton;
+        InputHandler.SprintHolding += HandleSprintHolding;
+        InputHandler.SprintReleased += HandleSprintReleased;
     }
 
     private void OnDisable()
@@ -62,8 +64,9 @@ public class PlayerManager : CharacterManager
         InputHandler.LightAttackButtonPressed -= HandleLightAttackInput;
         InputHandler.HeavyAttackButtonPressed -= HandleHeavyAttackInput;
         InputHandler.JumpButtonPressed -= HandleJumpInput;
-        InputHandler.DodgeButtonPressed -= HandleDodgeButtonPressed;
-        InputHandler.DodgeButtonReleased -= HandleDodgeButtonReleased;
+        InputHandler.DodgeTapped -= HandleDodgeButton;
+        InputHandler.SprintHolding -= HandleSprintHolding;
+        InputHandler.SprintReleased -= HandleSprintReleased;
     }
 
     private void Update()
@@ -83,14 +86,6 @@ public class PlayerManager : CharacterManager
         }
         
         HandleInteractableUI();
-    }
-
-    private void FixedUpdate()
-    {
-        float deltaTime = Time.fixedDeltaTime;
-
-        playerLocomotion.HandleMovement(deltaTime);
-        playerLocomotion.HandleFalling(deltaTime, playerLocomotion.moveDirection);
     }
 
     private void LateUpdate()
@@ -119,11 +114,15 @@ public class PlayerManager : CharacterManager
 
             DodgeCommand = new RelayCommand(
                 () => !isInMidAction,
-                playerLocomotion.HandleDodgeButtonPressed),
+                playerLocomotion.HandleDodgeTapped),
 
-            DodgeReleaseCommand = new RelayCommand(
-                null,
-                playerLocomotion.HandleDodgeButtonReleased)
+            SprintHoldCommand = new RelayCommand(
+                () => !isInMidAction,
+                playerLocomotion.HandleSprintHolding),
+
+            SprintReleaseCommand = new RelayCommand(
+                () => true,
+                playerLocomotion.HandleSprintReleased)
         };
     }
 
@@ -132,6 +131,9 @@ public class PlayerManager : CharacterManager
     {
         if (command.CanExecute())
         {
+            // If a command could be exectuted,there is
+            // no reason to hold for the pending command
+            pendingCommand = null;
             command.Execute();
         }
         else
@@ -155,16 +157,21 @@ public class PlayerManager : CharacterManager
         HandleCommand(commands.JumpCommand);
     }
 
-    private void HandleDodgeButtonPressed()
+    private void HandleDodgeButton()
     {
         HandleCommand(commands.DodgeCommand);
     }
 
-    private void HandleDodgeButtonReleased()
+    private void HandleSprintHolding()
     {
-        commands.DodgeReleaseCommand.Execute();
+        HandleCommand(commands.SprintHoldCommand);
     }
-    
+
+    private void HandleSprintReleased()
+    {
+        HandleCommand(commands.SprintReleaseCommand);
+    }
+
     private void HandleInteractButtonPressed()
     {
         isInteracting = true;

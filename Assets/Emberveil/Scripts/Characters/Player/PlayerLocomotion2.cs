@@ -1,9 +1,9 @@
 using UnityEngine;
 
-public class PlayerLocomotion : MonoBehaviour
+public class PlayerLocomotion2 : MonoBehaviour
 {
     private Transform cameraObject;
-    private Transform Orientation => cameraHandler.IsLockedOn ? transform : cameraObject;
+    private Transform Orientation => (cameraHandler.IsLockedOn && !isSprinting) ? transform : cameraObject;
     private PlayerManager playerManager;
     public Vector3 moveDirection;
 

@@ -537,6 +537,37 @@ Transform:
   - {fileID: 7007267441362120107}
   m_Father: {fileID: 7968019621273037886}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3845196765136732485
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3985372797156537282}
+  m_Layer: 13
+  m_Name: Look At
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3985372797156537282
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3845196765136732485}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6617811616378658093}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3858919190724506684
 GameObject:
   m_ObjectHideFlags: 0
@@ -1231,7 +1262,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5855861412599736176}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d1df180205d10a443b5aef398a17ea1c, type: 3}
   m_Name: 
@@ -1610,10 +1641,10 @@ GameObject:
   - component: {fileID: 6945413391869945082}
   - component: {fileID: 6831730101438527696}
   - component: {fileID: 3569286514129032211}
-  - component: {fileID: 6907088894822583122}
   - component: {fileID: 5996394775482851198}
   - component: {fileID: 2719513274266845588}
   - component: {fileID: 8842606515577052609}
+  - component: {fileID: 134953928314530544}
   m_Layer: 13
   m_Name: Player
   m_TagString: Player
@@ -1635,6 +1666,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1506167395937801292}
+  - {fileID: 3985372797156537282}
   - {fileID: 6191335808686067161}
   - {fileID: 2527497949564724510}
   m_Father: {fileID: 0}
@@ -1658,10 +1690,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 1.5
+  m_Radius: 0.25
+  m_Height: 1.8
   m_Direction: 1
-  m_Center: {x: 0, y: 1, z: 0}
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!54 &6945413391869945082
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1722,34 +1754,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ceb58f0739b8554e9d10733803364cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &6907088894822583122
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7392619686556425504}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ec73701dd4c094a409725868128cb1a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveDirection: {x: 0, y: 0, z: 0}
-  animatorHandler: {fileID: 0}
-  rigidbody: {fileID: 0}
-  movementSpeed: 5
-  walkingSpeed: 1
-  sprintSpeed: 7
-  rotationSpeed: 18
-  fallingSpeed: 500
-  groundDetectionRayStartPoint: 0.5
-  minimumDistanceNeededToBeginFall: 1
-  groundDirectionRayDistance: -0.6
-  ignoreForGroundCheck:
-    serializedVersion: 2
-    m_Bits: 15415
-  inAirTimer: 0
-  cameraHandler: {fileID: 0}
 --- !u!114 &5996394775482851198
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1807,6 +1811,37 @@ MonoBehaviour:
   baseStaminaAmout: 100
   staminaRegenAmount: 10
   staminaRegenDelay: 1
+--- !u!114 &134953928314530544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7392619686556425504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fac316d9a8273340ad35dd3f2112c02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cameraController: {fileID: 0}
+  moveDirection: {x: 0, y: 0, z: 0}
+  animatorHandler: {fileID: 0}
+  rigidbody: {fileID: 0}
+  movementSpeed: 5
+  walkingSpeed: 1
+  sprintSpeed: 8
+  rotationSpeed: 18
+  fallingSpeed: 300
+  lockOnMovementForwardMultiplier: 0.125
+  lockOnDodgeForwardMultiplier: 0.9
+  groundDetectionRayStartPoint: 0.5
+  minimumDistanceNeededToBeginFall: 1
+  groundDirectionRayDistance: 0.2
+  ignoreForGroundCheck:
+    serializedVersion: 2
+    m_Bits: 16928
+  inAirTimer: 0
+  movementSmoothTime: 0.05
 --- !u!1 &7630567604707857878
 GameObject:
   m_ObjectHideFlags: 0

@@ -84,8 +84,8 @@ public class CameraController : MonoBehaviour
         _finalCameraLocalPosition = new Vector3(0, 0, -_currentDesiredDistance);
         cameraActualTransform.localPosition = _finalCameraLocalPosition;
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        //Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
 
         // Initialize LOS check variables
         if (lockOnLOSCheckRate > 0f)

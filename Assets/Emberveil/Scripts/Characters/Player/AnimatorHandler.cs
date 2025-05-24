@@ -120,4 +120,9 @@ public class AnimatorHandler : AnimatorManager
     {
         anim.SetBool("isInvulnerable", false);
     }
+
+    public void OnDodgeAnimationEnd()
+    {
+        playerLocomotion.OnDodgeAnimationEnd();
+    }
 }

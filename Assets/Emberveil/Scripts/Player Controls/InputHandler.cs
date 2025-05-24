@@ -5,8 +5,14 @@ public class InputHandler : MonoBehaviour
 {
     public static event Action<Vector2> PlayerMovementPerformed;
     public static event Action<Vector2> CameraMovementPerformed;
+
     public static event Action DodgeButtonPressed;
     public static event Action DodgeButtonReleased;
+
+    public static event Action DodgeTapped;
+    public static event Action SprintHolding;
+    public static event Action SprintReleased;
+
     public static event Action JumpButtonPressed;
     public static event Action LightAttackButtonPressed;
     public static event Action HeavyAttackButtonPressed;
@@ -44,8 +50,12 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerMovement.Camera.performed +=
             context => CameraMovementPerformed?.Invoke(context.ReadValue<Vector2>());
 
-        inputActions.PlayerActions.Dodge.started += _ => DodgeButtonPressed?.Invoke();
-        inputActions.PlayerActions.Dodge.canceled += _ => DodgeButtonReleased?.Invoke();
+        //inputActions.PlayerActions.Dodge.started += _ => DodgeButtonPressed?.Invoke();
+        //inputActions.PlayerActions.Dodge.canceled += _ => DodgeButtonReleased?.Invoke();
+
+        inputActions.PlayerActions.Dodge.performed += context => DodgeTapped?.Invoke();
+        inputActions.PlayerActions.Sprint.performed += context => SprintHolding?.Invoke();
+        inputActions.PlayerActions.Sprint.canceled += context => SprintReleased?.Invoke();
 
         inputActions.PlayerActions.RB.performed += _ => LightAttackButtonPressed?.Invoke();
         inputActions.PlayerActions.RT.performed += _ => HeavyAttackButtonPressed?.Invoke();
