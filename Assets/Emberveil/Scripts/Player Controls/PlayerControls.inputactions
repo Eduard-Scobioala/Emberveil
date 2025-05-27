@@ -200,7 +200,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "RB",
+                    "name": "Light Attack",
                     "type": "Button",
                     "id": "a8d7f64d-8245-4983-954e-718ff3a14ecf",
                     "expectedControlType": "",
@@ -209,9 +209,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "RT",
+                    "name": "Heavy Attack",
                     "type": "Button",
                     "id": "ef576d2e-e65c-4985-afc9-b8f82d1cb091",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Critical Attack",
+                    "type": "Button",
+                    "id": "746e7e60-1baf-49c5-bc11-0d23d49a019f",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -293,7 +302,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "RB",
+                    "action": "Light Attack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -304,7 +313,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "RB",
+                    "action": "Light Attack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -315,7 +324,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "RT",
+                    "action": "Heavy Attack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -326,7 +335,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "RT",
+                    "action": "Heavy Attack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -459,6 +468,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Sprint",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f5105422-369e-456e-b1e6-255757eef6c2",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Critical Attack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

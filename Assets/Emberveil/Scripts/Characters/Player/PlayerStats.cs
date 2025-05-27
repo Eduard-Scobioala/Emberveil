@@ -74,15 +74,32 @@ public class PlayerStats : CharacterStats
         currentHealth -= damange;
         healthBar.SetCurrentStatValue(currentHealth);
 
-        animatorHandler.PlayTargetAnimation("Damage_01", true);
+        // Play damage animation ONLY if not in a critical hit sequence (like being backstabbed)
+        // and if damage is not lethal (lethal damage will trigger backstab death or regular death anim)
+        if (!playerManager.isBeingCriticallyHit && currentHealth > 0)
+        {
+            animatorHandler.PlayTargetAnimation("Damage_01", true);
+        }
+        else
+        {
+            animatorHandler.PlayTargetAnimation("Backstab_Main_Victim_01", true);
+        }
 
-        if (currentHealth <= 0)
+        if (currentHealth <= 0 && !isDead)
         {
             currentHealth = 0;
-            animatorHandler.PlayTargetAnimation("Death_01", true);
-
-            // Handle Player Death
             isDead = true;
+
+            animatorHandler.anim.SetBool("isDead", true);
+
+            // If not already in a critical hit (backstab), play normal death.
+            // If being critically hit, the backstab victim animation sequence will handle death.
+            if (!playerManager.isBeingCriticallyHit)
+            {
+                animatorHandler.PlayTargetAnimation("Death_01", true);
+            }
+            
+            //playerManager.RaiseDeath();
         }
     }
 

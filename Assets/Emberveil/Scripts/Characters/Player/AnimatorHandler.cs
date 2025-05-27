@@ -125,4 +125,40 @@ public class AnimatorHandler : AnimatorManager
     {
         playerLocomotion.OnDodgeAnimationEnd();
     }
+
+    public void AnimEvent_ApplyBackstabDamage()
+    {
+        if (playerManager != null)
+        {
+            playerManager.AnimEvent_ApplyBackstabDamage();
+        }
+        else
+        {
+            Debug.LogError("AnimatorHandler: AnimEvent_ApplyBackstabDamage called, but PlayerManager is null!", this);
+        }
+    }
+
+    public void AnimEvent_FinishPerformingBackstab()
+    {
+        if (playerManager != null)
+        {
+            playerManager.AnimEvent_FinishPerformingBackstab();
+        }
+        else
+        {
+            Debug.LogError("AnimatorHandler: AnimEvent_FinishPerformingBackstab called, but PlayerManager is null!", this);
+        }
+    }
+
+    public void AnimEvent_FinishBeingBackstabbed()
+    {
+        if (playerManager != null)
+        {
+            playerManager.FinishBeingBackstabbed();
+        }
+        else
+        {
+            Debug.LogError("AnimEvent_FinishBeingBackstabbed called, but PlayerManager is null!", this);
+        }
+    }
 }

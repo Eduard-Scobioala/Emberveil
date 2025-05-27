@@ -222,7 +222,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""RB"",
+                    ""name"": ""Light Attack"",
                     ""type"": ""Button"",
                     ""id"": ""a8d7f64d-8245-4983-954e-718ff3a14ecf"",
                     ""expectedControlType"": """",
@@ -231,9 +231,18 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""RT"",
+                    ""name"": ""Heavy Attack"",
                     ""type"": ""Button"",
                     ""id"": ""ef576d2e-e65c-4985-afc9-b8f82d1cb091"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Critical Attack"",
+                    ""type"": ""Button"",
+                    ""id"": ""746e7e60-1baf-49c5-bc11-0d23d49a019f"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -315,7 +324,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""RB"",
+                    ""action"": ""Light Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -326,7 +335,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""RB"",
+                    ""action"": ""Light Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -337,7 +346,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""RT"",
+                    ""action"": ""Heavy Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -348,7 +357,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""RT"",
+                    ""action"": ""Heavy Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -481,6 +490,17 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Sprint"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f5105422-369e-456e-b1e6-255757eef6c2"",
+                    ""path"": """",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Critical Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -631,8 +651,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_PlayerActions = asset.FindActionMap("Player Actions", throwIfNotFound: true);
         m_PlayerActions_Sprint = m_PlayerActions.FindAction("Sprint", throwIfNotFound: true);
         m_PlayerActions_Dodge = m_PlayerActions.FindAction("Dodge", throwIfNotFound: true);
-        m_PlayerActions_RB = m_PlayerActions.FindAction("RB", throwIfNotFound: true);
-        m_PlayerActions_RT = m_PlayerActions.FindAction("RT", throwIfNotFound: true);
+        m_PlayerActions_LightAttack = m_PlayerActions.FindAction("Light Attack", throwIfNotFound: true);
+        m_PlayerActions_HeavyAttack = m_PlayerActions.FindAction("Heavy Attack", throwIfNotFound: true);
+        m_PlayerActions_CriticalAttack = m_PlayerActions.FindAction("Critical Attack", throwIfNotFound: true);
         m_PlayerActions_Interact = m_PlayerActions.FindAction("Interact", throwIfNotFound: true);
         m_PlayerActions_Jump = m_PlayerActions.FindAction("Jump", throwIfNotFound: true);
         m_PlayerActions_Options = m_PlayerActions.FindAction("Options", throwIfNotFound: true);
@@ -784,8 +805,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private List<IPlayerActionsActions> m_PlayerActionsActionsCallbackInterfaces = new List<IPlayerActionsActions>();
     private readonly InputAction m_PlayerActions_Sprint;
     private readonly InputAction m_PlayerActions_Dodge;
-    private readonly InputAction m_PlayerActions_RB;
-    private readonly InputAction m_PlayerActions_RT;
+    private readonly InputAction m_PlayerActions_LightAttack;
+    private readonly InputAction m_PlayerActions_HeavyAttack;
+    private readonly InputAction m_PlayerActions_CriticalAttack;
     private readonly InputAction m_PlayerActions_Interact;
     private readonly InputAction m_PlayerActions_Jump;
     private readonly InputAction m_PlayerActions_Options;
@@ -797,8 +819,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         public PlayerActionsActions(@PlayerControls wrapper) { m_Wrapper = wrapper; }
         public InputAction @Sprint => m_Wrapper.m_PlayerActions_Sprint;
         public InputAction @Dodge => m_Wrapper.m_PlayerActions_Dodge;
-        public InputAction @RB => m_Wrapper.m_PlayerActions_RB;
-        public InputAction @RT => m_Wrapper.m_PlayerActions_RT;
+        public InputAction @LightAttack => m_Wrapper.m_PlayerActions_LightAttack;
+        public InputAction @HeavyAttack => m_Wrapper.m_PlayerActions_HeavyAttack;
+        public InputAction @CriticalAttack => m_Wrapper.m_PlayerActions_CriticalAttack;
         public InputAction @Interact => m_Wrapper.m_PlayerActions_Interact;
         public InputAction @Jump => m_Wrapper.m_PlayerActions_Jump;
         public InputAction @Options => m_Wrapper.m_PlayerActions_Options;
@@ -819,12 +842,15 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Dodge.started += instance.OnDodge;
             @Dodge.performed += instance.OnDodge;
             @Dodge.canceled += instance.OnDodge;
-            @RB.started += instance.OnRB;
-            @RB.performed += instance.OnRB;
-            @RB.canceled += instance.OnRB;
-            @RT.started += instance.OnRT;
-            @RT.performed += instance.OnRT;
-            @RT.canceled += instance.OnRT;
+            @LightAttack.started += instance.OnLightAttack;
+            @LightAttack.performed += instance.OnLightAttack;
+            @LightAttack.canceled += instance.OnLightAttack;
+            @HeavyAttack.started += instance.OnHeavyAttack;
+            @HeavyAttack.performed += instance.OnHeavyAttack;
+            @HeavyAttack.canceled += instance.OnHeavyAttack;
+            @CriticalAttack.started += instance.OnCriticalAttack;
+            @CriticalAttack.performed += instance.OnCriticalAttack;
+            @CriticalAttack.canceled += instance.OnCriticalAttack;
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
@@ -850,12 +876,15 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Dodge.started -= instance.OnDodge;
             @Dodge.performed -= instance.OnDodge;
             @Dodge.canceled -= instance.OnDodge;
-            @RB.started -= instance.OnRB;
-            @RB.performed -= instance.OnRB;
-            @RB.canceled -= instance.OnRB;
-            @RT.started -= instance.OnRT;
-            @RT.performed -= instance.OnRT;
-            @RT.canceled -= instance.OnRT;
+            @LightAttack.started -= instance.OnLightAttack;
+            @LightAttack.performed -= instance.OnLightAttack;
+            @LightAttack.canceled -= instance.OnLightAttack;
+            @HeavyAttack.started -= instance.OnHeavyAttack;
+            @HeavyAttack.performed -= instance.OnHeavyAttack;
+            @HeavyAttack.canceled -= instance.OnHeavyAttack;
+            @CriticalAttack.started -= instance.OnCriticalAttack;
+            @CriticalAttack.performed -= instance.OnCriticalAttack;
+            @CriticalAttack.canceled -= instance.OnCriticalAttack;
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
@@ -969,8 +998,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     {
         void OnSprint(InputAction.CallbackContext context);
         void OnDodge(InputAction.CallbackContext context);
-        void OnRB(InputAction.CallbackContext context);
-        void OnRT(InputAction.CallbackContext context);
+        void OnLightAttack(InputAction.CallbackContext context);
+        void OnHeavyAttack(InputAction.CallbackContext context);
+        void OnCriticalAttack(InputAction.CallbackContext context);
         void OnInteract(InputAction.CallbackContext context);
         void OnJump(InputAction.CallbackContext context);
         void OnOptions(InputAction.CallbackContext context);

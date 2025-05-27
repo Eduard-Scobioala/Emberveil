@@ -219,6 +219,9 @@ public class EnemyLocomotion : MonoBehaviour
 
     public void HandleRotateTowardsPosition(Vector3 targetPosition)
     {
+        if (enemyManager.isBeingCriticallyHit) 
+            return;
+
         // Only rotate manually if the agent ISN'T handling rotation OR if the agent is disabled
         if (navMeshAgent != null && (!navMeshAgent.updateRotation || !navMeshAgent.enabled))
         {

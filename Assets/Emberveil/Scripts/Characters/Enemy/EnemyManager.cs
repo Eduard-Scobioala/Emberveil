@@ -11,11 +11,17 @@ public class EnemyManager : CharacterManager
     public float maxDetectionAngle = 50;
     public bool isPerformingAction;
     public EnemyAttackAction[] enemyAttacks;
+    public EnemyBackstabAction enemyBackstabAttack;
+
+    [Header("Enemy Backstab Settings")]
+    public float backstabCheckMaxDistance = 3f;
+    public float backstabCheckMaxAngle = 45f;
+    public float chanceToAttemptBackstab = 0.3f;
+    public CharacterManager currentBackstabVictim { get; set; }
 
     [Header("Patrol Settings")]
     public List<Transform> patrolPoints;
     public float patrolWaitTime = 2f;
-
     
     [Header("State Machine")]
     public InitialStateType initialState = InitialStateType.Idle;
@@ -35,10 +41,11 @@ public class EnemyManager : CharacterManager
     [HideInInspector] public EnemyAnimator enemyAnimator;
     [HideInInspector] public EnemyStats enemyStats;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         enemyLocomotion = GetComponent<EnemyLocomotion>();
-        enemyAnimator = GetComponentInChildren<EnemyAnimator>();
+        enemyAnimator = charAnimatorManager as EnemyAnimator;
         enemyStats = GetComponent<EnemyStats>();
 
         // Initialize states
@@ -46,7 +53,7 @@ public class EnemyManager : CharacterManager
         chaseState = new ChaseState();
         combatState = new CombatState();
         deadState = new DeadState();
-        stunnedState = new StunnedState();
+        stunnedState = new StunnedState(() => isInMidAction || isBeingCriticallyHit, () => isInvulnerable);
         patrolState = new PatrollingState();
     }
 
@@ -154,7 +161,12 @@ public class EnemyManager : CharacterManager
 
     private void HandleDamageReceived(int damage)
     {
-        if (currentState != deadState) // Only react if not already dead
+        // Sometimes if the enemy is in action you should not be allowed to stun him
+        // ex. a big swing which cannot be interuped in any way
+        if (isInvulnerable || /*isInMidAction ||*/ isBeingCriticallyHit)
+            return;
+
+        if (currentState != deadState)
         {
             // Notify current state of damage
             currentState.OnDamageReceived();
@@ -173,6 +185,41 @@ public class EnemyManager : CharacterManager
     public EnemyState GetCurrentState()
     {
         return currentState;
+    }
+
+    public void AnimEvent_ApplyBackstabDamageToVictim()
+    {
+        if (currentBackstabVictim != null && enemyBackstabAttack != null)
+        {
+            int damage = enemyBackstabAttack.backstabDamage;
+            Debug.Log($"{gameObject.name} applying {damage} backstab damage to {currentBackstabVictim.name}");
+
+            PlayerStats victimStats = currentBackstabVictim.GetComponent<PlayerStats>();
+            if (victimStats != null)
+            {
+                victimStats.TakeDamange(damage);
+            }
+        }
+    }
+
+    public void AnimEvent_FinishPerformingBackstab()
+    {
+        Debug.Log($"{gameObject.name} finished performing backstab.");
+        isInMidAction = false;
+        isInvulnerable = false;
+        isBeingCriticallyHit = false; // Enemy was the attacker, not being hit
+        currentBackstabVictim = null;
+
+        if (currentState is CombatState combatStateInstance)
+        {
+            combatStateInstance.ResetIsAttemptingBackstabFlag();
+        }
+
+        // Re-enable locomotion if it was disabled for the backstab
+        if (enemyLocomotion != null) enemyLocomotion.enabled = true;
+
+        // After backstab, enemy should re-evaluate.
+        // The CombatState will handle the attackCooldownTimer for the backstab action.
     }
 
     #region Gizmos

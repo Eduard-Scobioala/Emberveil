@@ -5,14 +5,18 @@ public class EnemyStats : CharacterStats
 {
     [SerializeField] private int baseHealthAmout = 0;
 
-    private Animator animator;
-
     public event Action<int> OnDamageReceived;
     public event Action OnDeath;
 
+    private EnemyManager enemyManager;
+
     private void Awake()
     {
-        animator = GetComponentInChildren<Animator>();
+        enemyManager = GetComponent<EnemyManager>();
+        if (enemyManager == null)
+        {
+            Debug.LogError("EnemyStats could not find EnemyManager component.", this);
+        }
     }
 
     private void Start()
@@ -41,19 +45,24 @@ public class EnemyStats : CharacterStats
         return baseHealthAmout + levelBasedGainedHealth;
     }
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, bool isBackstab = false)
     {
         if (isDead)
             return;
 
-        currentHealth -= damage;
+        if (enemyManager != null && !isBackstab && enemyManager.isInvulnerable)
+            return;
 
+        currentHealth -= damage;
         OnDamageReceived?.Invoke(damage);
 
-        if (currentHealth <= 0)
+        if (currentHealth <= 0 && !isDead)
         {
             currentHealth = 0;
-            // Invoke death event
+            isDead = true;
+
+            enemyManager.enemyAnimator.anim.SetBool("isDead", true);
+             
             OnDeath?.Invoke();
         }
     }

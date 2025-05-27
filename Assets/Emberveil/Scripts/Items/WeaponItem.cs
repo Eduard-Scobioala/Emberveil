@@ -20,6 +20,16 @@ public class WeaponItem : Item
 
     [Header("Stamina Costs")]
     public int baseStamina;
-    public float lightAttackMultiplier;
-    public float heavyAttackMultiplier;
+    public float lightAttackStaminaMultiplier;
+    public float heavyAttackStaminaMultiplier;
+
+    [Header("Damage Stats")]
+    public int lightAttackDmg;
+    public int heavyAttackDmg;
+    public int critDmgMultiplier;
+
+    public int GetBackstabDmg()
+    {
+        return lightAttackDmg * critDmgMultiplier;
+    }
 }

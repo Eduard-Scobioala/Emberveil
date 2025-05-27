@@ -1,17 +1,30 @@
+using System;
 using UnityEngine;
 
 public class StunnedState : EnemyState
 {
     private float stunTimer;
     private float stunDuration;
+    private readonly Func<bool> isInMidAction;
+    private readonly Func<bool> isInvulnerable;
+
+    public StunnedState(Func<bool> isInMidAction, Func<bool> isInvulnerable)
+    {
+        this.isInMidAction = isInMidAction;
+        this.isInvulnerable = isInvulnerable;
+    }
 
     public override void EnterState(EnemyManager enemy)
     {
         base.EnterState(enemy);
         stunDuration = 1.0f; // Default stun duration
         stunTimer = stunDuration;
-        enemyAnimator.PlayTargetAnimation("Damage_01", true);
-        Debug.Log($"{enemy.gameObject.name} entered STUNNED state");
+
+        if (!isInMidAction() && !isInvulnerable())
+        {
+            enemyAnimator.PlayTargetAnimation("Damage_01", true);
+            Debug.Log($"{enemy.gameObject.name} entered STUNNED state");
+        }
     }
 
     public override void UpdateState()

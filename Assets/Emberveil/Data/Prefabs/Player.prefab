@@ -1302,6 +1302,37 @@ Transform:
   - {fileID: 4177643190791478774}
   m_Father: {fileID: 8630447344912912905}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6149262886852140432
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5021777785780805348}
+  m_Layer: 11
+  m_Name: BackstabReceiverPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5021777785780805348
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6149262886852140432}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.64}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6617811616378658093}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6215593273113841068
 GameObject:
   m_ObjectHideFlags: 0
@@ -1669,6 +1700,7 @@ Transform:
   - {fileID: 3985372797156537282}
   - {fileID: 6191335808686067161}
   - {fileID: 2527497949564724510}
+  - {fileID: 5021777785780805348}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &6924507559270458254
@@ -1735,13 +1767,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lockOnTransform: {fileID: 6191335808686067161}
   isInMidAction: 0
+  isInvulnerable: 0
+  isBeingCriticallyHit: 0
+  backstabReceiverPoint: {fileID: 5021777785780805348}
+  beingBackstabbedAnimation: Backstab_Main_Victim_01
+  canBeBackstabbed: 1
+  playerInventory: {fileID: 0}
   isSprinting: 0
   isInAir: 0
   isGrounded: 0
   canDoCombo: 0
   isUsingRightHand: 0
   isUsingLeftHand: 0
-  isInvulnerable: 0
+  currentBackstabTarget: {fileID: 0}
 --- !u!114 &3569286514129032211
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1786,6 +1824,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70d9194dda76c3446b6ade4d1072e58f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  backstabRaycastDistance: 1.5
+  backstabMaxInteractionDistance: 0.6
+  backstabMaxAngle: 45
+  backstabLayerMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  playerBackstabAnimation: Backstab_Main_01
+  playerSnapSpeed: 15
 --- !u!114 &8842606515577052609
 MonoBehaviour:
   m_ObjectHideFlags: 0

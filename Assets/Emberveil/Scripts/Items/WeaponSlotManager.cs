@@ -167,7 +167,7 @@ public class WeaponSlotManager : MonoBehaviour
     {
         if (attackingWeapon != null)
         {
-            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackMultiplier));
+            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackStaminaMultiplier));
         }
     }
 
@@ -175,7 +175,7 @@ public class WeaponSlotManager : MonoBehaviour
     {
         if (attackingWeapon != null)
         {
-            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.heavyAttackMultiplier));
+            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.heavyAttackStaminaMultiplier));
         }
     }
     #endregion

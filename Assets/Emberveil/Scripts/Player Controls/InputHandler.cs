@@ -50,15 +50,12 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerMovement.Camera.performed +=
             context => CameraMovementPerformed?.Invoke(context.ReadValue<Vector2>());
 
-        //inputActions.PlayerActions.Dodge.started += _ => DodgeButtonPressed?.Invoke();
-        //inputActions.PlayerActions.Dodge.canceled += _ => DodgeButtonReleased?.Invoke();
-
         inputActions.PlayerActions.Dodge.performed += context => DodgeTapped?.Invoke();
         inputActions.PlayerActions.Sprint.performed += context => SprintHolding?.Invoke();
         inputActions.PlayerActions.Sprint.canceled += context => SprintReleased?.Invoke();
 
-        inputActions.PlayerActions.RB.performed += _ => LightAttackButtonPressed?.Invoke();
-        inputActions.PlayerActions.RT.performed += _ => HeavyAttackButtonPressed?.Invoke();
+        inputActions.PlayerActions.LightAttack.performed += _ => LightAttackButtonPressed?.Invoke();
+        inputActions.PlayerActions.HeavyAttack.performed += _ => HeavyAttackButtonPressed?.Invoke();
         inputActions.PlayerActions.TwoHanding.performed += _ => TwoHandingButtonPressed?.Invoke();
 
         inputActions.PlayerQuickSlots.DPadRight.performed += _ => DPadRightButtonPressed?.Invoke();

@@ -21,7 +21,7 @@ public class DamageCollider : MonoBehaviour
 
     public void DisableDamageCollider()
     {
-        damageCollider.enabled =false;
+        damageCollider.enabled = false;
     }
 
     private void OnTriggerEnter(Collider collision)

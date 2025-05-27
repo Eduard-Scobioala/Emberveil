@@ -5,7 +5,11 @@ public class DeadState : EnemyState
     public override void EnterState(EnemyManager enemy)
     {
         base.EnterState(enemy);
-        enemyAnimator.PlayTargetAnimation("Death_01", true);
+
+        if (!enemy.isBeingCriticallyHit)
+        {
+            enemyAnimator.PlayTargetAnimation("Death_01", true);
+        }
 
         // Disable components
         enemyLocomotion.DisableNavMeshAgent();

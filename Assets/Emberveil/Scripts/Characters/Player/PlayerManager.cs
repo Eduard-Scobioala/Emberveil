@@ -13,20 +13,19 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    private Animator animator;
     private PlayerLocomotion playerLocomotion;
     private InteractableUI interactableUI;
     private PlayerAttacker playerAttacker;
+    private PlayerStats playerStats;
+    public PlayerInventory playerInventory;
 
     [Header("Player Flags")]
-    public bool isInMidAction;
     public bool isSprinting;
     public bool isInAir;
     public bool isGrounded;
     public bool canDoCombo;
     public bool isUsingRightHand;
     public bool isUsingLeftHand;
-    public bool isInvulnerable;
 
     private bool pickedUpItem = false;
     private bool isInteracting = false;
@@ -37,13 +36,21 @@ public class PlayerManager : CharacterManager
     private ICommand pendingCommand;
     private Commands commands;
 
-    private void Start()
+    public CharacterManager currentBackstabTarget;
+
+    protected override void Awake()
     {
-        animator = GetComponentInChildren<Animator>();
+        base.Awake();
+        playerStats = GetComponent<PlayerStats>();
+        playerInventory = GetComponent<PlayerInventory>();
+        charAnimator = GetComponentInChildren<Animator>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
+    }
 
+    private void Start()
+    {
         InitCommands();
     }
 
@@ -71,12 +78,12 @@ public class PlayerManager : CharacterManager
 
     private void Update()
     {
-        isInMidAction = animator.GetBool("isInMidAction");
-        canDoCombo = animator.GetBool("canDoCombo");
-        isUsingRightHand = animator.GetBool("isUsingRightHand");
-        isUsingLeftHand = animator.GetBool("isUsingLeftHand");
-        isInvulnerable = animator.GetBool("isInvulnerable");
-        animator.SetBool("isInAir", isInAir);
+        isInMidAction = charAnimator.GetBool("isInMidAction");
+        canDoCombo = charAnimator.GetBool("canDoCombo");
+        isUsingRightHand = charAnimator.GetBool("isUsingRightHand");
+        isUsingLeftHand = charAnimator.GetBool("isUsingLeftHand");
+        isInvulnerable = charAnimator.GetBool("isInvulnerable");
+        charAnimator.SetBool("isInAir", isInAir);
 
         // Execute pending command when action ends
         if (pendingCommand != null && pendingCommand.CanExecute())
@@ -124,6 +131,38 @@ public class PlayerManager : CharacterManager
                 () => true,
                 playerLocomotion.HandleSprintReleased)
         };
+    }
+
+    public void AnimEvent_ApplyBackstabDamage()
+    {
+        if (currentBackstabTarget != null && playerAttacker != null)
+        {
+            WeaponItem weaponItem = playerInventory.RightHandWeapon;
+            int backstabDamage = weaponItem != null ? weaponItem.GetBackstabDmg() : 200;
+            Debug.Log($"Player applying {backstabDamage} backstab damage to {currentBackstabTarget.name}");
+
+            EnemyStats victimStats = currentBackstabTarget.GetComponent<EnemyStats>();
+            if (victimStats != null)
+            {
+                victimStats.TakeDamage(backstabDamage, true);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("ApplyBackstabDamage called, but currentBackstabTarget or playerAttacker is null.");
+        }
+    }
+
+    public void AnimEvent_FinishPerformingBackstab()
+    {
+        Debug.Log("Player finished performing backstab animation.");
+        isInMidAction = false;
+        isInvulnerable = false;
+        isBeingCriticallyHit = false;
+        currentBackstabTarget = null;
+
+        // Re-enable locomotion if it was disabled
+        if (playerLocomotion != null) playerLocomotion.enabled = true;
     }
 
     #region Handle Commands

@@ -4,7 +4,8 @@ using System.Collections;
 public class CombatState : EnemyState
 {
     private float attackCooldownTimer = 0f;
-    private bool isAttacking = false; // Tracks if currently IN the attack animation
+    private bool isAttacking = false; // General attacking flag
+    private bool isAttemptingBackstab = false; // Specific for backstab sequence
 
     public override void EnterState(EnemyManager enemy)
     {
@@ -25,6 +26,7 @@ public class CombatState : EnemyState
         }
 
         isAttacking = false;
+        isAttemptingBackstab = false;
         enemyManager.isPerformingAction = false;
         attackCooldownTimer = 0f; // Start ready to attack potentially
 
@@ -63,11 +65,26 @@ public class CombatState : EnemyState
 
     public override void FixedUpdateState()
     {
-        if (attackCooldownTimer <= 0 && !enemyManager.isPerformingAction && !isAttacking)
+        if (attackCooldownTimer <= 0 && !enemyManager.isPerformingAction && !isAttacking && !isAttemptingBackstab)
         {
             if (enemyLocomotion.currentTarget != null)
             {
-                AttackTarget();
+                // Try backstab first if available
+                if (enemyManager.enemyBackstabAttack != null && CanAttemptBackstab())
+                {
+                    if (Random.value < enemyManager.chanceToAttemptBackstab)
+                    {
+                        PerformBackstabAttack();
+                    }
+                    else
+                    {
+                        AttackTarget();
+                    }
+                }
+                else
+                {
+                    AttackTarget();
+                }
             }
             else
             {
@@ -81,17 +98,101 @@ public class CombatState : EnemyState
         }
     }
 
+    private bool CanAttemptBackstab()
+    {
+        if (enemyLocomotion.currentTarget == null || enemyManager.enemyBackstabAttack == null)
+            return false;
+
+        PlayerManager playerTarget = enemyLocomotion.currentTarget.GetComponent<PlayerManager>();
+        if (playerTarget == null || !playerTarget.canBeBackstabbed || playerTarget.isInMidAction || playerTarget.isInvulnerable)
+        {
+            // Player is not a PlayerManager, or is immune/busy
+            return false;
+        }
+
+        // Check position: Enemy behind player?
+        Vector3 directionToEnemy = (enemyManager.transform.position - playerTarget.transform.position).normalized;
+        directionToEnemy.y = 0;
+
+        float angle = Vector3.Angle(-playerTarget.transform.forward, directionToEnemy);
+
+        if (angle <= enemyManager.backstabCheckMaxAngle) // Enemy is within the "back" cone of the player
+        {
+            // Check distance: Enemy close enough to player's (assumed) backstab receiver point
+            // For simplicity, we'll check distance to player's main transform.
+            // A more precise check would involve a 'player.backstabReceiverPoint' if player had one for enemies.
+            float distance = Vector3.Distance(enemyManager.transform.position, playerTarget.transform.position);
+            if (distance <= enemyManager.backstabCheckMaxDistance)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void PerformBackstabAttack()
+    {
+        Debug.Log($"{enemyManager.gameObject.name} attempting BACKSTAB on {enemyLocomotion.currentTarget.name}");
+        enemyManager.isPerformingAction = true;
+        isAttemptingBackstab = true;
+        attackCooldownTimer = enemyManager.enemyBackstabAttack.recoveryTime;
+        enemyManager.currentBackstabVictim = enemyLocomotion.currentTarget.GetComponent<CharacterManager>();
+
+        enemyManager.isInMidAction = true;
+        enemyManager.isInvulnerable = true; // Enemy is invulnerable during their backstab
+
+        PlayerManager playerVictim = enemyLocomotion.currentTarget.GetComponent<PlayerManager>();
+        if (playerVictim != null)
+        {
+            // The enemy should snap to the player's backstabReceiverPoint.
+            // This point on the player is where an *attacker* would stand.
+            Vector3 snapPosition = playerVictim.backstabReceiverPoint.position;
+
+            // The enemy should look towards the player's core/center from this snap position.
+            // Player's lockOnTransform is a good approximation for their center.
+            Vector3 lookAtTargetPos = playerVictim.lockOnTransform != null ? playerVictim.lockOnTransform.position : playerVictim.transform.position + playerVictim.transform.up * 1f;
+            Vector3 directionToLook = lookAtTargetPos - snapPosition;
+            directionToLook.y = 0; // Keep enemy rotation horizontal
+
+            Quaternion snapRotation = Quaternion.LookRotation(directionToLook.normalized);
+
+            enemyManager.transform.position = snapPosition;
+            enemyManager.transform.rotation = snapRotation;
+
+            playerVictim.GetBackstabbed(enemyManager.transform);
+
+            Debug.Log($"{enemyManager.name} snapped to {playerVictim.name}'s backstabReceiverPoint. Pos: {snapPosition}, Rot: {snapRotation.eulerAngles}");
+        }
+        else
+        {
+            Debug.LogError($"{enemyManager.name} initiated backstab but target {enemyLocomotion.currentTarget.name} is not a PlayerManager or is null! Aborting backstab.");
+            enemyManager.isPerformingAction = false;
+            isAttemptingBackstab = false;
+            attackCooldownTimer = 0.1f;
+            enemyManager.isInMidAction = false;
+            enemyManager.isInvulnerable = false;
+            enemyManager.currentBackstabVictim = null;
+            return;
+        }
+
+        enemyAnimator.PlayTargetAnimation(enemyManager.enemyBackstabAttack.actionAnimation, true);
+
+        // Reset isAttemptingBackstab via anim event (FinishPerformingBackstab)
+        // AnimEvent_FinishPerformingBackstab on EnemyManager will reset flags.
+    }
+
     public override void ExitState()
     {
         enemyManager.isPerformingAction = false;
         isAttacking = false;
+        isAttemptingBackstab = false;
 
         enemyManager.StopCoroutine(ResetAttackAnimationFlag());
     }
 
     public override void CheckStateTransitions()
     {
-        if (isAttacking) return;
+        if (isAttacking || isAttemptingBackstab || attackCooldownTimer > 1f) return;
 
         // --- Target Lost ---
         if (enemyLocomotion.currentTarget == null)
@@ -170,6 +271,11 @@ public class CombatState : EnemyState
             // Do nothing this frame, rotation will happen in Update.
             Debug.Log($"{enemyManager.gameObject.name} no valid attack found.");
         }
+    }
+
+    public void ResetIsAttemptingBackstabFlag()
+    {
+        isAttemptingBackstab = false;
     }
 
     private IEnumerator ResetAttackAnimationFlag(float animationDelay = 0.8f)
