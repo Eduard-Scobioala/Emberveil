@@ -1,31 +1,103 @@
 using UnityEngine;
+using UnityEngine.AI;
 
-public class EnemyAnimator : AnimatorManager
+public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
 {
-    private EnemyLocomotion enemyLocomotion;
     private EnemyManager enemyManager;
+    private EnemyLocomotion enemyLocomotion;
+    private EnemyCombat enemyCombat;
 
-    private void Awake()
+    // Animator Hashes
+    private readonly int hashForwardSpeed = Animator.StringToHash("ForwardSpeed");
+    private readonly int hashStrafeSpeed = Animator.StringToHash("StrafeSpeed");
+    // Add other common hashes like "IsInteracting", "IsDead"
+
+    public void Initialize(EnemyManager manager)
     {
-        anim = GetComponent<Animator>();
-        enemyLocomotion = GetComponentInParent<EnemyLocomotion>();
-        enemyManager = GetComponentInParent<EnemyManager>();
-        if (enemyManager == null)
+        enemyManager = manager;
+        enemyLocomotion = manager.Locomotion;
+        enemyCombat = manager.Combat;
+        anim = GetComponent<Animator>(); // Make sure this is set
+        if (anim == null) Debug.LogError("Animator not found on EnemyAnimator's GameObject or children.", this);
+    }
+
+    public void SetMovementValues(float forwardAmount, float strafeAmount)
+    {
+        if (anim == null) return;
+        anim.SetFloat(hashForwardSpeed, forwardAmount, 0.1f, Time.deltaTime);
+        anim.SetFloat(hashStrafeSpeed, strafeAmount, 0.1f, Time.deltaTime);
+    }
+
+    public void PlayTargetAnimation(string animationName, bool isInteracting, float transitionDuration = 0.1f)
+    {
+        if (anim == null) return;
+
+        SetBool("isInteracting", isInteracting);
+        anim.applyRootMotion = isInteracting; // Typically true for actions, false for locomotion blends
+        anim.CrossFade(animationName, transitionDuration);
+    }
+
+    public void SetBool(string paramName, bool value)
+    {
+        if (anim == null) return;
+        anim.SetBool(paramName, value);
+    }
+
+    public void SetTrigger(string paramName)
+    {
+        if (anim == null) return;
+        anim.SetTrigger(paramName);
+    }
+
+    // OnAnimatorMove is called on the GameObject with the Animator component
+    // This script should be on that same GameObject or a child that can get it.
+    private void OnAnimatorMove()
+    {
+        if (enemyLocomotion == null || !anim.applyRootMotion || Time.deltaTime <= 0) return;
+
+        // Only apply root motion if the locomotion system is prepared for it
+        // (e.g., RB is non-kinematic, NavAgent is off or overridden by current state)
+        // Or if in a critical action where animation fully dictates movement
+        if ((!enemyLocomotion.GetComponent<NavMeshAgent>().enabled && !enemyLocomotion.GetComponent<Rigidbody>().isKinematic) ||
+            enemyManager.IsPerformingCriticalAction || enemyManager.IsReceivingCriticalHit)
         {
-            Debug.LogError("EnemyAnimator could not find EnemyManager in parent.", this);
+            enemyLocomotion.ApplyRootMotion(anim.deltaPosition, anim.deltaRotation);
         }
     }
 
-    public void AnimEvent_FinishBeingBackstabbed()
+    // --- Animation Event Handlers ---
+    // These are called by name from Animation Events in animation clips
+
+    public void AnimEvent_EnableDamageCollider()
     {
-        if (enemyManager != null)
-        {
-            enemyManager.FinishBeingBackstabbed();
-        }
-        else
-        {
-            Debug.LogError("AnimEvent_FinishBeingBackstabbed called, but EnemyManager is null!", this);
-        }
+        enemyCombat?.EnableWeaponCollider(WeaponHand.Right); // Assuming right hand for now
+    }
+
+    public void AnimEvent_DisableDamageCollider()
+    {
+        enemyCombat?.DisableWeaponCollider(WeaponHand.Right);
+    }
+
+    public void AnimEvent_AttackLanded()
+    {
+        // TODO: Play SFX, VFX for attack impact
+    }
+
+    public void AnimEvent_ApplyBackstabDamageToVictim() // When enemy is ATTACKER
+    {
+        enemyCombat?.ApplyBackstabDamageOnVictim();
+    }
+
+    public void AnimEvent_FinishPerformingCriticalAction() // When enemy is ATTACKER
+    {
+        // This signals the end of the enemy's attacking critical animation (e.g., backstab)
+        enemyManager?.Notify_FinishedPerformingCriticalAction();
+    }
+
+    public void AnimEvent_FinishBeingCriticallyHit() // When enemy is VICTIM
+    {
+        // This signals the end of the enemy's victim critical animation (e.g., being backstabbed)
+        enemyManager?.Notify_FinishedBeingCriticallyHit();
     }
 
     public void AnimEvent_EnableInvulnerability()
@@ -38,84 +110,18 @@ public class EnemyAnimator : AnimatorManager
         if (enemyManager != null) enemyManager.isInvulnerable = false;
     }
 
-    public void AnimEvent_ApplyBackstabDamageToVictim()
+    public void AnimEvent_CanCombo() // If enemies have combos
     {
-        if (enemyManager != null)
-        {
-            enemyManager.AnimEvent_ApplyBackstabDamageToVictim();
-        }
+        // enemyCombat?.SetCanCombo(true);
     }
 
-    public void AnimEvent_FinishPerformingBackstab()
+    public void AnimEvent_CannotCombo()
     {
-        if (enemyManager != null)
-        {
-            enemyManager.AnimEvent_FinishPerformingBackstab();
-        }
+        // enemyCombat?.SetCanCombo(false);
     }
 
-    private void OnAnimatorMove()
+    public void AnimEvent_Footstep()
     {
-        if (anim == null || enemyManager == null || Time.deltaTime <= 0)
-        {
-            // Not ready or no time has passed, do nothing.
-            return;
-        }
-
-        // Get the root motion from the animator for this frame.
-        Vector3 deltaPosition = anim.deltaPosition;
-        Quaternion deltaRotation = anim.deltaRotation;
-
-        // --- Apply to Rigidbody (Recommended for physics-based characters) ---
-        if (enemyLocomotion != null && enemyLocomotion.enemyRigidbody != null)
-        {
-            // If the Rigidbody is kinematic, use MovePosition/MoveRotation.
-            // If it's non-kinematic, applying velocity or using MovePosition/MoveRotation
-            // can work, but MovePosition/Rotation is often better for direct animation control.
-
-            // We need to be careful if the NavMeshAgent is active, as it also controls position.
-            // Generally, during animations that use root motion (like attacks or being hit),
-            // the NavMeshAgent should be disabled or its updating paused.
-
-            if (enemyLocomotion.enemyRigidbody.isKinematic)
-            {
-                // For kinematic rigidbodies, directly move them.
-                // This is often the case when NavMeshAgent is active and has taken over,
-                // but during root motion victim animations, agent should be off.
-                enemyLocomotion.enemyRigidbody.MovePosition(enemyLocomotion.enemyRigidbody.position + deltaPosition);
-                enemyLocomotion.enemyRigidbody.MoveRotation(enemyLocomotion.enemyRigidbody.rotation * deltaRotation);
-            }
-            else // Non-kinematic Rigidbody
-            {
-                // For non-kinematic, you can apply it as a velocity or use MovePosition.
-                // Using MovePosition is often more direct for root motion.
-                // This is the state the Rigidbody should be in when NavMeshAgent is disabled
-                // for victim animations.
-
-                // Ensure drag is low so it doesn't fight the root motion too much
-                // enemyLocomotion.enemyRigidbody.drag = 0; // You might already do this
-
-                // Calculate desired velocity from deltaPosition
-                Vector3 worldVelocity = deltaPosition / Time.deltaTime;
-
-                // If you want to preserve existing Y velocity (e.g., for gravity if falling while being hit),
-                // you can do this, but for simple pushback, directly applying is fine.
-                // worldVelocity.y = enemyLocomotion.enemyRigidbody.velocity.y;
-
-                enemyLocomotion.enemyRigidbody.velocity = worldVelocity;
-
-                // Apply rotation (usually less problematic than position)
-                enemyManager.transform.rotation *= deltaRotation; // Apply delta to current rotation
-
-                // ALTERNATIVE FOR NON-KINEMATIC (often more stable for root motion):
-                // enemyLocomotion.enemyRigidbody.MovePosition(enemyLocomotion.enemyRigidbody.position + deltaPosition);
-                // enemyLocomotion.enemyRigidbody.MoveRotation(enemyLocomotion.enemyRigidbody.rotation * deltaRotation);
-            }
-        }
-        else // --- Fallback: Apply directly to Transform (if no Rigidbody or it's not the primary mover) ---
-        {
-            enemyManager.transform.position += deltaPosition;
-            enemyManager.transform.rotation *= deltaRotation;
-        }
+        // TODO: Play footstep sound
     }
 }

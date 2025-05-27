@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class IdleState : EnemyState
+public class IdleState2 : EnemyState
 {
     private float detectionCheckCounter = 0f;
     private float detectionCheckInterval = 0.2f;

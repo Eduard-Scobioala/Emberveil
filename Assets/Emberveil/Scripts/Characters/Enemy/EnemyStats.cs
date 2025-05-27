@@ -3,15 +3,19 @@ using UnityEngine;
 
 public class EnemyStats : CharacterStats
 {
-    [SerializeField] private int baseHealthAmout = 0;
-
-    public event Action<int> OnDamageReceived;
-    public event Action OnDeath;
+    public event Action<int, DamageType, Transform> OnDamagedEvent;
+    public event Action OnDeathEvent;
 
     private EnemyManager enemyManager;
 
-    private void Awake()
+    [Header("Enemy Specific Stats")]
+    [SerializeField] private int baseHealthAmount = 100;
+    public float poise = 100f;
+    public float currentPoise;
+
+    protected void Awake()
     {
+        //base.Awake();
         enemyManager = GetComponent<EnemyManager>();
         if (enemyManager == null)
         {
@@ -21,49 +25,69 @@ public class EnemyStats : CharacterStats
 
     private void Start()
     {
-        maxHealth = GetMaxHealthBasedOnHealthLevel();
+        maxHealth = CalculateMaxHealth();
         currentHealth = maxHealth;
+        currentPoise = poise;
+        isDead = false;
     }
 
-    private int GetMaxHealthBasedOnHealthLevel()
+    private int CalculateMaxHealth()
     {
         int levelBasedGainedHealth = 0;
 
-        if (healthLevel < 27)
+        if (healthLevel < 20)
         {
-            levelBasedGainedHealth = 20 * healthLevel;
+            levelBasedGainedHealth = 15 * healthLevel;
         }
-        else if (healthLevel >= 27 && healthLevel <= 49)
+        else if (healthLevel >= 20 && healthLevel <= 40)
         {
-            levelBasedGainedHealth = 540 + 13 * (healthLevel - 26);
+            levelBasedGainedHealth = 300 + 10 * (healthLevel - 19);
         }
-        else if (healthLevel > 49)
+        else if (healthLevel > 40)
         {
-            levelBasedGainedHealth = 858 + 5 * (healthLevel - 49);
+            levelBasedGainedHealth = 510 + 5 * (healthLevel - 40);
         }
-        
-        return baseHealthAmout + levelBasedGainedHealth;
+
+        return baseHealthAmount + levelBasedGainedHealth;
     }
 
-    public void TakeDamage(int damage, bool isBackstab = false)
+    public void TakeDamage(int damage, DamageType damageType, Transform attacker)
     {
-        if (isDead)
+        if (isDead) return;
+        if (enemyManager.isInvulnerable && damageType != DamageType.BackstabCritical) // Backstabs should always hit
+        {
+            // TODO: Maybe some damage types bypass invulnerability
+            Debug.Log($"{gameObject.name} is invulnerable. Damage blocked.");
             return;
-
-        if (enemyManager != null && !isBackstab && enemyManager.isInvulnerable)
-            return;
+        }
 
         currentHealth -= damage;
-        OnDamageReceived?.Invoke(damage);
+        Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}/{maxHealth}");
 
-        if (currentHealth <= 0 && !isDead)
+        OnDamagedEvent?.Invoke(damage, damageType, attacker); // Notify EnemyManager
+
+        if (currentHealth <= 0)
         {
             currentHealth = 0;
-            isDead = true;
-
-            enemyManager.enemyAnimator.anim.SetBool("isDead", true);
-             
-            OnDeath?.Invoke();
+            if (!isDead) // Ensure OnDeathEvent is invoked only once
+            {
+                isDead = true;
+                OnDeathEvent?.Invoke(); // Notify EnemyManager
+            }
         }
+        // else
+        // {
+        //    // Handle poise damage
+        //    // currentPoise -= poiseDamageFromAttack;
+        //    // if (currentPoise <= 0) { // Trigger PoiseBreak state }
+        // }
+    }
+
+    public void Heal(int amount)
+    {
+        if (isDead) return;
+
+        currentHealth += amount;
+        if (currentHealth > maxHealth) currentHealth = maxHealth;
     }
 }

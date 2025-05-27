@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ChaseState : EnemyState
+public class ChaseState2 : EnemyState
 {
     [SerializeField] private float timeUntilTargetLoss = 5f;
     private float targetLossTimer = 0f;
