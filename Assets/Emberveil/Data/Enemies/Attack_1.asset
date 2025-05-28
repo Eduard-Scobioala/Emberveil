@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6db0328d6ffde4e489012ed54894e20a, type: 3}
+  m_Name: Attack_1
+  m_EditorClassIdentifier: 
+  actionName: Lickt Attack
+  animationName: OH_Light_Attack_01
+  recoveryTime: 2
+  staminaCost: 5
+  attackScore: 10
+  minAttackDistance: 0
+  maxAttackDistance: 3
+  minAttackAngle: -35
+  maxAttackAngle: 35
+  damage: 20
+  damageType: 0
+  poiseDamage: 10
+  damageColliderStartTime: 0.2
+  damageColliderEndTime: 0.5
+  canBeParried: 1
+  isHeavyAttack: 0

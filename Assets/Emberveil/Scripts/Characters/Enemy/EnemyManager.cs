@@ -1,238 +1,236 @@
-using System.Collections.Generic;
 using UnityEngine;
-
-public enum InitialStateType { Idle, Patrol }
 
 public class EnemyManager : CharacterManager
 {
-    [Header("AI Settings")]
-    public float detectionRadius = 20;
-    public float minDetectionAngle = -50;
-    public float maxDetectionAngle = 50;
-    public bool isPerformingAction;
-    public EnemyAttackAction[] enemyAttacks;
-    public EnemyBackstabAction enemyBackstabAttack;
+    //"AI Core Components"
+    public EnemyStats Stats { get; private set; }
+    public EnemyLocomotion Locomotion { get; private set; }
+    public EnemyAnimator EnemyAnimator { get; private set; }
+    public EnemyCombat Combat { get; private set; }
+    public EnemySenses Senses { get; private set; }
 
-    [Header("Enemy Backstab Settings")]
-    public float backstabCheckMaxDistance = 3f;
-    public float backstabCheckMaxAngle = 45f;
-    public float chanceToAttemptBackstab = 0.3f;
-    public CharacterManager currentBackstabVictim { get; set; }
+    //"State Machine"
+    public IEnemyState CurrentState { get; private set; }
+    public IdleState idleState;
+    public PatrolState patrolState;
+    public ChaseState chaseState;
+    public CombatStanceState combatStanceState;
+    public AttackingState attackingState;
+    public PerformingBackstabState performingBackstabState; // Attacker
+    public BeingBackstabbedState beingBackstabbedState;   // Victim
+    public HitReactionState hitReactionState;
+    public DeadState deadState;
+    // Add more states like FleeState, InvestigateState, PoiseBreakState
 
-    [Header("Patrol Settings")]
-    public List<Transform> patrolPoints;
-    public float patrolWaitTime = 2f;
-    
-    [Header("State Machine")]
-    public InitialStateType initialState = InitialStateType.Idle;
-    [HideInInspector] public EnemyState defaultState;
-    private EnemyState currentState;
+    //"AI Behavior"
+    public CharacterManager CurrentTarget { get; set; } // Who the AI is focused on
+    public PatrolRoute patrolRoute;
+    public float defaultStoppingDistance = 1.5f;
 
-    // Available States
-    [HideInInspector] public IdleState idleState;
-    [HideInInspector] public ChaseState chaseState;
-    [HideInInspector] public CombatState combatState;
-    [HideInInspector] public DeadState deadState;
-    [HideInInspector] public StunnedState stunnedState;
-    [HideInInspector] public PatrollingState patrolState;
 
-    // Component references
-    [HideInInspector] public EnemyLocomotion enemyLocomotion;
-    [HideInInspector] public EnemyAnimator enemyAnimator;
-    [HideInInspector] public EnemyStats enemyStats;
+    public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
+    public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
+    public bool isPerformingNonCriticalAction; // For regular attacks
 
     protected override void Awake()
     {
-        base.Awake();
-        enemyLocomotion = GetComponent<EnemyLocomotion>();
-        enemyAnimator = charAnimatorManager as EnemyAnimator;
-        enemyStats = GetComponent<EnemyStats>();
+        base.Awake(); // From your CharacterManager
 
-        // Initialize states
+        Stats = GetComponent<EnemyStats>();
+        Locomotion = GetComponent<EnemyLocomotion>();
+        EnemyAnimator = GetComponentInChildren<EnemyAnimator>();
+        Combat = GetComponent<EnemyCombat>();
+        Senses = GetComponent<EnemySenses>();
+
+        if (Stats == null) Debug.LogError("EnemyStats not found!", this);
+        if (Locomotion == null) Debug.LogError("EnemyLocomotion not found!", this);
+        if (EnemyAnimator == null) Debug.LogError("EnemyAnimator not found or not assigned!", this);
+        if (Combat == null) Debug.LogError("EnemyCombat not found!", this);
+        if (Senses == null) Debug.LogError("EnemySenses not found!", this);
+
+        // Initialize components
+        //Stats.Initialize(this);
+        Locomotion.Initialize(this);
+        EnemyAnimator.Initialize(this);
+        Combat.Initialize(this);
+        Senses.Initialize(this);
+
+        // Create state instances
         idleState = new IdleState();
+        patrolState = new PatrolState();
         chaseState = new ChaseState();
-        combatState = new CombatState();
+        combatStanceState = new CombatStanceState();
+        attackingState = new AttackingState();
+        performingBackstabState = new PerformingBackstabState();
+        beingBackstabbedState = new BeingBackstabbedState();
+        hitReactionState = new HitReactionState();
         deadState = new DeadState();
-        stunnedState = new StunnedState(() => isInMidAction || isBeingCriticallyHit, () => isInvulnerable);
-        patrolState = new PatrollingState();
+
+        // Default flags from CharacterManager
+        // isInMidAction (use isPerformingNonCriticalAction or state checks)
+        // isInvulnerable
+        // isBeingCriticallyHit (use beingBackstabbedState)
+        // canBeBackstabbed
     }
 
     private void Start()
     {
-        if (initialState == InitialStateType.Idle)
+        // Subscribe to events
+        Stats.OnDamagedEvent += HandleDamageTaken;
+        Stats.OnDeathEvent += HandleDeath;
+        Senses.OnTargetSpotted += HandleTargetSpotted;
+        Senses.OnTargetLost += HandleTargetLost;
+
+        // Set initial state
+        if (patrolRoute != null && patrolRoute.patrolPoints.Count > 0)
         {
-            defaultState = idleState;
-            SwitchState(idleState);
-        }
-        else if (initialState == InitialStateType.Patrol)
-        {
-            defaultState = patrolState;
             SwitchState(patrolState);
         }
-    }
-
-    private void OnEnable()
-    {
-        enemyStats.OnDamageReceived += HandleDamageReceived;
-        enemyStats.OnDeath += HandleDeath;
-    }
-
-    private void OnDisable()
-    {
-        enemyStats.OnDamageReceived -= HandleDamageReceived;
-        enemyStats.OnDeath -= HandleDeath;
+        else
+        {
+            SwitchState(idleState);
+        }
     }
 
     private void Update()
     {
-        if (currentState == deadState)
-            return;
-
-        currentState?.UpdateState();
+        CurrentState?.Tick();
+        Combat.TickCombat();
+        HandleStateTransitions();
+        Locomotion.UpdateAnimatorMovementParameters(); // Update animator based on locomotion state
     }
 
     private void FixedUpdate()
     {
-        if (currentState == deadState)
-            return;
-
-        currentState?.FixedUpdateState();
+        CurrentState?.FixedTick();
     }
 
-    public void SwitchState(EnemyState newState)
+    private void OnDestroy()
     {
-        currentState?.ExitState();
-
-        currentState = newState;
-        currentState.EnterState(this);
-    }
-
-    public EnemyAttackAction GetRandomAttack()
-    {
-        if (enemyLocomotion.currentTarget == null)
-            return null;
-
-        // Target information
-        Transform targetTransform = enemyLocomotion.currentTarget.transform;
-        Vector3 targetPosition = targetTransform.position;
-        Vector3 directionToTarget = targetPosition - transform.position;
-
-        // Calculate key metrics
-        float angleToTarget = Vector3.Angle(directionToTarget, transform.forward);
-        float distanceToTarget = Vector3.Distance(targetPosition, transform.position);
-
-        // Find valid attacks and their total score
-        List<(EnemyAttackAction, int)> validAttacks = new ();
-        int totalScore = 0;
-
-        foreach (EnemyAttackAction attack in enemyAttacks)
+        // Unsubscribe
+        if (Stats != null)
         {
-            // Check if attack is valid based on distance and angle
-            bool isInRangeDistance = distanceToTarget >= attack.minDistanceRequiredToAttack &&
-                                    distanceToTarget <= attack.maxDistanceRequiredToAttack;
+            Stats.OnDamagedEvent -= HandleDamageTaken;
+            Stats.OnDeathEvent -= HandleDeath;
+        }
+        if (Senses != null)
+        {
+            Senses.OnTargetSpotted -= HandleTargetSpotted;
+            Senses.OnTargetLost -= HandleTargetLost;
+        }
+    }
 
-            bool isInRangeAngle = angleToTarget >= attack.minAttackAngle &&
-                                 angleToTarget <= attack.maxAttackAngle;
+    public void SwitchState(IEnemyState newState)
+    {
+        if (CurrentState == deadState && newState != deadState) return; // Cannot leave dead state except for cleanup
 
-            if (isInRangeDistance && isInRangeAngle)
-            {
-                totalScore += attack.attackScore;
-                validAttacks.Add((attack, totalScore));
-            }
+        CurrentState?.Exit();
+        CurrentState = newState;
+        Debug.Log($"{name} transitioning to {newState.GetType().Name}");
+        CurrentState.Enter(this);
+    }
+
+    private void HandleStateTransitions()
+    {
+        if (CurrentState == null) return;
+        IEnemyState nextState = CurrentState.Transition();
+        if (nextState != null)
+        {
+            SwitchState(nextState);
+        }
+    }
+
+    // --- Event Handlers ---
+    private void HandleTargetSpotted(CharacterManager target)
+    {
+        CurrentTarget = target;
+        // Current state might react to this by transitioning (e.g., Idle to Chase)
+    }
+
+    private void HandleTargetLost()
+    {
+        CurrentTarget = null;
+        // Current state might react (e.g., Chase to Idle/ReturnToPost)
+    }
+
+    private void HandleDamageTaken(int damageAmount, DamageType type, Transform attacker)
+    {
+        if (CurrentState == deadState || CurrentState == beingBackstabbedState) return; // Already dead or in critical hit anim
+
+        // Specific handling for backstabs
+        if (type == DamageType.BackstabCritical)
+        {
+            // The GetBackstabbed method should have already been called by the attacker
+            // This event is more for logging or if additional logic is needed after damage application
+            // SwitchState(beingBackstabbedState); // This is usually initiated by GetBackstabbed
+            return;
         }
 
-        // If no valid attacks found, return null
-        if (validAttacks.Count == 0)
-            return null;
-
-        // Select a random attack based on weighted scores
-        int randomValue = Random.Range(0, totalScore);
-
-        foreach (var (attack, runningScore) in validAttacks)
+        // For other damage, transition to HitReactionState
+        // unless in a state that shouldn't be interrupted (e.g. performing critical action)
+        if (!(CurrentState is PerformingBackstabState)) // Don't interrupt own backstab
         {
-            if (randomValue < runningScore)
-            {
-                return attack;
-            }
-        }
-
-        throw new System.Exception("Wtff? Your attacks score are screwed.");
-    }
-
-    private void HandleDamageReceived(int damage)
-    {
-        // Sometimes if the enemy is in action you should not be allowed to stun him
-        // ex. a big swing which cannot be interuped in any way
-        if (isInvulnerable || /*isInMidAction ||*/ isBeingCriticallyHit)
-            return;
-
-        if (currentState != deadState)
-        {
-            // Notify current state of damage
-            currentState.OnDamageReceived();
-
-            // Immediately switch to stunned state
-            SwitchState(stunnedState);
+            hitReactionState.SetAttacker(attacker); // Pass attacker for facing
+            SwitchState(hitReactionState);
         }
     }
 
     private void HandleDeath()
     {
-        RaiseDeath();
         SwitchState(deadState);
     }
 
-    public EnemyState GetCurrentState()
+    // --- Critical Action Control Methods ---
+    public override void GetBackstabbed(Transform attacker) // Called by PlayerAttacker or other enemies
     {
-        return currentState;
+        if (CurrentState == deadState || !canBeBackstabbed) return;
+
+        Debug.Log($"{gameObject.name} is being backstabbed by {attacker.name}");
+        base.GetBackstabbed(attacker); // Calls CharacterManager version if any shared logic needed
+
+        beingBackstabbedState.SetAttacker(attacker);
+        SwitchState(beingBackstabbedState);
     }
 
-    public void AnimEvent_ApplyBackstabDamageToVictim()
+    public void SetPerformingCriticalAction(bool isPerforming, bool isAttackerPerspective)
     {
-        if (currentBackstabVictim != null && enemyBackstabAttack != null)
+        // This method helps states like PerformingBackstabState to manage overall enemy behavior.
+        // The flags `isPerformingCriticalAction` and `isReceivingCriticalHit` on CharacterManager
+        // are now effectively controlled by being IN these specific states.
+        if (isPerforming)
         {
-            int damage = enemyBackstabAttack.backstabDamage;
-            Debug.Log($"{gameObject.name} applying {damage} backstab damage to {currentBackstabVictim.name}");
+            isInvulnerable = true; // Usually invulnerable during criticals
+            Locomotion.DisableAgentAndPhysicsControl();
+        }
+        else
+        {
+            isInvulnerable = false; // Reset on exit from critical state
+            // Locomotion re-enabled by the exiting state
+        }
+        // The boolean flags on EnemyManager are now less important than the state itself
+    }
 
-            PlayerStats victimStats = currentBackstabVictim.GetComponent<PlayerStats>();
-            if (victimStats != null)
-            {
-                victimStats.TakeDamange(damage);
-            }
+    // Called by EnemyAnimator's animation event when ENEMY'S ATTACKING critical animation finishes
+    public void Notify_FinishedPerformingCriticalAction()
+    {
+        if (CurrentState is PerformingBackstabState performingState)
+        {
+            performingState.OnCriticalActionAnimationEnd();
+        }
+        Combat.ClearBackstabVictim();
+    }
+
+    // Called by EnemyAnimator's animation event when ENEMY'S VICTIM critical animation finishes
+    public void Notify_FinishedBeingCriticallyHit()
+    {
+        if (CurrentState is BeingBackstabbedState victimState)
+        {
+            victimState.OnCriticalHitAnimationEnd();
+        }
+        // Check if health is <=0, if so, transition to DeadState if not already handled
+        if (Stats.currentHealth <= 0 && CurrentState != deadState)
+        {
+            SwitchState(deadState);
         }
     }
-
-    public void AnimEvent_FinishPerformingBackstab()
-    {
-        Debug.Log($"{gameObject.name} finished performing backstab.");
-        isInMidAction = false;
-        isInvulnerable = false;
-        isBeingCriticallyHit = false; // Enemy was the attacker, not being hit
-        currentBackstabVictim = null;
-
-        if (currentState is CombatState combatStateInstance)
-        {
-            combatStateInstance.ResetIsAttemptingBackstabFlag();
-        }
-
-        // Re-enable locomotion if it was disabled for the backstab
-        if (enemyLocomotion != null) enemyLocomotion.enabled = true;
-
-        // After backstab, enemy should re-evaluate.
-        // The CombatState will handle the attackCooldownTimer for the backstab action.
-    }
-
-    #region Gizmos
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
-
-        Vector3 fovLine1 = Quaternion.AngleAxis(maxDetectionAngle, transform.up) * transform.forward * detectionRadius;
-        Vector3 fovLine2 = Quaternion.AngleAxis(minDetectionAngle, transform.up) * transform.forward * detectionRadius;
-        Gizmos.color = Color.blue;
-        Gizmos.DrawRay(transform.position, fovLine1);
-        Gizmos.DrawRay(transform.position, fovLine2);
-    }
-    #endregion
 }

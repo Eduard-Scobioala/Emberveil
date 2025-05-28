@@ -64246,35 +64246,28 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.73333335
-    functionName: OpenDamageCollider
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 0.8
-    functionName: DrainStaminaLightAttack
+    functionName: AnimEvent_EnableDamageCollider
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 0.8666667
-    functionName: CloseDamageCollider
+    functionName: AnimEvent_DisableDamageCollider
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 1.0666667
-    functionName: EnableCombo
+    functionName: AnimEvent_CanCombo
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 1.6666666
-    functionName: DisableCombo
+    functionName: AnimEvent_CannotCombo
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

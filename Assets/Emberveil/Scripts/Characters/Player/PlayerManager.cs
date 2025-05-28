@@ -144,7 +144,7 @@ public class PlayerManager : CharacterManager
             EnemyStats victimStats = currentBackstabTarget.GetComponent<EnemyStats>();
             if (victimStats != null)
             {
-                victimStats.TakeDamage(backstabDamage, true);
+                victimStats.TakeDamage(backstabDamage, DamageType.BackstabCritical, transform);
             }
         }
         else
