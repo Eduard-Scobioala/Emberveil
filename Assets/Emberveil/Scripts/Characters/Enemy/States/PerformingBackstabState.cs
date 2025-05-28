@@ -9,14 +9,36 @@ public class PerformingBackstabState : IEnemyState
     {
         this.manager = manager;
         animationFinishedNotified = false;
-        manager.isInMidAction = true; // Use CharacterManager's flag
+
+        PlayerManager victim = manager.Combat.CurrentBackstabVictim as PlayerManager;
+
+        if (victim == null)
+        {
+            Debug.LogError($"{manager.name} entered PerformingBackstabState but CurrentBackstabVictim is null or not PlayerManager. Exiting to CombatStance.");
+            manager.SwitchState(manager.combatStanceState); // Failsafe, go back
+            return;
+        }
+
         manager.isInvulnerable = true;
+        manager.Locomotion.DisableAgentAndPhysicsControl();
 
-        // Locomotion should already be disabled and enemy snapped by EnemyCombat.AttemptBackstab()
-        // Animation should have been started by EnemyCombat.AttemptBackstab()
-        Debug.Log($"{manager.name} entered PerformingBackstabState.");
+        // Snap enemy to player's backstab receiver point
+        Transform victimReceiverPoint = victim.backstabReceiverPoint;
+        manager.transform.position = victimReceiverPoint.position;
 
-        // Cooldown is set by EnemyCombat after the animation via Notify_FinishedPerformingCriticalAction
+        // Enemy should look towards the player's core
+        Vector3 lookAtTargetPos = victim.lockOnTransform != null ? victim.lockOnTransform.position : victim.transform.position + victim.transform.up * 1f;
+        Vector3 directionToLook = lookAtTargetPos - manager.transform.position;
+        directionToLook.y = 0;
+        if (directionToLook != Vector3.zero) manager.transform.rotation = Quaternion.LookRotation(directionToLook);
+
+        // Notify player they are being backstabbed
+        victim.GetBackstabbed(manager.transform);
+
+        // Play enemy's backstab animation
+        manager.EnemyAnimator.PlayTargetAnimation(manager.Combat.backstabAction.animationName, true, 0.05f);
+
+        Debug.Log($"{manager.name} entered PerformingBackstabState, executing backstab on {victim.name}.");
     }
 
     public void Tick()

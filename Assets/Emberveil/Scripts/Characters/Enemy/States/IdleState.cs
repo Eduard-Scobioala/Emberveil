@@ -13,7 +13,7 @@ public class IdleState : IEnemyState
         manager.Locomotion.StopMovement();
         manager.Locomotion.DisableAgentNavigation(true); // Ensure non-kinematic for idle physics if any
         manager.EnemyAnimator.SetMovementValues(0, 0);
-        manager.EnemyAnimator.PlayTargetAnimation("Idle", false);
+        //manager.EnemyAnimator.PlayTargetAnimation("Idle", false);
         idleTimer = Random.Range(minIdleTime, maxIdleTime);
         manager.isPerformingNonCriticalAction = false;
         Debug.Log($"{manager.name} entered IdleState.");

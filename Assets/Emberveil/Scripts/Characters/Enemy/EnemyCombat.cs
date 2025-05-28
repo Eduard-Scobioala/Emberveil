@@ -16,7 +16,7 @@ public class EnemyCombat : MonoBehaviour
     public float minAttackCooldown = 1.0f;
     public float maxAttackCooldown = 3.0f;
     private float currentAttackCooldownTimer;
-    public bool isAttackOnCooldown => currentAttackCooldownTimer > 0;
+    public bool IsAttackOnCooldown => currentAttackCooldownTimer > 0;
 
     [Header("Backstab Settings")]
     public float backstabCheckMaxDistance = 1.5f; // How close enemy needs to be to player's back
@@ -47,7 +47,7 @@ public class EnemyCombat : MonoBehaviour
 
     public EnemyAttackActionSO GetAvailableAttack(CharacterManager target)
     {
-        if (target == null || attackActions.Count == 0) return null;
+        if (target == null || attackActions.Count == 0 || IsAttackOnCooldown) return null;
 
         Vector3 directionToTarget = target.transform.position - transform.position;
         float distanceToTarget = directionToTarget.magnitude;
@@ -148,6 +148,29 @@ public class EnemyCombat : MonoBehaviour
         enemyAnimator.PlayTargetAnimation(backstabAction.animationName, true, 0.05f);
         // Recovery/cooldown will be handled when the critical action state finishes
         // currentAttackCooldownTimer = backstabAction.recoveryTime; // Set by state exit or anim event
+    }
+
+    public bool CanInitiateBackstabSequence(PlayerManager playerTarget)
+    {
+        if (backstabAction == null || playerTarget == null) return false;
+        if (playerTarget.backstabReceiverPoint == null)
+        {
+            Debug.LogWarning($"Player {playerTarget.name} has no backstabReceiverPoint. Cannot initiate backstab.");
+            return false;
+        }
+        return true;
+    }
+
+    public void InitiateBackstabSequence(PlayerManager playerTarget)
+    {
+        if (!CanInitiateBackstabSequence(playerTarget))
+        {
+            CurrentBackstabVictim = null; // Ensure it's cleared if pre-check fails
+            return;
+        }
+
+        CurrentBackstabVictim = playerTarget;
+        Debug.Log($"{enemyManager.name} is initiating backstab sequence on {playerTarget.name}. PerformingBackstabState will execute.");
     }
 
     public void ApplyBackstabDamageOnVictim() // Called by EnemyAnimator AnimEvent

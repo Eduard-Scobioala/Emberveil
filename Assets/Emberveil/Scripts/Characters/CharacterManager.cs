@@ -15,7 +15,7 @@ public class CharacterManager : MonoBehaviour
 
     [Header("Backstab Settings")]
     public Transform backstabReceiverPoint; // A child empty GameObject on the character model where the attacker snaps TO
-    public string beingBackstabbedAnimation = "Backstabbed";
+    public string beingBackstabbedAnimation = "Enemy_Backstab_Main_Victim_01";
     public bool canBeBackstabbed = true;
 
     protected Animator charAnimator;

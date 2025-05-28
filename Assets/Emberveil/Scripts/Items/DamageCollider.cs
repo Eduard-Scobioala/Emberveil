@@ -42,7 +42,7 @@ public class DamageCollider : MonoBehaviour
 
             if (enemyStats != null)
             {
-                enemyStats.TakeDamage(colliderDamage); 
+                enemyStats.TakeDamage(colliderDamage, DamageType.Standard, transform);
             }
         }
     }

@@ -3,105 +3,144 @@ using UnityEngine;
 public class CombatStanceState : IEnemyState
 {
     private EnemyManager manager;
-    private float maxRepositionTime = 2f; // Time to try repositioning before re-evaluating
+    private float maxRepositionTime = .1f; // Time to try repositioning before re-evaluating
     private float repositionTimer;
+
+    // Internal flags to store decisions made in Tick()
+    private bool _wantsToBackstab = false;
+    private EnemyAttackActionSO _selectedAttackAction = null;
 
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
         manager.Locomotion.StopMovement();
-        // Keep agent enabled for potential strafing/repositioning, but don't let it auto-rotate
         manager.Locomotion.EnableAgentNavigation();
-        manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = false;
-        manager.Locomotion.SetAgentSpeed(manager.Locomotion.baseSpeed * 0.5f); // Slower speed for combat stance
+        manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = false; // Manual rotation
+        manager.Locomotion.SetAgentSpeed(manager.Locomotion.baseSpeed * 0.5f);
+
         repositionTimer = maxRepositionTime;
-        manager.isPerformingNonCriticalAction = false;
+
+        // Reset decision flags
+        _wantsToBackstab = false;
+        _selectedAttackAction = null;
+
         Debug.Log($"{manager.name} entered CombatStanceState against {manager.CurrentTarget?.name}.");
     }
 
     public void Tick()
     {
         manager.Senses.TickSenses();
-        if (manager.CurrentTarget == null) return;
+        if (manager.CurrentTarget == null)
+        {
+            _wantsToBackstab = false;
+            _selectedAttackAction = null;
+            return;
+        }
 
         manager.Locomotion.RotateTowards(manager.CurrentTarget.transform.position);
 
-        if (!manager.Combat.isAttackOnCooldown)
+        // Reset decisions each tick before re-evaluating
+        _wantsToBackstab = false;
+        _selectedAttackAction = null;
+
+        if (!manager.Combat.IsAttackOnCooldown) // Only consider actions if not on general cooldown
         {
-            // Try backstab first if conditions are met
+            // Priority 1: Backstab
             if (manager.CurrentTarget is PlayerManager playerTarget &&
                 manager.Combat.CanAttemptBackstab(playerTarget) &&
                 Random.value < manager.Combat.chanceToAttemptBackstab)
             {
-                // Transition will be handled by returning performingBackstabState
-                return;
+                _wantsToBackstab = true;
             }
 
-            // Then try a regular attack
-            EnemyAttackActionSO attack = manager.Combat.GetAvailableAttack(manager.CurrentTarget);
-            if (attack != null)
+            // Priority 2: Regular Attack
+            if (!_wantsToBackstab) // Ensure we don't select a normal attack if backstab was chosen
             {
-                manager.attackingState.SetAttackAction(attack);
-                // Transition will be handled by returning attackingState
-                return;
+                _selectedAttackAction = manager.Combat.GetAvailableAttack(manager.CurrentTarget);
+                if (_selectedAttackAction != null)
+                {
+                    // Decision made to attack. Transition() will see _selectedAttackAction.
+                }
             }
         }
 
-        repositionTimer -= Time.deltaTime;
+        // If no action was decided and we're not on cooldown, tick down reposition timer
+        if (!_wantsToBackstab && _selectedAttackAction == null && !manager.Combat.IsAttackOnCooldown)
+        {
+            repositionTimer -= Time.deltaTime;
+        }
+        else if (_wantsToBackstab || _selectedAttackAction != null)
+        {
+            // If an action is chosen, reset reposition timer so we don't immediately
+            // reposition if the action leads back to CombatStanceState quickly.
+            repositionTimer = maxRepositionTime;
+        }
     }
 
     public void FixedTick()
     {
-        // TODO: Implement subtle strafing or repositioning logic if needed
-        // manager.Locomotion.StrafeAroundTarget(manager.CurrentTarget);
-        // For now, just stand and rotate.
-        manager.Locomotion.StopMovement(); // Ensure no sliding if agent velocity was non-zero
+        // If agent is enabled and we're not actively trying to move for an attack,
+        // ensure it's not sliding due to residual velocity.
+        if (manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled)
+        {
+            manager.Locomotion.StopMovement(); // Or implement actual strafing/repositioning logic here
+        }
     }
 
     public IEnemyState Transition()
     {
+        // Target lost
         if (manager.CurrentTarget == null)
         {
             return manager.idleState;
         }
 
+        // Target moved too far away
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-        if (distanceToTarget > manager.defaultStoppingDistance * 1.2f) // Target moved away
+        if (distanceToTarget > manager.defaultStoppingDistance * 1.2f) // Check a slightly larger range than stopping distance
         {
             return manager.chaseState;
         }
 
-        // If conditions for backstab are met (checked in Tick)
-        if (!manager.Combat.isAttackOnCooldown &&
-            manager.CurrentTarget is PlayerManager playerTarget &&
-            manager.Combat.CanAttemptBackstab(playerTarget) &&
-            Random.value < manager.Combat.chanceToAttemptBackstab) // Re-check random for transition
+        // Wants to Backstab
+        if (_wantsToBackstab)
         {
-            manager.Combat.AttemptBackstab(playerTarget); // This will set up the manager
-            return manager.performingBackstabState;
-        }
-
-        // If an attack is ready (checked in Tick)
-        if (!manager.Combat.isAttackOnCooldown)
-        {
-            EnemyAttackActionSO attack = manager.Combat.GetAvailableAttack(manager.CurrentTarget);
-            if (attack != null)
+            // Ensure CurrentTarget is still valid and a PlayerManager before committing
+            if (manager.CurrentTarget is PlayerManager playerForBackstab)
             {
-                manager.attackingState.SetAttackAction(attack);
-                return manager.attackingState;
+                manager.Combat.InitiateBackstabSequence(playerForBackstab);
+                _wantsToBackstab = false; // Consume the intention
+                return manager.performingBackstabState;
+            }
+            else
+            {
+                _wantsToBackstab = false; // Target changed or invalid, clear intention
             }
         }
 
-        if (repositionTimer <= 0) // Failed to find an action, try chasing again briefly
+        // Selected a Regular Attack
+        if (_selectedAttackAction != null)
+        {
+            manager.attackingState.SetAttackAction(_selectedAttackAction);
+            _selectedAttackAction = null; // Consume the intention
+            return manager.attackingState;
+        }
+
+        // Reposition timer expired, and no action was chosen
+        if (repositionTimer <= 0)
         {
             return manager.chaseState;
         }
 
+        // No transition conditions met, remain in CombatStanceState
         return null;
     }
 
     public void Exit()
     {
-        manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = true; // Restore agent rotation
+        if (manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
+        {
+            manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = true;
+        }
     }
 }

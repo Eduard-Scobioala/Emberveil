@@ -95,6 +95,7 @@ public class EnemyManager : CharacterManager
     private void Update()
     {
         CurrentState?.Tick();
+        Combat.TickCombat();
         HandleStateTransitions();
         Locomotion.UpdateAnimatorMovementParameters(); // Update animator based on locomotion state
     }

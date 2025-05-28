@@ -28,12 +28,12 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
         anim.SetFloat(hashStrafeSpeed, strafeAmount, 0.1f, Time.deltaTime);
     }
 
-    public void PlayTargetAnimation(string animationName, bool isInteracting, float transitionDuration = 0.1f)
+    public void PlayTargetAnimation(string animationName, bool isInMidAction, float transitionDuration = 0.1f)
     {
         if (anim == null) return;
 
-        SetBool("isInteracting", isInteracting);
-        anim.applyRootMotion = isInteracting; // Typically true for actions, false for locomotion blends
+        SetBool("isInMidAction", isInMidAction);
+        anim.applyRootMotion = isInMidAction; // Typically true for actions, false for locomotion blends
         anim.CrossFade(animationName, transitionDuration);
     }
 
