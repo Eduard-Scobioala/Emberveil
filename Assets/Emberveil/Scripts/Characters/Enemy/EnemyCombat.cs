@@ -69,21 +69,6 @@ public class EnemyCombat : MonoBehaviour
         return validAttacks[Random.Range(0, validAttacks.Count)];
     }
 
-    public void PerformAttack(EnemyAttackActionSO attackAction)
-    {
-        if (attackAction == null || enemyManager.IsPerformingCriticalAction || enemyManager.IsReceivingCriticalHit) return;
-
-        Debug.Log($"{enemyManager.name} performing attack: {attackAction.actionName}");
-        enemyManager.isPerformingNonCriticalAction = true; // A flag for general actions
-        enemyLocomotion.StopMovement(); // Ensure enemy stops before attacking
-        enemyLocomotion.FaceTargetInstantly(enemyManager.CurrentTarget.transform); // Snap to target
-
-        enemyAnimator.PlayTargetAnimation(attackAction.animationName, true, 0.1f);
-        currentAttackCooldownTimer = attackAction.recoveryTime + Random.Range(minAttackCooldown, maxAttackCooldown);
-
-        // Handle damage collider timing with anim events
-    }
-
     public bool CanAttemptBackstab(CharacterManager target)
     {
         if (backstabAction == null || target == null || !(target is PlayerManager)) return false;
@@ -114,40 +99,6 @@ public class EnemyCombat : MonoBehaviour
             }
         }
         return false;
-    }
-
-    public void AttemptBackstab(PlayerManager playerTarget)
-    {
-        if (backstabAction == null || playerTarget == null) return;
-
-        Debug.Log($"{enemyManager.name} attempting BACKSTAB on {playerTarget.name}");
-        enemyManager.SetPerformingCriticalAction(true, true); // isPerforming, isAttacker
-        CurrentBackstabVictim = playerTarget;
-
-        // Snap enemy to player's backstab receiver point
-        // The receiver point on the player is where an *attacker* would stand.
-        Transform victimReceiverPoint = playerTarget.backstabReceiverPoint;
-        if (victimReceiverPoint == null)
-        {
-            Debug.LogError($"Player {playerTarget.name} has no backstabReceiverPoint! Aborting backstab.");
-            enemyManager.SetPerformingCriticalAction(false, false);
-            CurrentBackstabVictim = null;
-            return;
-        }
-        transform.position = victimReceiverPoint.position;
-
-        // Enemy should look towards the player's core from this snap position.
-        Vector3 lookAtTargetPos = playerTarget.lockOnTransform != null ? playerTarget.lockOnTransform.position : playerTarget.transform.position + playerTarget.transform.up * 1f;
-        Vector3 directionToLook = lookAtTargetPos - transform.position;
-        directionToLook.y = 0;
-        if (directionToLook != Vector3.zero) transform.rotation = Quaternion.LookRotation(directionToLook);
-
-        // Notify player they are being backstabbed
-        playerTarget.GetBackstabbed(enemyManager.transform);
-
-        enemyAnimator.PlayTargetAnimation(backstabAction.animationName, true, 0.05f);
-        // Recovery/cooldown will be handled when the critical action state finishes
-        // currentAttackCooldownTimer = backstabAction.recoveryTime; // Set by state exit or anim event
     }
 
     public bool CanInitiateBackstabSequence(PlayerManager playerTarget)
