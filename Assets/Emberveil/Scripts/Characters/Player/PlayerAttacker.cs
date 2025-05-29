@@ -37,6 +37,7 @@ public class PlayerAttacker : MonoBehaviour
         {
             if (TryPerformBackstab())
             {
+                playerManager.isCrouching = false;
                 return; // Backstab initiated
             }
         }

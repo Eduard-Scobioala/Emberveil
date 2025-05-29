@@ -84,7 +84,6 @@ public class AnimatorHandler : AnimatorManager
         anim.CrossFade(targetAnim, crossFadeDuration);
     }
 
-
     public void EnableRotation() => canRotate = true;
 
     public void DisableRotation() => canRotate = false;

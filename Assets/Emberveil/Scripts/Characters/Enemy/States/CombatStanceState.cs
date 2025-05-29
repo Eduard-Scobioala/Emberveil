@@ -92,7 +92,7 @@ public class CombatStanceState : IEnemyState
         // Target lost
         if (manager.CurrentTarget == null)
         {
-            return manager.idleState;
+            return manager.returnToPostState;
         }
 
         // Target moved too far away

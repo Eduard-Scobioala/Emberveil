@@ -5689,7 +5689,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 46f3311a0406de741aa06e25fae468bd, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 7c54ffcc33d120b4188282f5e4c5653e, type: 2}
   m_BuildHeightMesh: 0
 --- !u!1 &176853316
 GameObject:
@@ -9167,6 +9167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseSpeed: 3.5
+  chaseSpeed: 3.5
   rotationSpeed: 10
   stoppingDistance: 1
 --- !u!114 &1455925456
@@ -9203,12 +9204,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45b1f2c6aba73634f9f2c5a763ee1f6c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sightRadius: 20
-  sightAngle: 180
+  sightRadius: 9
+  sightAngle: 120
   loseSightDistanceMultiplier: 1.5
   timeToLoseTargetAfterLoSBreak: 5
-  proximityDetectionRadius: 5
-  timeToLoseTargetAfterProximityBreak: 4
+  proximityDetectionRadius: 5.5
+  timeToLoseTargetAfterProximityBreak: 1
   targetLayers:
     serializedVersion: 2
     m_Bits: 8192
@@ -15925,7 +15926,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -21.294487, y: 10.386344, z: -7.800109}
-  m_LocalScale: {x: 0.5, y: 2, z: 4}
+  m_LocalScale: {x: 0.5, y: 2, z: 6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1746490735}
@@ -16508,7 +16509,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 763249544858688550}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -10.54, y: 0, z: -4.59}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -16520,7 +16521,7 @@ Transform:
   - {fileID: 1378666268892144318}
   - {fileID: 7663441693016756131}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1121367935401666288
 Transform:
   m_ObjectHideFlags: 0

@@ -246,12 +246,6 @@ public class PlayerLocomotion : MonoBehaviour
         playerTransform.rotation = Quaternion.Slerp(playerTransform.rotation, tr, rotationSpeed * deltaTime);
     }
 
-    private void ApplyZeroMovement()
-    {
-        Vector3 targetVelocity = new Vector3(0, rigidbody.velocity.y, 0); // Keep Y velocity for falling
-        rigidbody.velocity = Vector3.SmoothDamp(rigidbody.velocity, targetVelocity, ref _rigidbodyVelocityRef, movementSmoothTime * 0.5f); // Faster stop
-    }
-
     public void HandleDodgeTapped()
     {
         if (playerManager.isInMidAction || !playerManager.isGrounded) return;
@@ -304,6 +298,7 @@ public class PlayerLocomotion : MonoBehaviour
     {
         playerManager.isInMidAction = false;
         animatorHandler.SetBool("isDodging", false);
+        ResetInputAndMovementState();
     }
 
     public void HandleSprintHolding()
@@ -394,5 +389,21 @@ public class PlayerLocomotion : MonoBehaviour
         // A proper jump would involve more physics. Example for adding force:
         // float jumpForce = 7f;
         // rigidbody.AddForce(Vector3.up * jumpForce + playerTransform.forward * moveAmount * 2f, ForceMode.Impulse); // Add some forward momentum
+    }
+
+    public void ResetInputAndMovementState()
+    {
+        horizontalInput = 0f;
+        verticalInput = 0f;
+        moveAmount = 0f; // Recalculate based on fresh input
+        rigidbody.velocity = new Vector3(0, rigidbody.velocity.y, 0); // Stop horizontal movement, preserve fall
+                                                                      // You might also want to reset _rigidbodyVelocityRef if it's causing issues with SmoothDamp
+        _rigidbodyVelocityRef = Vector3.zero;
+
+        // Ensure animator values are also reflecting "no input"
+        if (animatorHandler != null)
+        {
+            animatorHandler.UpdateAnimatorValues(0f, 0f, false, playerManager.isCrouching, cameraController.IsLockedOn);
+        }
     }
 }

@@ -16,7 +16,7 @@ public class EnemySenses : MonoBehaviour
 
     [Header("Proximity Settings")]
     public float proximityDetectionRadius = 5f;
-    public float timeToLoseTargetAfterProximityBreak = 1.5f;
+    public float timeToLoseTargetAfterProximityBreak = 2f;
 
     [Header("Layers")]
     public LayerMask targetLayers; // Player layer
@@ -24,40 +24,26 @@ public class EnemySenses : MonoBehaviour
 
     public CharacterManager CurrentPerceivedTarget { get; private set; }
     private float currentLoseTargetTimer = 0f;
-    private bool wasTargetVisibleLastFrame_LoS = false;
-    private bool wasTargetDetectedLastFrame_Proximity = false;
     private enum DetectionMethod { None, LoS, Proximity }
-    private DetectionMethod lastDetectionMethod = DetectionMethod.None;
+    private DetectionMethod lastFrameDetectionMethod = DetectionMethod.None;
 
     public void Initialize(EnemyManager manager)
     {
         enemyManager = manager;
     }
 
-    //public void TickSenses2()
-    //{
-    //    if (CurrentPerceivedTarget != null)
-    //    {
-    //        HandleTargetRetention();
-    //    }
-    //    else
-    //    {
-    //        LookForNewTarget();
-    //    }
-    //}
-
     public void TickSenses()
     {
-        if (enemyManager.CurrentState is DeadState) // Don't sense if dead
+        if (enemyManager.CurrentState is DeadState)
         {
-            if (CurrentPerceivedTarget != null) LoseCurrentTarget();
+            if (CurrentPerceivedTarget != null) LoseCurrentTargetAndNotify();
             return;
         }
 
-        CharacterManager potentialTargetByLoS = null;
-        CharacterManager potentialTargetByProximity = null;
+        CharacterManager freshlyDetectedThisFrame = null;
+        DetectionMethod currentFrameDetectionMethod = DetectionMethod.None;
 
-        // --- Look for new target or update existing ---
+        // --- Step 1: Attempt to Detect a Target THIS FRAME ---
         Collider[] collidersInVision = Physics.OverlapSphere(transform.position, sightRadius, targetLayers);
         foreach (var col in collidersInVision)
         {
@@ -66,100 +52,75 @@ public class EnemySenses : MonoBehaviour
             {
                 if (IsTargetInDirectSight(pTarget)) // Line of Sight check
                 {
-                    potentialTargetByLoS = pTarget;
+                    freshlyDetectedThisFrame = pTarget;
+                    currentFrameDetectionMethod = DetectionMethod.LoS;
                     break; // Prioritize LoS target
                 }
             }
         }
 
-        // Proximity check (only if no LoS target found or to confirm existing proximity target)
-        // Or, always check proximity and LoS gives higher priority.
-        // Let's check proximity regardless, LoS will override if found.
-        Collider[] collidersInProximity = Physics.OverlapSphere(transform.position, proximityDetectionRadius, targetLayers);
-        foreach (var col in collidersInProximity)
+        if (freshlyDetectedThisFrame == null) // If no LoS target, check proximity
         {
-            CharacterManager pTarget = col.GetComponent<CharacterManager>();
-            if (pTarget != null && pTarget != enemyManager && pTarget.isActiveAndEnabled)
+            Collider[] collidersInProximity = Physics.OverlapSphere(transform.position, proximityDetectionRadius, targetLayers);
+            foreach (var col in collidersInProximity)
             {
-                PlayerManager player = pTarget as PlayerManager;
-                if (player != null && !player.isCrouching) // Proximity only detects non-crouching players
+                CharacterManager pTarget = col.GetComponent<CharacterManager>();
+                if (pTarget != null && pTarget != enemyManager && pTarget.isActiveAndEnabled)
                 {
-                    potentialTargetByProximity = pTarget;
-                    break; // Found a non-crouching player by proximity
+                    PlayerManager player = pTarget as PlayerManager;
+                    // Proximity only detects non-crouching players, or any non-player CharacterManager
+                    if (player == null || (player != null && !player.isCrouching))
+                    {
+                        freshlyDetectedThisFrame = pTarget;
+                        currentFrameDetectionMethod = DetectionMethod.Proximity;
+                        break;
+                    }
                 }
-                // If not a player, or a crouching player, proximity alone doesn't detect.
             }
         }
 
-        // --- Determine Actual Target and Handle Retention/Loss ---
-        CharacterManager newlyDetectedTarget = null;
-        DetectionMethod currentDetectionMethod = DetectionMethod.None;
+        // --- Step 2: Update Target State based on Detection ---
+        if (freshlyDetectedThisFrame != null)
+        {
+            if (CurrentPerceivedTarget == null)
+            {
+                SetNewTarget(freshlyDetectedThisFrame, currentFrameDetectionMethod);
+            }
+            else if (CurrentPerceivedTarget == freshlyDetectedThisFrame)
+            {
+                currentLoseTargetTimer = 0f;
+                lastFrameDetectionMethod = currentFrameDetectionMethod;
+            }
+            else // Switched target (e.g., player ran past another valid target closer by LoS)
+            {
+                LoseCurrentTargetAndNotify();
+                SetNewTarget(freshlyDetectedThisFrame, currentFrameDetectionMethod); // Spot new one
+            }
+        }
+        else
+        {
+            if (CurrentPerceivedTarget != null) // We *were* tracking someone
+            {
+                currentLoseTargetTimer += Time.deltaTime;
+                float maxTimeToLose = (lastFrameDetectionMethod == DetectionMethod.LoS) ? timeToLoseTargetAfterLoSBreak : timeToLoseTargetAfterProximityBreak;
+                if (lastFrameDetectionMethod == DetectionMethod.None) maxTimeToLose = 0.1f;
 
-        if (potentialTargetByLoS != null)
-        {
-            newlyDetectedTarget = potentialTargetByLoS;
-            currentDetectionMethod = DetectionMethod.LoS;
+                // Instant loss if they get too far, regardless of timer
+                float distanceToLastKnown = Vector3.Distance(transform.position, CurrentPerceivedTarget.transform.position);
+                if (distanceToLastKnown > sightRadius * loseSightDistanceMultiplier)
+                {
+                    Debug.Log($"Target {CurrentPerceivedTarget.name} lost due to excessive distance.");
+                    LoseCurrentTargetAndNotify();
+                }
+                else if (currentLoseTargetTimer >= maxTimeToLose)
+                {
+                    Debug.Log($"Target {CurrentPerceivedTarget.name} lost due to timer ({currentLoseTargetTimer} >= {maxTimeToLose}), last seen via {lastFrameDetectionMethod}.");
+                    LoseCurrentTargetAndNotify();
+                }
+                // else, still in grace period, keep CurrentPerceivedTarget for now
+            }
+            // If CurrentPerceivedTarget is already null and we didn't detect anyone, do nothing.
         }
-        else if (potentialTargetByProximity != null)
-        {
-            newlyDetectedTarget = potentialTargetByProximity;
-            currentDetectionMethod = DetectionMethod.Proximity;
-        }
-
-        // --- Handle Target State Changes ---
-        if (CurrentPerceivedTarget == null && newlyDetectedTarget != null) // Fresh detection
-        {
-            SetNewTarget(newlyDetectedTarget, currentDetectionMethod);
-        }
-        else if (CurrentPerceivedTarget != null && newlyDetectedTarget == CurrentPerceivedTarget) // Still detecting the same target
-        {
-            // Target retained, update detection method and reset timer
-            currentLoseTargetTimer = 0f;
-            lastDetectionMethod = currentDetectionMethod; // Update how we are currently seeing them
-            wasTargetVisibleLastFrame_LoS = (currentDetectionMethod == DetectionMethod.LoS);
-            wasTargetDetectedLastFrame_Proximity = (currentDetectionMethod == DetectionMethod.Proximity || currentDetectionMethod == DetectionMethod.LoS); // LoS implies proximity
-        }
-        else if (CurrentPerceivedTarget != null && newlyDetectedTarget != CurrentPerceivedTarget) // Switched target or lost old, found new
-        {
-            LoseCurrentTarget(); // Lose old one first
-            if (newlyDetectedTarget != null) SetNewTarget(newlyDetectedTarget, currentDetectionMethod); // Then set new one
-        }
-        else if (CurrentPerceivedTarget != null && newlyDetectedTarget == null) // Lost target completely this frame
-        {
-            HandleTargetLossTimer();
-        }
-    }
-
-    private void HandleTargetLossTimer()
-    {
-        if (CurrentPerceivedTarget == null) return;
-
-        // If target moves beyond hard max distance (e.g. sightRadius * multiplier)
-        float distanceToTarget = Vector3.Distance(transform.position, CurrentPerceivedTarget.transform.position);
-        if (distanceToTarget > sightRadius * loseSightDistanceMultiplier)
-        {
-            LoseCurrentTarget();
-            return;
-        }
-
-        // If previously detected, start or continue loss timer
-        bool wasDetectedLastFrame = wasTargetVisibleLastFrame_LoS || wasTargetDetectedLastFrame_Proximity;
-
-        if (wasDetectedLastFrame) // Just lost sight/proximity this frame
-        {
-            currentLoseTargetTimer = 0f; // Reset timer only if it was detected last frame by any means
-        }
-
-        currentLoseTargetTimer += Time.deltaTime;
-        float maxTimeToLose = (lastDetectionMethod == DetectionMethod.LoS) ? timeToLoseTargetAfterLoSBreak : timeToLoseTargetAfterProximityBreak;
-
-        if (currentLoseTargetTimer >= maxTimeToLose)
-        {
-            LoseCurrentTarget();
-        }
-        // Update "last frame" flags after timer logic
-        wasTargetVisibleLastFrame_LoS = false;
-        wasTargetDetectedLastFrame_Proximity = false;
     }
 
     private bool IsTargetInDirectSight(CharacterManager target)
@@ -182,29 +143,25 @@ public class EnemySenses : MonoBehaviour
     private void SetNewTarget(CharacterManager target, DetectionMethod method)
     {
         CurrentPerceivedTarget = target;
-        lastDetectionMethod = method;
-        currentLoseTargetTimer = 0f;
-        wasTargetVisibleLastFrame_LoS = (method == DetectionMethod.LoS);
-        wasTargetDetectedLastFrame_Proximity = (method == DetectionMethod.Proximity || method == DetectionMethod.LoS);
+        lastFrameDetectionMethod = method; // Store how we initially saw them
+        currentLoseTargetTimer = 0f;       // Reset loss timer
         OnTargetSpotted?.Invoke(target);
         Debug.Log($"{enemyManager.name} spotted target: {target.name} via {method}");
     }
 
-    private void LoseCurrentTarget()
+    private void LoseCurrentTargetAndNotify()
     {
         if (CurrentPerceivedTarget != null)
         {
-            Debug.Log($"{enemyManager.name} lost target: {CurrentPerceivedTarget.name} (was {lastDetectionMethod})");
+            Debug.Log($"{enemyManager.name} lost target: {CurrentPerceivedTarget.name} (was {lastFrameDetectionMethod})");
         }
         CurrentPerceivedTarget = null;
-        lastDetectionMethod = DetectionMethod.None;
+        lastFrameDetectionMethod = DetectionMethod.None;
         currentLoseTargetTimer = 0f;
-        wasTargetVisibleLastFrame_LoS = false;
-        wasTargetDetectedLastFrame_Proximity = false;
-        OnTargetLost?.Invoke();
+        OnTargetLost?.Invoke(); // Notify manager and other systems
     }
 
-    public void ForceLoseTarget() => LoseCurrentTarget();
+    public void ForceLoseTarget() => LoseCurrentTargetAndNotify();
 
     void OnDrawGizmosSelected()
     {
@@ -228,7 +185,7 @@ public class EnemySenses : MonoBehaviour
 
         if (CurrentPerceivedTarget != null && CurrentPerceivedTarget.lockOnTransform != null)
         {
-            Gizmos.color = (lastDetectionMethod == DetectionMethod.LoS) ? Color.green : ((lastDetectionMethod == DetectionMethod.Proximity) ? Color.magenta : Color.red);
+            Gizmos.color = (lastFrameDetectionMethod == DetectionMethod.LoS) ? Color.green : ((lastFrameDetectionMethod == DetectionMethod.Proximity) ? Color.magenta : Color.red);
             Vector3 sightOrigin = transform.position + Vector3.up * (enemyManager.GetComponent<UnityEngine.AI.NavMeshAgent>()?.height * 0.8f ?? 1.5f);
             Gizmos.DrawLine(sightOrigin, CurrentPerceivedTarget.lockOnTransform.position);
         }

@@ -12,6 +12,8 @@ public class EnemyCombat : MonoBehaviour
     public List<EnemyAttackActionSO> attackActions = new List<EnemyAttackActionSO>();
     public EnemyBackstabActionSO backstabAction;
 
+    private Dictionary<EnemyAttackActionSO, float> specificAttackCooldowns = new();
+
     [Header("Combat Settings")]
     public float minAttackCooldown = 1.0f;
     public float maxAttackCooldown = 3.0f;
@@ -47,26 +49,68 @@ public class EnemyCombat : MonoBehaviour
 
     public EnemyAttackActionSO GetAvailableAttack(CharacterManager target)
     {
-        if (target == null || attackActions.Count == 0 || IsAttackOnCooldown) return null;
+        if (target == null || attackActions.Count == 0 || IsAttackOnCooldown) // General combat cooldown check
+        {
+            return null;
+        }
 
         Vector3 directionToTarget = target.transform.position - transform.position;
         float distanceToTarget = directionToTarget.magnitude;
         float angleToTarget = Vector3.Angle(transform.forward, directionToTarget.normalized);
 
-        List<EnemyAttackActionSO> validAttacks = new List<EnemyAttackActionSO>();
+        List<(EnemyAttackActionSO action, int score)> scoredValidAttacks = new List<(EnemyAttackActionSO, int)>();
+        int totalScore = 0;
+
         foreach (var attack in attackActions)
         {
-            if (distanceToTarget >= attack.minAttackDistance && distanceToTarget <= attack.maxAttackDistance &&
-                angleToTarget >= attack.minAttackAngle && angleToTarget <= attack.maxAttackAngle)
+            // Check specific attack cooldown
+            if (specificAttackCooldowns.TryGetValue(attack, out float cooldownEndTime) && Time.time < cooldownEndTime)
             {
-                validAttacks.Add(attack);
+                continue; // This specific attack is on cooldown
+            }
+
+            if (attack.IsBasicConditionsMet(distanceToTarget, angleToTarget))
+            {
+                int score = attack.CalculateScore(enemyManager, target, distanceToTarget, angleToTarget);
+                if (score > 0)
+                {
+                    scoredValidAttacks.Add((attack, score));
+                    totalScore += score;
+                }
             }
         }
 
-        if (validAttacks.Count == 0) return null;
+        if (scoredValidAttacks.Count == 0 || totalScore == 0)
+        {
+            return null; // No valid or scorable attacks
+        }
 
-        // TODO: Improve with scoring
-        return validAttacks[Random.Range(0, validAttacks.Count)];
+        // Weighted random selection
+        int randomPoint = Random.Range(0, totalScore);
+        int currentSum = 0;
+        foreach (var (action, score) in scoredValidAttacks)
+        {
+            currentSum += score;
+            if (randomPoint < currentSum)
+            {
+                return action; // This is the chosen attack
+            }
+        }
+
+        // Fallback (should ideally not be reached if totalScore > 0 and list is not empty)
+        return scoredValidAttacks.Count > 0 ? scoredValidAttacks[Random.Range(0, scoredValidAttacks.Count)].action : null;
+    }
+
+    public void NotifyAttackActionStarted(EnemyAttackActionSO action)
+    {
+        // Set the general shared cooldown
+        enemyManager.Combat.SetGeneralAttackCooldown(action.recoveryTime);
+
+        // Set specific attack cooldown if it has one
+        if (action.specificAttackCooldown > 0)
+        {
+            specificAttackCooldowns[action] = Time.time + action.specificAttackCooldown;
+        }
     }
 
     public bool CanAttemptBackstab(CharacterManager target)
@@ -74,8 +118,7 @@ public class EnemyCombat : MonoBehaviour
         if (backstabAction == null || target == null || !(target is PlayerManager)) return false;
 
         PlayerManager playerTarget = target as PlayerManager;
-        // TODO: Add PlayerManager.canBeBackstabbed similar to CharacterManager
-        if (playerTarget.isInMidAction || playerTarget.isInvulnerable /*|| !playerTarget.canBeBackstabbed*/) return false;
+        if (playerTarget.isInMidAction || playerTarget.isInvulnerable) return false;
 
         // Check position: Enemy behind player?
         Vector3 directionFromPlayerToEnemy = (transform.position - playerTarget.transform.position).normalized;
@@ -161,7 +204,7 @@ public class EnemyCombat : MonoBehaviour
         currentAttackCooldownTimer = Random.Range(minAttackCooldown, maxAttackCooldown);
     }
 
-    public void SetSpecificCooldown(float duration)
+    public void SetGeneralAttackCooldown(float duration)
     {
         currentAttackCooldownTimer = duration;
     }

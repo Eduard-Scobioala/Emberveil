@@ -31,12 +31,11 @@ public class ChaseState : IEnemyState
     {
         if (manager.CurrentTarget == null)
         {
-            // TODO: Could go to an "InvestigateLastKnownPosition" state
-            return manager.idleState; // Or patrolState if applicable
+            return manager.returnToPostState;
         }
 
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-        if (distanceToTarget <= manager.defaultStoppingDistance) // Check against NavMeshAgent's stopping distance
+        if (distanceToTarget <= manager.defaultStoppingDistance)
         {
             return manager.combatStanceState;
         }

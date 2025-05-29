@@ -229,13 +229,13 @@ MonoBehaviour:
   normalRotationSensitivityX: 2.7
   normalRotationSensitivityY: 1.5
   normalModeRotationSmoothing: 15
-  normalDefaultDistance: 3.5
+  normalDefaultDistance: 3
   normalMinPitch: -35
   normalMaxPitch: 70
   normalPivotOffset: {x: 0, y: 1.65, z: 0}
   normalModeZoomSpeed: 20
   lockOnRotationSpeed: 10
-  lockOnDesiredDistance: 4
+  lockOnDesiredDistance: 3.5
   lockOnPivotOffset: {x: 0, y: 1.8, z: 0}
   maxLockOnSearchDistance: 25
   maxLockOnSearchAngle: 60

@@ -81,7 +81,7 @@ public class PerformingBackstabState : IEnemyState
         manager.Locomotion.EnableAgentNavigation();
         manager.Combat.ClearBackstabVictim();
         // Set cooldown for the backstab action via Combat
-        manager.Combat.SetSpecificCooldown(manager.Combat.backstabAction.recoveryTime + Random.Range(manager.Combat.minAttackCooldown, manager.Combat.maxAttackCooldown));
+        manager.Combat.SetGeneralAttackCooldown(manager.Combat.backstabAction.recoveryTime + Random.Range(manager.Combat.minAttackCooldown, manager.Combat.maxAttackCooldown));
         Debug.Log($"{manager.name} exited PerformingBackstabState.");
     }
 }

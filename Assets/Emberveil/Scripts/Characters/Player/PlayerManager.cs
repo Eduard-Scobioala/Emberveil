@@ -313,7 +313,11 @@ public class PlayerManager : CharacterManager
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;
 
-        if (playerLocomotion != null) playerLocomotion.enabled = true;
+        if (playerLocomotion != null)
+        {
+            playerLocomotion.enabled = true;
+            playerLocomotion.ResetInputAndMovementState();
+        }
     }
     #endregion
 }

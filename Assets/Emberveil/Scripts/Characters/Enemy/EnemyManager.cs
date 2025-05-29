@@ -19,14 +19,16 @@ public class EnemyManager : CharacterManager
     public PerformingBackstabState performingBackstabState; // Attacker
     public BeingBackstabbedState beingBackstabbedState;   // Victim
     public HitReactionState hitReactionState;
+    public ReturnToPostState returnToPostState;
     public DeadState deadState;
-    // Add more states like FleeState, InvestigateState, PoiseBreakState
+    // TODO: Add more states: InvestigateState, PoiseBreakState
 
     //"AI Behavior"
     public CharacterManager CurrentTarget { get; set; } // Who the AI is focused on
     public PatrolRoute patrolRoute;
     public float defaultStoppingDistance = 1.5f;
-
+    [HideInInspector] public Vector3 initialPosition;
+    [HideInInspector] public Quaternion initialRotation;
 
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
@@ -64,17 +66,16 @@ public class EnemyManager : CharacterManager
         performingBackstabState = new PerformingBackstabState();
         beingBackstabbedState = new BeingBackstabbedState();
         hitReactionState = new HitReactionState();
+        returnToPostState = new ReturnToPostState();
         deadState = new DeadState();
-
-        // Default flags from CharacterManager
-        // isInMidAction (use isPerformingNonCriticalAction or state checks)
-        // isInvulnerable
-        // isBeingCriticallyHit (use beingBackstabbedState)
-        // canBeBackstabbed
     }
 
     private void Start()
     {
+        // Capture initial position and rotation
+        initialPosition = transform.position;
+        initialRotation = transform.rotation;
+
         // Subscribe to events
         Stats.OnDamagedEvent += HandleDamageTaken;
         Stats.OnDeathEvent += HandleDeath;

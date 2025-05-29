@@ -51,7 +51,7 @@ public class HitReactionState : IEnemyState
                 }
                 return manager.chaseState;
             }
-            return manager.idleState;
+            return manager.returnToPostState;
         }
         return null;
     }

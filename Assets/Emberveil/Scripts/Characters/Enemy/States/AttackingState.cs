@@ -29,11 +29,12 @@ public class AttackingState : IEnemyState
         manager.Locomotion.DisableAgentNavigation(true); // Non-kinematic for root motion
         if (manager.CurrentTarget != null) manager.Locomotion.FaceTargetInstantly(manager.CurrentTarget.transform);
 
+        manager.Combat.NotifyAttackActionStarted(currentAttack);
         manager.EnemyAnimator.PlayTargetAnimation(currentAttack.animationName, true);
         animationTimer = 0f; // Timer to track animation progress for manual collider control if needed
 
         // Set cooldown now, so even if interrupted, it's on cooldown
-        manager.Combat.SetSpecificCooldown(currentAttack.recoveryTime);
+        manager.Combat.SetGeneralAttackCooldown(currentAttack.recoveryTime);
     }
 
     public void Tick()

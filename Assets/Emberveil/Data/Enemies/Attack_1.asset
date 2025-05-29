@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   actionName: Lickt Attack
   animationName: OH_Light_Attack_01
-  recoveryTime: 2
+  recoveryTime: 1.5
   staminaCost: 5
-  attackScore: 10
   minAttackDistance: 0
   maxAttackDistance: 3
   minAttackAngle: -35
@@ -24,7 +23,12 @@ MonoBehaviour:
   damage: 20
   damageType: 0
   poiseDamage: 10
-  damageColliderStartTime: 0.2
-  damageColliderEndTime: 0.5
   canBeParried: 1
   isHeavyAttack: 0
+  baseScore: 10
+  closeRangeScoreMultiplier: 1
+  midRangeScoreMultiplier: 1
+  farRangeScoreMultiplier: 1
+  targetLowHealthScoreMultiplier: 1
+  selfLowHealthScoreMultiplier: 1
+  specificAttackCooldown: 0
