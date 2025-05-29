@@ -9,6 +9,7 @@ public struct Commands
     public ICommand DodgeCommand;
     public ICommand SprintHoldCommand;
     public ICommand SprintReleaseCommand;
+    public ICommand CrouchCommand;
 };
 
 public class PlayerManager : CharacterManager
@@ -18,14 +19,16 @@ public class PlayerManager : CharacterManager
     private PlayerAttacker playerAttacker;
     private PlayerStats playerStats;
     public PlayerInventory playerInventory;
+    private AnimatorHandler animatorHandler;
 
     [Header("Player Flags")]
     public bool isSprinting;
     public bool isInAir;
     public bool isGrounded;
     public bool canDoCombo;
-    public bool isUsingRightHand;
-    public bool isUsingLeftHand;
+    //public bool isUsingRightHand;
+    //public bool isUsingLeftHand;
+    public bool isCrouching;
 
     private bool pickedUpItem = false;
     private bool isInteracting = false;
@@ -44,6 +47,7 @@ public class PlayerManager : CharacterManager
         playerStats = GetComponent<PlayerStats>();
         playerInventory = GetComponent<PlayerInventory>();
         charAnimator = GetComponentInChildren<Animator>();
+        animatorHandler = GetComponentInChildren<AnimatorHandler>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
@@ -63,6 +67,7 @@ public class PlayerManager : CharacterManager
         InputHandler.DodgeTapped += HandleDodgeButton;
         InputHandler.SprintHolding += HandleSprintHolding;
         InputHandler.SprintReleased += HandleSprintReleased;
+        InputHandler.CrouchButtonPressed += HandleCrouchInput;
     }
 
     private void OnDisable()
@@ -74,16 +79,25 @@ public class PlayerManager : CharacterManager
         InputHandler.DodgeTapped -= HandleDodgeButton;
         InputHandler.SprintHolding -= HandleSprintHolding;
         InputHandler.SprintReleased -= HandleSprintReleased;
+        InputHandler.CrouchButtonPressed -= HandleCrouchInput;
     }
 
     private void Update()
     {
+        // Read flags from animator (base CharacterManager fields)
         isInMidAction = charAnimator.GetBool("isInMidAction");
-        canDoCombo = charAnimator.GetBool("canDoCombo");
-        isUsingRightHand = charAnimator.GetBool("isUsingRightHand");
-        isUsingLeftHand = charAnimator.GetBool("isUsingLeftHand");
         isInvulnerable = charAnimator.GetBool("isInvulnerable");
+        // isBeingCriticallyHit is managed by GetBackstabbed / FinishBeingBackstabbed
+
+        // Player specific animator reads
+        canDoCombo = charAnimator.GetBool("canDoCombo");
+        //isUsingRightHand = charAnimator.GetBool("isUsingRightHand");
+        //isUsingLeftHand = charAnimator.GetBool("isUsingLeftHand");
+
+        // Update animator with player state
         charAnimator.SetBool("isInAir", isInAir);
+        charAnimator.SetBool("isGrounded", isGrounded);
+        charAnimator.SetBool("isCrouching", isCrouching);
 
         // Execute pending command when action ends
         if (pendingCommand != null && pendingCommand.CanExecute())
@@ -116,7 +130,7 @@ public class PlayerManager : CharacterManager
                 playerAttacker.HandleHeavyAttackButtonPressed),
 
             JumpCommand = new RelayCommand(
-                () => !isInMidAction,
+                () => !isInMidAction && isGrounded,
                 playerLocomotion.HandleJumpButtonPressed),
 
             DodgeCommand = new RelayCommand(
@@ -124,15 +138,153 @@ public class PlayerManager : CharacterManager
                 playerLocomotion.HandleDodgeTapped),
 
             SprintHoldCommand = new RelayCommand(
-                () => !isInMidAction,
+                () => !isInMidAction && !isCrouching,
                 playerLocomotion.HandleSprintHolding),
 
             SprintReleaseCommand = new RelayCommand(
                 () => true,
-                playerLocomotion.HandleSprintReleased)
+                playerLocomotion.HandleSprintReleased),
+
+            CrouchCommand = new RelayCommand(
+                () => !isInMidAction && isGrounded,
+                HandleToggleCrouch)
         };
     }
 
+    private void HandleToggleCrouch()
+    {
+        isCrouching = !isCrouching; // the bool will handle transition from Locomotion blend tree in animator
+        if (isCrouching)
+        {
+            isSprinting = false;
+        }
+    }
+
+    public override void GetBackstabbed(Transform attacker)
+    {
+        if (isCrouching) // Force stand up if backstabbed while crouching
+        {
+            isCrouching = false;
+            // Animator should transition out of crouch automatically due to isCrouching=false
+        }
+        base.GetBackstabbed(attacker);
+    }
+
+
+    #region Handle Commands
+    private void HandleCommand(ICommand command)
+    {
+        if (command.CanExecute())
+        {
+            // If a command could be exectuted,there is
+            // no reason to hold for the pending command
+            pendingCommand = null;
+            command.Execute();
+        }
+        else
+        {
+            pendingCommand = command;
+        }
+    }
+
+    private void HandleLightAttackInput() => HandleCommand(commands.LightAttackCommand);
+    private void HandleHeavyAttackInput() => HandleCommand(commands.HeavyAttackCommand);
+    private void HandleJumpInput() => HandleCommand(commands.JumpCommand);
+    private void HandleDodgeButton() => HandleCommand(commands.DodgeCommand);
+    private void HandleSprintHolding() => HandleCommand(commands.SprintHoldCommand);
+    private void HandleSprintReleased() => HandleCommand(commands.SprintReleaseCommand);
+    private void HandleCrouchInput() => HandleCommand(commands.CrouchCommand);
+    private void HandleInteractButtonPressed() => isInteracting = true;
+    #endregion
+
+    #region Handle Interactables UI
+    public void AddInteractable(Interactable interactable)
+    {
+        if (!nearbyInteractables.Contains(interactable))
+        {
+            nearbyInteractables.Add(interactable);
+        }
+    }
+
+    public void RemoveInteractable(Interactable interactable)
+    {
+        nearbyInteractables.Remove(interactable);
+    }
+
+    private void HandleInteractableUI()
+    {
+        if (nearbyInteractables.Count > 0)
+        {
+            Interactable closest = GetClosestInteractable();
+            if (closest != null)
+            {
+                // Allow re-showing interaction if item popup closed
+                if (pickedUpItem && !interactableUI.itemPopUp.activeSelf)
+                {
+                    pickedUpItem = false;
+                }
+
+                if (pickedUpItem) return;
+
+                interactableUI.interactableInfoText.text = closest.interactableInfoText;
+                interactableUI.EnableInteractionPopUpGameObject(true);
+
+                if (isInteracting)
+                {
+                    isInteracting = false;
+
+                    interactableUI.itemInfoText.text = closest.GetItemName();
+                    interactableUI.itemImage.sprite = closest.GetItemIcon();
+
+                    closest.OnInteract(this);
+                    // TODO: Let OnInteract handle removal if necessary
+                    //nearbyInteractables.Remove(closest);
+
+                    interactableUI.EnableItemPopUpGameObject(true);
+                    pickedUpItem = true;
+                }
+            }
+            else // No closest, but list not empty (e.g. all became null)
+            {
+                interactableUI.EnableInteractionPopUpGameObject(false);
+            }
+        }
+        else
+        {
+            interactableUI.EnableInteractionPopUpGameObject(false);
+
+            if (isInteracting || pickedUpItem)
+            {
+                isInteracting = false;
+
+                interactableUI.EnableItemPopUpGameObject(false);
+                pickedUpItem = false;
+            }
+        }
+    }
+
+    private Interactable GetClosestInteractable()
+    {
+        Interactable closest = null;
+        float minDistance = float.MaxValue;
+        Vector3 playerPos = transform.position;
+
+        nearbyInteractables.RemoveAll(item => item == null);
+
+        foreach (var interactable in nearbyInteractables)
+        {
+            float distance = Vector3.Distance(playerPos, interactable.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closest = interactable;
+            }
+        }
+        return closest;
+    }
+    #endregion
+
+    #region Animation Events
     public void AnimEvent_ApplyBackstabDamage()
     {
         if (currentBackstabTarget != null && playerAttacker != null)
@@ -161,136 +313,7 @@ public class PlayerManager : CharacterManager
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;
 
-        // Re-enable locomotion if it was disabled
         if (playerLocomotion != null) playerLocomotion.enabled = true;
-    }
-
-    #region Handle Commands
-    private void HandleCommand(ICommand command)
-    {
-        if (command.CanExecute())
-        {
-            // If a command could be exectuted,there is
-            // no reason to hold for the pending command
-            pendingCommand = null;
-            command.Execute();
-        }
-        else
-        {
-            pendingCommand = command;
-        }
-    }
-
-    private void HandleLightAttackInput()
-    {
-        HandleCommand(commands.LightAttackCommand);
-    }
-
-    private void HandleHeavyAttackInput()
-    {
-        HandleCommand(commands.HeavyAttackCommand);
-    }
-
-    private void HandleJumpInput()
-    {
-        HandleCommand(commands.JumpCommand);
-    }
-
-    private void HandleDodgeButton()
-    {
-        HandleCommand(commands.DodgeCommand);
-    }
-
-    private void HandleSprintHolding()
-    {
-        HandleCommand(commands.SprintHoldCommand);
-    }
-
-    private void HandleSprintReleased()
-    {
-        HandleCommand(commands.SprintReleaseCommand);
-    }
-
-    private void HandleInteractButtonPressed()
-    {
-        isInteracting = true;
-    }
-    #endregion
-
-    #region Handle Interactables UI
-    public void AddInteractable(Interactable interactable)
-    {
-        if (!nearbyInteractables.Contains(interactable))
-        {
-            nearbyInteractables.Add(interactable);
-        }
-    }
-
-    public void RemoveInteractable(Interactable interactable)
-    {
-        nearbyInteractables.Remove(interactable);
-    }
-
-    private void HandleInteractableUI()
-    {
-        if (nearbyInteractables.Count > 0)
-        {
-            Interactable closest = GetClosestInteractable();
-            if (closest != null)
-            {
-                // Don't update the UI, in case of multiple items, if the previus pick was not confirmed
-                if (pickedUpItem)
-                    return;
-
-                interactableUI.interactableInfoText.text = closest.interactableInfoText;
-                interactableUI.EnableInteractionPopUpGameObject(true);
-
-                if (isInteracting)
-                {
-                    isInteracting = false;
-
-                    interactableUI.itemInfoText.text = closest.GetItemName();
-                    interactableUI.itemImage.sprite = closest.GetItemIcon();
-
-                    closest.OnInteract(this);
-                    nearbyInteractables.Remove(closest);
-
-                    interactableUI.EnableItemPopUpGameObject(true);
-                    pickedUpItem = true;
-                }
-            }
-        }
-        else
-        {
-            interactableUI.EnableInteractionPopUpGameObject(false);
-
-            if (isInteracting)
-            {
-                isInteracting = false;
-
-                interactableUI.EnableItemPopUpGameObject(false);
-                pickedUpItem = false;
-            }
-        }
-    }
-
-    private Interactable GetClosestInteractable()
-    {
-        Interactable closest = null;
-        float minDistance = float.MaxValue;
-        Vector3 playerPos = transform.position;
-
-        foreach (var interactable in nearbyInteractables)
-        {
-            if (interactable == null) continue;
-            float distance = Vector3.Distance(playerPos, interactable.transform.position);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closest = interactable;
-            }
-        }
-        return closest;
     }
     #endregion
 }

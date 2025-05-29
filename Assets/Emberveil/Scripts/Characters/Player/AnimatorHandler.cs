@@ -2,11 +2,15 @@ using UnityEngine;
 
 public class AnimatorHandler : AnimatorManager
 {
-    private int vertical;
-    private int horizontal;
+    private readonly int hashVertical = Animator.StringToHash("Vertical");
+    private readonly int hashHorizontal = Animator.StringToHash("Horizontal");
+    private readonly int hashIsCrouching = Animator.StringToHash("isCrouching");
+    private readonly int hashIsDodging = Animator.StringToHash("isDodging");
 
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
+    private CameraController cameraController;
+
     public bool canRotate;
 
     public void Initialize()
@@ -14,72 +18,72 @@ public class AnimatorHandler : AnimatorManager
         anim = GetComponent<Animator>();
         playerLocomotion = GetComponentInParent<PlayerLocomotion>();
         playerManager = GetComponentInParent<PlayerManager>();
+        cameraController = FindObjectOfType<CameraController>();
 
-        vertical = Animator.StringToHash("Vertical");
-        horizontal = Animator.StringToHash("Horizontal");
+        if (playerManager == null) Debug.LogError("PlayerManager not found in parent for AnimatorHandler", this);
+        if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent for AnimatorHandler", this);
+        if (cameraController == null) Debug.LogError("CameraController not found in scene for AnimatorHandler", this);
     }
 
-    public void UpdateAnimatorValues(float verticalMovement, float horizontalMovement, bool isSprinting)
+    public void UpdateAnimatorValues(float verticalInput, float horizontalInput, bool isSprinting, bool isCrouching, bool isLockedOn)
     {
-        #region Vertical
-        float v;
+        if (anim == null || playerManager == null || cameraController == null) return;
 
-        if (verticalMovement > 0 && verticalMovement <= 0.55f)
-        {
-            v = 0.5f;
-        }
-        else if (verticalMovement > 0.55f)
-        {
-            v = 1f;
-        }
-        else if (verticalMovement < 0 && verticalMovement >= -0.55f)
-        {
-            v = -0.5f;
-        }
-        else if (verticalMovement < -0.55f)
-        {
-            v = -1f;
-        }
-        else
-        {
-            v = 0f;
-        }
-        #endregion
+        float v = 0; // Vertical output for animator
+        float h = 0; // Horizontal output for animator
 
-        #region Horizontal
-        float h;
+        if (isLockedOn && !isSprinting && !isCrouching) // Locked-on standard movement (not sprinting/crouching)
+        {
+            // Input is already player-relative (forward/strafe)
+            v = verticalInput;
+            h = horizontalInput;
+        }
+        else // Free-look, or Sprinting/Crouching (even if locked on, these might use camera-relative for freedom)
+        {
+            // Convert camera-relative input to player-local space for the animator
+            Vector3 moveDirWorld = (cameraController.transform.forward * verticalInput) + (cameraController.transform.right * horizontalInput);
+            moveDirWorld.y = 0;
+            moveDirWorld.Normalize();
 
-        if (horizontalMovement > 0 && horizontalMovement <= 0.55f)
-        {
-            h = 0.5f;
-        }
-        else if (horizontalMovement > 0.55f)
-        {
-            h = 1f;
-        }
-        else if (horizontalMovement < 0 && horizontalMovement >= -0.55f)
-        {
-            h = -0.5f;
-        }
-        else if (horizontalMovement < -0.55f)
-        {
-            h = -1f;
-        }
-        else
-        {
-            h = 0f;
-        }
-        #endregion
-
-        if (isSprinting && verticalMovement > 0)
-        {
-            v = 2;
-            h = horizontalMovement;
+            if (moveDirWorld.sqrMagnitude > 0.01f)
+            {
+                Vector3 moveDirLocal = playerManager.transform.InverseTransformDirection(moveDirWorld);
+                v = moveDirLocal.z;
+                h = moveDirLocal.x;
+            }
+            else // No input
+            {
+                v = 0;
+                h = 0;
+            }
         }
 
-        anim.SetFloat(vertical, v, 0.1f, Time.deltaTime);
-        anim.SetFloat(horizontal, h, 0.1f, Time.deltaTime);
+        // Apply sprinting multiplier if applicable
+        if (isSprinting && v > 0.5f && !isCrouching)
+        {
+            v = 2f;
+        }
+
+        // Crouching state is handled by a separate animator bool usually,
+        // but v and h still determine crouch walk/strafe direction within the crouch blend tree/layer.
+        // No specific change to v, h needed here just for crouching itself,
+        // unless your crouch animations are at different 'speed' values in the blend tree (e.g., crouch walk at v=0.25)
+        // If so, you'd scale v and h here when isCrouching is true.
+        // For example: if (isCrouching) { v *= 0.5f; h *= 0.5f; } // If crouch anims are at half magnitude
+
+        anim.SetFloat(hashVertical, v, 0.1f, Time.deltaTime);
+        anim.SetFloat(hashHorizontal, h, 0.1f, Time.deltaTime);
+        anim.SetBool(hashIsCrouching, isCrouching);
     }
+
+    public void PlayTargetAnimation(string targetAnim, bool isPlayerInAction, float crossFadeDuration = 0.1f)
+    {
+        if (anim == null) return;
+        anim.SetBool("isInMidAction", isPlayerInAction);
+        anim.applyRootMotion = isPlayerInAction; // General rule, can be overridden by specific anims
+        anim.CrossFade(targetAnim, crossFadeDuration);
+    }
+
 
     public void EnableRotation() => canRotate = true;
 
@@ -87,44 +91,39 @@ public class AnimatorHandler : AnimatorManager
 
     public void OnAnimatorMove()
     {
-        if (playerManager.isInMidAction == false)
-            return;
+        // Only apply root motion if playerManager says they are in an action that *should* use it.
+        // And if not in air where root motion can be problematic unless specifically designed for it.
+        if (playerManager != null && playerManager.isInMidAction && playerManager.isGrounded)
+        {
+            if (anim != null && anim.applyRootMotion)
+            {
+                float deltaTime = Time.deltaTime;
+                if (deltaTime > 0)
+                {
+                    playerLocomotion.rigidbody.drag = 0;
+                    Vector3 deltaPosition = anim.deltaPosition;
+                    deltaPosition.y = 0; // Typically ignore Y root motion for grounded characters unless it's for jumps
+                    Vector3 velocity = deltaPosition / deltaTime;
+                    playerLocomotion.rigidbody.velocity = new Vector3(velocity.x, playerLocomotion.rigidbody.velocity.y, velocity.z); // Preserve Y for gravity/jumps
+                }
+            }
+        }
+    }
 
-        float deltaTime = Time.deltaTime;
-
-        playerLocomotion.rigidbody.drag = 0;
-        Vector3 deltaPosition = anim.deltaPosition;
-        deltaPosition.y = 0;
-        Vector3 velocity = deltaPosition / deltaTime;
-        playerLocomotion.rigidbody.velocity = velocity;
+    public void SetBool(string paramName, bool value)
+    {
+        if (anim != null) anim.SetBool(paramName, value);
     }
 
     public bool IsInMidAction() => anim.GetBool("isInMidAction");
 
-    public void EnableCombo()
-    {
-        anim.SetBool("canDoCombo", true);
-    }
+    public void EnableCombo() => anim.SetBool("canDoCombo", true);
+    public void DisableCombo() => anim.SetBool("canDoCombo", false);
 
-    public void DisableCombo()
-    {
-        anim.SetBool("canDoCombo", false);
-    }
+    public void EnableInvulnerability() => anim.SetBool("isInvulnerable", true);
+    public void DisableInvulnerability() => anim.SetBool("isInvulnerable", false);
 
-    public void EnableInvulnerability()
-    {
-        anim.SetBool("isInvulnerable", true);
-    }
-
-    public void DisableInvulnerability()
-    {
-        anim.SetBool("isInvulnerable", false);
-    }
-
-    public void OnDodgeAnimationEnd()
-    {
-        playerLocomotion.OnDodgeAnimationEnd();
-    }
+    public void OnDodgeAnimationEnd() => playerLocomotion.OnDodgeAnimationEnd();
 
     public void AnimEvent_ApplyBackstabDamage()
     {

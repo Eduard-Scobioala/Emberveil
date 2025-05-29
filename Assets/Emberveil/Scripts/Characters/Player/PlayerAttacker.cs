@@ -15,7 +15,7 @@ public class PlayerAttacker : MonoBehaviour
     [SerializeField] private float backstabMaxInteractionDistance = .6f;
     [SerializeField] private float backstabMaxAngle = 45f;
     [SerializeField] private LayerMask backstabLayerMask;
-    [SerializeField] private string playerBackstabAnimation = "Backstab_Attack";
+    [SerializeField] private string playerBackstabAnimation = "Backstab_Main_01";
     [SerializeField] private float playerSnapSpeed = 15f;
 
     private void Awake()

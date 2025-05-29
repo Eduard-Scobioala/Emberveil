@@ -8,8 +8,8 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
     private EnemyCombat enemyCombat;
 
     // Animator Hashes
-    private readonly int hashForwardSpeed = Animator.StringToHash("ForwardSpeed");
-    private readonly int hashStrafeSpeed = Animator.StringToHash("StrafeSpeed");
+    public readonly int hashVertical = Animator.StringToHash("Vertical");
+    public readonly int hashHorizontal = Animator.StringToHash("Horizontal");
     // Add other common hashes like "IsInteracting", "IsDead"
 
     public void Initialize(EnemyManager manager)
@@ -19,13 +19,6 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
         enemyCombat = manager.Combat;
         anim = GetComponent<Animator>(); // Make sure this is set
         if (anim == null) Debug.LogError("Animator not found on EnemyAnimator's GameObject or children.", this);
-    }
-
-    public void SetMovementValues(float forwardAmount, float strafeAmount)
-    {
-        if (anim == null) return;
-        anim.SetFloat(hashForwardSpeed, forwardAmount, 0.1f, Time.deltaTime);
-        anim.SetFloat(hashStrafeSpeed, strafeAmount, 0.1f, Time.deltaTime);
     }
 
     public void PlayTargetAnimation(string animationName, bool isInMidAction, float transitionDuration = 0.1f)
@@ -41,6 +34,27 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
     {
         if (anim == null) return;
         anim.SetBool(paramName, value);
+    }
+
+    public void SetFloat(string paramName, float value, float dampTime = 0.1f, float deltaTime = -1f)
+    {
+        if (anim == null) return;
+        if (deltaTime < 0) deltaTime = Time.deltaTime;
+        anim.SetFloat(paramName, value, dampTime, deltaTime);
+    }
+
+    public void SetFloat(int paramID, float value, float dampTime = 0.1f, float deltaTime = -1f) // Overload for hash IDs
+    {
+        if (anim == null) return;
+        if (deltaTime < 0) deltaTime = Time.deltaTime;
+        anim.SetFloat(paramID, value, dampTime, deltaTime);
+    }
+
+    public void SetMovementValues(float verticalSpeed, float horizontalSpeed)
+    {
+        if (anim == null) return;
+        anim.SetFloat(hashVertical, verticalSpeed, 0.1f, Time.deltaTime);
+        anim.SetFloat(hashHorizontal, horizontalSpeed, 0.1f, Time.deltaTime);
     }
 
     public void SetTrigger(string paramName)
