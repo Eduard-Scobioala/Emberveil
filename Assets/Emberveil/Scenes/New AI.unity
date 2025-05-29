@@ -9206,7 +9206,9 @@ MonoBehaviour:
   sightRadius: 20
   sightAngle: 180
   loseSightDistanceMultiplier: 1.5
-  timeToLoseTarget: 5
+  timeToLoseTargetAfterLoSBreak: 5
+  proximityDetectionRadius: 5
+  timeToLoseTargetAfterProximityBreak: 4
   targetLayers:
     serializedVersion: 2
     m_Bits: 8192
@@ -9406,7 +9408,7 @@ PrefabInstance:
     - target: {fileID: 6617811616378658093, guid: d1d9d6542d224c74fab4e17d1e6f8596,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -11.97
+      value: -3.52
       objectReference: {fileID: 0}
     - target: {fileID: 6617811616378658093, guid: d1d9d6542d224c74fab4e17d1e6f8596,
         type: 3}

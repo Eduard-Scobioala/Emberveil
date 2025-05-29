@@ -10,7 +10,8 @@ public class EnemyLocomotion : MonoBehaviour
     private EnemyAnimator enemyAnimator; // Renamed from AnimatorManager
 
     [Header("Movement Settings")]
-    public float baseSpeed = 3.5f;
+    public float baseSpeed = 3f;
+    public float chaseSpeed = 3.5f;
     public float rotationSpeed = 10f;
     public float stoppingDistance = 1.5f; // Agent's stopping distance
 
@@ -61,7 +62,6 @@ public class EnemyLocomotion : MonoBehaviour
     {
         DisableAgentNavigation(true); // Make non-kinematic
     }
-
 
     public void MoveToPoint(Vector3 destination)
     {
@@ -114,7 +114,6 @@ public class EnemyLocomotion : MonoBehaviour
         }
     }
 
-
     public void ApplyRootMotion(Vector3 deltaPosition, Quaternion deltaRotation)
     {
         // This is called from EnemyAnimator.OnAnimatorMove
@@ -141,17 +140,35 @@ public class EnemyLocomotion : MonoBehaviour
 
     public void UpdateAnimatorMovementParameters()
     {
-        if (enemyAnimator == null || !agent.enabled)
+        if (enemyAnimator == null) return;
+
+        float verticalSpeed = 0f;
+        float horizontalSpeed = 0f;
+
+        if (agent.enabled && agent.isOnNavMesh && agent.desiredVelocity.sqrMagnitude > 0.01f)
         {
-            enemyAnimator?.SetMovementValues(0, 0);
-            return;
+            // Get the desired velocity of the agent (this is what it *wants* to do)
+            Vector3 worldDesiredVelocity = agent.desiredVelocity;
+
+            // Transform this world velocity into the enemy's local space
+            // This gives us how much it wants to move forward/backward (local Z)
+            // and left/right (local X) relative to its current orientation.
+            Vector3 localDesiredVelocity = transform.InverseTransformDirection(worldDesiredVelocity);
+
+            // Normalize these local values to be typically between -1 and 1
+            // The agent.speed is its current maximum speed.
+            verticalSpeed = localDesiredVelocity.z / agent.speed;
+            horizontalSpeed = localDesiredVelocity.x / agent.speed;
+
+            // Clamp them to ensure they are within the expected animator range
+            // If your blend tree's max for run is 1 and sprint is 2:
+            float maxAnimatorSpeed = 1.0f;
+
+            verticalSpeed = Mathf.Clamp(verticalSpeed, -maxAnimatorSpeed, maxAnimatorSpeed);
+            horizontalSpeed = Mathf.Clamp(horizontalSpeed, -maxAnimatorSpeed, maxAnimatorSpeed);
         }
-
-        Vector3 localVelocity = transform.InverseTransformDirection(agent.desiredVelocity);
-        float forwardSpeed = Mathf.Clamp(localVelocity.z / agent.speed, -1f, 1f);
-        float strafeSpeed = Mathf.Clamp(localVelocity.x / agent.speed, -1f, 1f);
-
-        enemyAnimator.SetMovementValues(forwardSpeed, strafeSpeed);
+        // If the agent is disabled, or not moving, speeds should be 0.
+        enemyAnimator.SetMovementValues(verticalSpeed, horizontalSpeed);
     }
 
     public void SetAgentSpeed(float speed)

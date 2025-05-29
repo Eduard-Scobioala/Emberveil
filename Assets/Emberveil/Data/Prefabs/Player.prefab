@@ -1779,6 +1779,7 @@ MonoBehaviour:
   canDoCombo: 0
   isUsingRightHand: 0
   isUsingLeftHand: 0
+  isCrouching: 0
   currentBackstabTarget: {fileID: 0}
 --- !u!114 &3569286514129032211
 MonoBehaviour:
@@ -1870,24 +1871,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraController: {fileID: 0}
-  moveDirection: {x: 0, y: 0, z: 0}
-  animatorHandler: {fileID: 0}
   rigidbody: {fileID: 0}
   movementSpeed: 5
-  walkingSpeed: 1
-  sprintSpeed: 8
+  walkingSpeed: 3
+  sprintSpeed: 7
+  crouchSpeed: 3
   rotationSpeed: 18
   fallingSpeed: 300
-  lockOnMovementForwardMultiplier: 0.125
-  lockOnDodgeForwardMultiplier: 0.9
+  movementSmoothTime: 0.05
+  maxFallSpeed: 350
+  airControlFactor: 1
+  lockOnStrafeSpeedMultiplier: 1
+  lockOnBackwardSpeedMultiplier: 0.8
   groundDetectionRayStartPoint: 0.5
-  minimumDistanceNeededToBeginFall: 1
   groundDirectionRayDistance: 0.2
   ignoreForGroundCheck:
     serializedVersion: 2
     m_Bits: 16928
   inAirTimer: 0
-  movementSmoothTime: 0.05
 --- !u!1 &7630567604707857878
 GameObject:
   m_ObjectHideFlags: 0

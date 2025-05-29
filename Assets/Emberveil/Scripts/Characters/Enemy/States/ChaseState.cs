@@ -8,7 +8,7 @@ public class ChaseState : IEnemyState
     {
         this.manager = manager;
         manager.Locomotion.EnableAgentNavigation();
-        manager.Locomotion.SetAgentSpeed(manager.Locomotion.baseSpeed * 1.5f); // Chase speed
+        manager.Locomotion.SetAgentSpeed(manager.Locomotion.chaseSpeed);
         Debug.Log($"{manager.name} entered ChaseState, chasing {manager.CurrentTarget?.name}.");
         manager.isPerformingNonCriticalAction = false;
     }
@@ -23,6 +23,7 @@ public class ChaseState : IEnemyState
         if (manager.CurrentTarget != null)
         {
             manager.Locomotion.FollowTarget(manager.CurrentTarget.transform);
+            manager.Locomotion.RotateTowards(manager.CurrentTarget.transform.position, manager.Locomotion.rotationSpeed);
         }
     }
 
@@ -37,13 +38,6 @@ public class ChaseState : IEnemyState
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
         if (distanceToTarget <= manager.defaultStoppingDistance) // Check against NavMeshAgent's stopping distance
         {
-            // Check if backstab is possible before committing to general combat
-            if (manager.CurrentTarget is PlayerManager playerTarget &&
-                manager.Combat.CanAttemptBackstab(playerTarget) &&
-                Random.value < manager.Combat.chanceToAttemptBackstab)
-            {
-                return manager.performingBackstabState;
-            }
             return manager.combatStanceState;
         }
         return null;

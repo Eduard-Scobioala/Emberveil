@@ -218,15 +218,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Critical Attack",
-                    "type": "Button",
-                    "id": "746e7e60-1baf-49c5-bc11-0d23d49a019f",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Interact",
                     "type": "Button",
                     "id": "c3bd08d3-cb52-43fa-9145-235319397f5d",
@@ -266,6 +257,15 @@
                     "name": "Two Handing",
                     "type": "Button",
                     "id": "fe89ac5b-c6be-4eee-bf31-1216bc9ca6e3",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Crouch",
+                    "type": "Button",
+                    "id": "681b2d47-1d0a-4cb7-906c-2023b925d8e1",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -473,12 +473,23 @@
                 },
                 {
                     "name": "",
-                    "id": "f5105422-369e-456e-b1e6-255757eef6c2",
-                    "path": "",
+                    "id": "5a84f93f-bb2a-4cd7-89ba-a5c229de2fa5",
+                    "path": "<Keyboard>/c",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Critical Attack",
+                    "action": "Crouch",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5f12151a-ea2f-4ea0-b3d6-3c36a87f3a16",
+                    "path": "<Gamepad>/leftTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Crouch",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
