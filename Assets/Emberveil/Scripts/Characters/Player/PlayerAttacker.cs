@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PlayerAttacker : MonoBehaviour
 {
-    private AnimatorHandler animatorHandler;
+    private PlayerAnimator animatorHandler;
     private WeaponSlotManager weaponSlotManager;
     private PlayerManager playerManager;
     private PlayerInventory playerInventory;
@@ -20,7 +20,7 @@ public class PlayerAttacker : MonoBehaviour
 
     private void Awake()
     {
-        animatorHandler = GetComponentInChildren<AnimatorHandler>();
+        animatorHandler = GetComponentInChildren<PlayerAnimator>();
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         playerManager = GetComponent<PlayerManager>();
         playerInventory = GetComponent<PlayerInventory>();
@@ -33,7 +33,7 @@ public class PlayerAttacker : MonoBehaviour
 
     public void HandleLightAttackButtonPressed()
     {
-        if (!playerManager.isInMidAction && playerManager.isGrounded)
+        if (!animatorHandler.IsInMidAction && playerManager.isGrounded)
         {
             if (TryPerformBackstab())
             {
@@ -50,10 +50,9 @@ public class PlayerAttacker : MonoBehaviour
         }
         else
         {
-            if (playerManager.isInMidAction)
+            if (animatorHandler.IsInMidAction)
                 return;
 
-            animatorHandler.anim.SetBool("isUsingRightHand", true);
             LightAttack(playerInventory.RightHandWeapon);
         }
     }
@@ -77,7 +76,7 @@ public class PlayerAttacker : MonoBehaviour
             if (hit.transform.root == playerManager.transform.root) continue;
 
             CharacterManager targetCharManager = hit.collider.GetComponentInParent<CharacterManager>();
-            if (targetCharManager != null && targetCharManager.canBeBackstabbed && !targetCharManager.isInMidAction)
+            if (targetCharManager != null && targetCharManager.canBeBackstabbed && !targetCharManager.charAnimManager.IsInMidAction)
             {
                 float distanceToHitPoint = Vector3.Distance(playerManager.transform.position, hit.point);
                 if (distanceToHitPoint < closestVictimDistance) // Prioritize by actual hit point for spherecast
@@ -120,7 +119,7 @@ public class PlayerAttacker : MonoBehaviour
     private void ExecuteBackstab(CharacterManager victim)
     {
         Debug.Log($"Executing backstab on {victim.name}");
-        playerManager.isInMidAction = true;
+        animatorHandler.IsInMidAction = true;
         playerManager.isInvulnerable = true;
         playerManager.isBeingCriticallyHit = true; // Player is also in a critical sequence
         playerManager.currentBackstabTarget = victim;

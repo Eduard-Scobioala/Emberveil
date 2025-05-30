@@ -19,7 +19,7 @@ public class PlayerManager : CharacterManager
     private PlayerAttacker playerAttacker;
     private PlayerStats playerStats;
     public PlayerInventory playerInventory;
-    private AnimatorHandler animatorHandler;
+    private PlayerAnimator animatorHandler;
 
     [Header("Player Flags")]
     public bool isSprinting;
@@ -36,6 +36,8 @@ public class PlayerManager : CharacterManager
     // Command buffering
     private ICommand pendingCommand;
     private Commands commands;
+    [SerializeField] private float pendingCommandInterval = 0.2f;
+    private float pendingCommandTimer;
 
     public CharacterManager currentBackstabTarget;
 
@@ -45,7 +47,7 @@ public class PlayerManager : CharacterManager
         playerStats = GetComponent<PlayerStats>();
         playerInventory = GetComponent<PlayerInventory>();
         charAnimator = GetComponentInChildren<Animator>();
-        animatorHandler = GetComponentInChildren<AnimatorHandler>();
+        animatorHandler = GetComponentInChildren<PlayerAnimator>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
@@ -82,7 +84,6 @@ public class PlayerManager : CharacterManager
 
     private void Update()
     {
-        isInMidAction = charAnimator.GetBool("isInMidAction");
         isInvulnerable = charAnimator.GetBool("isInvulnerable");
         canDoCombo = charAnimator.GetBool("canDoCombo");
 
@@ -90,13 +91,21 @@ public class PlayerManager : CharacterManager
         charAnimator.SetBool("isInAir", isInAir);
         charAnimator.SetBool("isGrounded", isGrounded);
         charAnimator.SetBool("isCrouching", isCrouching);
-        //charAnimator.SetBool("isInMidAction", isInMidAction);
 
         // Execute pending command when action ends
-        if (pendingCommand != null && pendingCommand.CanExecute())
+        if (pendingCommand != null)
         {
-            pendingCommand.Execute();
-            pendingCommand = null;
+            if (pendingCommand.CanExecute())
+            {
+                pendingCommand.Execute();
+                pendingCommand = null;
+            }
+            
+            pendingCommandTimer -= Time.deltaTime;
+            if (pendingCommandTimer < 0)
+            {
+                pendingCommand = null;
+            }
         }
         
         HandleInteractableUI();
@@ -115,23 +124,23 @@ public class PlayerManager : CharacterManager
         commands = new Commands
         {
             LightAttackCommand = new RelayCommand(
-                () => !isInMidAction || canDoCombo,
+                () => !charAnimManager.IsInMidAction || canDoCombo,
                 playerAttacker.HandleLightAttackButtonPressed),
 
             HeavyAttackCommand = new RelayCommand(
-                () => !isInMidAction || canDoCombo,
+                () => !charAnimManager.IsInMidAction || canDoCombo,
                 playerAttacker.HandleHeavyAttackButtonPressed),
 
             JumpCommand = new RelayCommand(
-                () => !isInMidAction && isGrounded,
+                () => !charAnimManager.IsInMidAction && isGrounded,
                 playerLocomotion.HandleJumpButtonPressed),
 
             DodgeCommand = new RelayCommand(
-                () => !isInMidAction,
+                () => !charAnimManager.IsInMidAction,
                 playerLocomotion.HandleDodgeTapped),
 
             SprintHoldCommand = new RelayCommand(
-                () => !isInMidAction && !isCrouching,
+                () => !charAnimManager.IsInMidAction && !isCrouching,
                 playerLocomotion.HandleSprintHolding),
 
             SprintReleaseCommand = new RelayCommand(
@@ -139,7 +148,7 @@ public class PlayerManager : CharacterManager
                 playerLocomotion.HandleSprintReleased),
 
             CrouchCommand = new RelayCommand(
-                () => !isInMidAction && isGrounded,
+                () => !charAnimManager.IsInMidAction && isGrounded,
                 ToggleCrouchState)
         };
     }
@@ -181,6 +190,7 @@ public class PlayerManager : CharacterManager
         }
         else
         {
+            pendingCommandTimer = pendingCommandInterval;
             pendingCommand = command;
         }
     }
@@ -306,7 +316,7 @@ public class PlayerManager : CharacterManager
     public void AnimEvent_FinishPerformingBackstab()
     {
         Debug.Log("Player finished performing backstab animation.");
-        isInMidAction = false;
+        charAnimManager.IsInMidAction = false;
         isInvulnerable = false;
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;

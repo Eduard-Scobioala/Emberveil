@@ -5,7 +5,7 @@ public class PlayerStats : CharacterStats
     [SerializeField] private StatUIBar healthBar;
     [SerializeField] private StatUIBar staminaBar;
 
-    private AnimatorHandler animatorHandler;
+    private PlayerAnimator animatorHandler;
     private PlayerManager playerManager;
 
     [Header("Stats Settings")]
@@ -18,7 +18,7 @@ public class PlayerStats : CharacterStats
 
     private void Awake()
     {
-        animatorHandler = GetComponentInChildren<AnimatorHandler>();
+        animatorHandler = GetComponentInChildren<PlayerAnimator>();
         playerManager = GetComponent<PlayerManager>();
     }
 
@@ -117,7 +117,7 @@ public class PlayerStats : CharacterStats
 
     public void RegenerateStamina()
     {
-        if (playerManager.isInMidAction)
+        if (playerManager.charAnimManager.IsInMidAction)
             return;
 
         staminaRegenTimer += Time.deltaTime;

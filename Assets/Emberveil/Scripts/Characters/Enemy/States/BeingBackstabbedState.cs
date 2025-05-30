@@ -69,7 +69,7 @@ public class BeingBackstabbedState : IEnemyState
     {
         manager.isBeingCriticallyHit = false;
         manager.isInvulnerable = false;
-        manager.isInMidAction = false;
+        manager.charAnimManager.IsInMidAction = false;
         manager.canBeBackstabbed = true;
         // Re-enable appropriate locomotion, handled by the next state's Enter usually
         // manager.Locomotion.EnableAgentNavigation(); // Example

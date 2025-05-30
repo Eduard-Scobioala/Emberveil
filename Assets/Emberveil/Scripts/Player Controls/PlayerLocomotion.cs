@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class PlayerLocomotion : MonoBehaviour
 {
@@ -7,7 +8,7 @@ public class PlayerLocomotion : MonoBehaviour
 
     private Transform playerTransform;
     private PlayerManager playerManager;
-    private AnimatorHandler animatorHandler;
+    private PlayerAnimator animatorHandler;
 
     public new Rigidbody rigidbody;
     //public Vector3 moveDirection;
@@ -22,9 +23,10 @@ public class PlayerLocomotion : MonoBehaviour
     [Header("Jumping Stats")]
     [SerializeField] private float jumpForce = 7f;
     [SerializeField] private float airControlFactor = 0.2f;
+    [SerializeField] private float maxAirSpeed = 4f; // Maximum horizontal speed while airborne
 
     [Header("Falling Stats")]
-    [SerializeField] private float customGravity = 25f; // Stronger custom gravity for a snappier feel
+    [SerializeField] private float customGravity = 25f;
     [SerializeField] private float maxFallSpeed = 50f;
 
     //[SerializeField] private float lockOnMovementForwardMultiplier = 0.125f;
@@ -58,7 +60,7 @@ public class PlayerLocomotion : MonoBehaviour
         playerTransform = transform;
         rigidbody = GetComponent<Rigidbody>();
         playerManager = GetComponent<PlayerManager>();
-        animatorHandler = GetComponentInChildren<AnimatorHandler>();
+        animatorHandler = GetComponentInChildren<PlayerAnimator>();
 
         if (cameraController == null) Debug.LogError("CameraController not assigned on PlayerLocomotion!", this);
         
@@ -95,6 +97,7 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void FixedUpdate()
     {
+        Debug.Log("Velocity: " + rigidbody.velocity);
         float deltaTime = Time.fixedDeltaTime;
         if (playerManager == null || cameraController == null) return;
 
@@ -114,7 +117,7 @@ public class PlayerLocomotion : MonoBehaviour
             applyJumpForceNextFixedUpdate = false;
         }
 
-        if (playerManager.isInMidAction && !playerManager.isInAir) // If in a grounded action (not jumping/falling)
+        if (animatorHandler.IsInMidAction && !playerManager.isInAir) // If in a grounded action (not jumping/falling)
         {
             // If the action uses root motion, OnAnimatorMove handles it.
             // If not, and we want to prevent sliding:
@@ -128,7 +131,6 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerManager.isInAir)
         {
             HandleAirborneMovement(deltaTime);
-            // Rotation in air is often restricted or different
             HandleAirborneRotation(deltaTime);
         }
         else // Grounded
@@ -214,10 +216,11 @@ public class PlayerLocomotion : MonoBehaviour
 
         // Project onto ground normal
         finalVelocity = Vector3.ProjectOnPlane(finalVelocity, currentNormalVector);
-        //finalVelocity.y = rigidbody.velocity.y; // Preserve existing Y velocity for jump/fall continuity
-        finalVelocity.y = -1f;
+        finalVelocity.y = rigidbody.velocity.y; // Preserve existing Y velocity for jump/fall continuity
+        //finalVelocity.y = -1f;
 
-        rigidbody.velocity = Vector3.SmoothDamp(rigidbody.velocity, finalVelocity, ref rigidbodyVelocityRef, movementSmoothTime);
+        //rigidbody.velocity = Vector3.SmoothDamp(rigidbody.velocity, finalVelocity, ref rigidbodyVelocityRef, movementSmoothTime);
+        rigidbody.velocity = finalVelocity;
     }
 
     private void HandleRotation(float deltaTime)
@@ -239,7 +242,7 @@ public class PlayerLocomotion : MonoBehaviour
         }
 
 
-        if (animatorHandler.canRotate == false && playerManager.isInMidAction) // Animator controls rotation during some actions
+        if (animatorHandler.canRotate == false && playerManager.charAnimManager.IsInMidAction) // Animator controls rotation during some actions
             return;
 
         Vector3 targetDir;
@@ -286,23 +289,20 @@ public class PlayerLocomotion : MonoBehaviour
 
     public void HandleDodgeTapped()
     {
-        if (playerManager.isInMidAction || !playerManager.isGrounded) return;
+        if (playerManager.charAnimManager.IsInMidAction || !playerManager.isGrounded) return;
         if (playerManager.isCrouching) playerManager.ToggleCrouchState(); // Stand up to dodge
         PerformDodge();
     }
 
     private void PerformDodge()
     {
-        playerManager.isInMidAction = true; // Player is busy
+        playerManager.charAnimManager.IsInMidAction = true; // Player is busy
         animatorHandler.SetBool("isDodging", true); // For animator state if needed
 
-        string targetAnimation;
-        Vector3 dodgeDir = playerTransform.forward; // Default dodge forward if no input
+        Vector3 dodgeDir;
 
         if (moveAmount > 0.01f) // Directional Dodge / Roll
         {
-            targetAnimation = playerManager.isCrouching ? "Crouch_Roll" : "Roll"; // Different roll if somehow still crouching
-
             if (cameraController.IsLockedOn)
             {
                 dodgeDir = playerTransform.forward * verticalInput + playerTransform.right * horizontalInput;
@@ -315,28 +315,46 @@ public class PlayerLocomotion : MonoBehaviour
                 dodgeDir = camForward * verticalInput + camRight * horizontalInput;
             }
             dodgeDir.Normalize();
-            if (dodgeDir.sqrMagnitude > 0.01f) playerTransform.rotation = Quaternion.LookRotation(dodgeDir);
+
+            var dodgeAngle = Vector3.SignedAngle(playerTransform.forward, dodgeDir, Vector3.up);
+            animatorHandler.RollDirection = AngleToDirection8(dodgeAngle);
+
+            if (dodgeDir.sqrMagnitude > 0.01f && !cameraController.IsLockedOn)
+            {
+                playerTransform.rotation = Quaternion.LookRotation(dodgeDir);
+            }
         }
         else // Neutral Dodge / Backstep
         {
-            targetAnimation = playerManager.isCrouching ? "Crouch_Backstep" : "Backstep";
-            dodgeDir = -playerTransform.forward; // Backstep directly backwards
+            animatorHandler.RollDirection = -1; // Backstep animation
             // No need to change rotation for backstep typically
         }
-        animatorHandler.PlayTargetAnimation(targetAnimation, true); // isInMidAction = true
+        animatorHandler.ApplyRootMotion(true);
         // Root motion will handle movement. OnDodgeAnimationEnd resets flags.
+    }
+
+    private int AngleToDirection8(float angle)
+    {
+        // Normalize the angle to 0-360 range first
+        float normalizedAngle = (angle + 360) % 360;
+
+        // Divide the circle into 8 sectors (45 degrees each)
+        // Add 22.5 to shift the sectors so 0 is centered at North/Up
+        int direction = (int)((normalizedAngle + 22.5f) / 45f) % 8;
+
+        return direction;
     }
 
     public void OnDodgeAnimationEnd()
     {
-        playerManager.isInMidAction = false;
+        playerManager.charAnimManager.IsInMidAction = false;
         animatorHandler.SetBool("isDodging", false);
         ResetInputAndMovementState();
     }
 
     public void HandleSprintHolding()
     {
-        if (playerManager.isCrouching || playerManager.isInMidAction || !playerManager.isGrounded)
+        if (playerManager.isCrouching || playerManager.charAnimManager.IsInMidAction || !playerManager.isGrounded)
         {
             playerManager.isSprinting = false; // Can't sprint if crouching or in action
             return;
@@ -378,7 +396,7 @@ public class PlayerLocomotion : MonoBehaviour
             inAirTimer = 0;
             if (!IsCurrentlyInJumpAnimation()) // Only play falling if not in a specific jump anim
             {
-                animatorHandler.PlayTargetAnimation("Jump_Idle", false);
+                animatorHandler.PlayTargetAnimation("Jump_Idle", true);
             }
             Debug.Log("Became airborne (not from immediate jump press this frame).");
         }
@@ -399,7 +417,7 @@ public class PlayerLocomotion : MonoBehaviour
             playerManager.isInAir = false;
             inAirTimer = 0;
             //animatorHandler.PlayTargetAnimation("Jump_End", true);
-            playerManager.isInMidAction = false;
+            //playerManager.charAnimManager.IsInMidAction = false;
             Debug.Log("Landed from air. Playing Jump_End animation.");
         }
     }
@@ -413,20 +431,20 @@ public class PlayerLocomotion : MonoBehaviour
 
     public void FinishJumpAction() // Called by animation event from Jump_End animation
     {
-        playerManager.isInMidAction = false;
+        playerManager.charAnimManager.IsInMidAction = false;
         Debug.Log("Jump/Land Action Finished.");
     }
 
     public void HandleJumpButtonPressed()
     {
-        if (playerManager.isInMidAction || !playerManager.isGrounded || playerManager.isCrouching)
+        if (playerManager.charAnimManager.IsInMidAction || !playerManager.isGrounded)
         {
-            // If crouching, first stand up
-            if (playerManager.isCrouching)
-            {
-                playerManager.ToggleCrouchState();
-            }
             return;
+        }
+        if (playerManager.isCrouching)
+        {
+            playerManager.ToggleCrouchState();
+            if (playerManager.isCrouching) return;
         }
 
         playerManager.isInAir = true;
@@ -434,7 +452,7 @@ public class PlayerLocomotion : MonoBehaviour
         inAirTimer = 0;
 
         // An animation event on Jump_Start or Jump_Lift will call animatorHandler.AnimEvent_ApplyJumpForce()
-        animatorHandler.PlayTargetAnimation("Jump_Start", true);
+        animatorHandler.PlayTargetAnimation("Jump_Start", true, rootMotion: false);
         Debug.Log("Jump Initiated, playing Jump_Start. Force will be applied via AnimEvent.");
     }
 
@@ -467,26 +485,42 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void HandleAirborneMovement(float deltaTime)
     {
+        if (moveAmount <= 0.01f) return; // No input, no air control
+
         Vector3 cameraForward = cameraController.transform.forward;
         Vector3 cameraRight = cameraController.transform.right;
         cameraForward.y = 0; cameraRight.y = 0;
         cameraForward.Normalize(); cameraRight.Normalize();
 
         Vector3 desiredMoveDirection = (cameraForward * verticalInput + cameraRight * horizontalInput).normalized;
-        float speed = playerManager.isSprinting ? sprintSpeed : movementSpeed; // Can still "sprint" in air for more control
 
-        Vector3 airMoveForce = desiredMoveDirection * speed * airControlFactor;
+        // Get current horizontal velocity
+        Vector3 currentHorizontalVelocity = new Vector3(rigidbody.velocity.x, 0, rigidbody.velocity.z);
 
-        // Apply force, but don't let it overcome existing momentum too quickly or exceed max air speed
-        // This is a simple way; more complex air physics might be desired for some games.
-        Vector3 horizontalVelocity = new Vector3(rigidbody.velocity.x, 0, rigidbody.velocity.z);
-        Vector3 targetHorizontalVelocity = new Vector3(airMoveForce.x, 0, airMoveForce.z);
+        // Calculate desired velocity based on input
+        Vector3 targetVelocity = desiredMoveDirection * (movementSpeed * airControlFactor);
 
-        // Lerp or AddForce for air control
-        // rigidbody.AddForce(airMoveForce * deltaTime, ForceMode.VelocityChange); // Might feel too slidy
-        // More direct control with clamping:
-        Vector3 newHorizontalVelocity = Vector3.Lerp(horizontalVelocity, targetHorizontalVelocity, deltaTime * 5f); // Adjust lerp speed
-        rigidbody.velocity = new Vector3(newHorizontalVelocity.x, rigidbody.velocity.y, newHorizontalVelocity.z);
+        // Calculate the difference between current and desired velocity
+        Vector3 velocityDifference = targetVelocity - currentHorizontalVelocity;
+
+        // Limit the acceleration to prevent sudden velocity changes (teleportation)
+        float maxAcceleration = airControlFactor * movementSpeed * 2f; // Adjust multiplier as needed
+        if (velocityDifference.magnitude > maxAcceleration * deltaTime)
+        {
+            velocityDifference = velocityDifference.normalized * maxAcceleration * deltaTime;
+        }
+
+        // Apply the limited velocity change
+        Vector3 newVelocity = currentHorizontalVelocity + velocityDifference;
+
+        // Clamp to maximum air speed
+        if (newVelocity.magnitude > maxAirSpeed)
+        {
+            newVelocity = newVelocity.normalized * maxAirSpeed;
+        }
+
+        // Set the new velocity
+        rigidbody.velocity = new Vector3(newVelocity.x, rigidbody.velocity.y, newVelocity.z);
     }
 
     private void HandleAirborneRotation(float deltaTime)

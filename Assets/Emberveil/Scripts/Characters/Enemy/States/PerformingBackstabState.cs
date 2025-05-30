@@ -76,7 +76,7 @@ public class PerformingBackstabState : IEnemyState
 
     public void Exit()
     {
-        manager.isInMidAction = false;
+        manager.charAnimManager.IsInMidAction = false;
         manager.isInvulnerable = false;
         manager.Locomotion.EnableAgentNavigation();
         manager.Combat.ClearBackstabVictim();

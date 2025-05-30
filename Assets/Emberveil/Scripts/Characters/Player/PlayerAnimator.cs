@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class AnimatorHandler : AnimatorManager
+public class PlayerAnimator : AnimatorManager
 {
     public readonly int hashVertical = Animator.StringToHash("Vertical");
     public readonly int hashHorizontal = Animator.StringToHash("Horizontal");
@@ -14,6 +14,12 @@ public class AnimatorHandler : AnimatorManager
     private CameraController cameraController;
 
     public bool canRotate;
+
+    public int RollDirection
+    {
+        get => GetAnimatorInt();
+        set => SetAnimatorInt(value);
+    }
 
     public void Initialize()
     {
@@ -80,11 +86,11 @@ public class AnimatorHandler : AnimatorManager
         anim.SetBool(hashIsInAir, playerManager.isInAir);
     }
 
-    public void PlayTargetAnimation(string targetAnim, bool isPlayerInAction, float crossFadeDuration = 0.1f)
+    public void PlayTargetAnimation(string targetAnim, bool isPlayerInAction, float crossFadeDuration = 0.1f, bool? rootMotion = null)
     {
         if (anim == null) return;
-        anim.SetBool("isInMidAction", isPlayerInAction);
-        anim.applyRootMotion = isPlayerInAction; // General rule, can be overridden by specific anims
+        IsInMidAction = isPlayerInAction;
+        anim.applyRootMotion = rootMotion ?? isPlayerInAction; // General rule, can be overridden by specific anims
         anim.CrossFade(targetAnim, crossFadeDuration);
     }
 
@@ -96,7 +102,7 @@ public class AnimatorHandler : AnimatorManager
     {
         // Only apply root motion if playerManager says they are in an action that *should* use it.
         // And if not in air where root motion can be problematic unless specifically designed for it.
-        if (playerManager != null && playerManager.isInMidAction && playerManager.isGrounded)
+        if (playerManager != null && IsInMidAction && playerManager.isGrounded)
         {
             if (anim != null && anim.applyRootMotion)
             {
@@ -119,8 +125,6 @@ public class AnimatorHandler : AnimatorManager
         if (anim != null) anim.SetBool(paramName, value);
     }
 
-    public bool IsInMidAction() => anim.GetBool("isInMidAction");
-
     public void EnableCombo() => anim.SetBool("canDoCombo", true);
     public void DisableCombo() => anim.SetBool("canDoCombo", false);
 
@@ -128,6 +132,8 @@ public class AnimatorHandler : AnimatorManager
     public void DisableInvulnerability() => anim.SetBool("isInvulnerable", false);
 
     public void OnDodgeAnimationEnd() => playerLocomotion.OnDodgeAnimationEnd();
+
+    public void AnimEvent_FinishAction() => IsInMidAction = false;
 
     public void AnimEvent_ApplyBackstabDamage()
     {

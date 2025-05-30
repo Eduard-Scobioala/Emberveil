@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class CharacterManager : MonoBehaviour
@@ -9,22 +10,21 @@ public class CharacterManager : MonoBehaviour
     public Transform lockOnTransform;
 
     [Header("Interaction Flags")]
-    public bool isInMidAction;
     public bool isInvulnerable;
     public bool isBeingCriticallyHit;
-
+    
     [Header("Backstab Settings")]
     public Transform backstabReceiverPoint; // A child empty GameObject on the character model where the attacker snaps TO
     public string beingBackstabbedAnimation = "Enemy_Backstab_Main_Victim_01";
     public bool canBeBackstabbed = true;
 
     protected Animator charAnimator;
-    protected AnimatorManager charAnimatorManager;
+    public AnimatorManager charAnimManager;
 
     protected virtual void Awake()
     {
         charAnimator = GetComponentInChildren<Animator>();
-        charAnimatorManager = GetComponentInChildren<AnimatorManager>();
+        charAnimManager = GetComponentInChildren<AnimatorManager>();
 
         if (backstabReceiverPoint == null)
         {
@@ -44,10 +44,10 @@ public class CharacterManager : MonoBehaviour
 
     public virtual void GetBackstabbed(Transform attacker)
     {
-        if (!canBeBackstabbed || isInvulnerable || isInMidAction) return;
+        if (!canBeBackstabbed || isInvulnerable || charAnimManager.IsInMidAction) return;
 
         Debug.Log($"{gameObject.name} is being backstabbed by {attacker.name}");
-        isInMidAction = true;
+        charAnimManager.IsInMidAction = true;
         isInvulnerable = true;
         isBeingCriticallyHit = true;
         canBeBackstabbed = false; // Cannot be backstabbed again while being backstabbed
@@ -62,14 +62,14 @@ public class CharacterManager : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(directionFromAttacker);
         }
 
-        if (charAnimatorManager != null)
+        if (charAnimManager != null)
         {
-            charAnimatorManager.PlayTargetAnimation(beingBackstabbedAnimation, true);
+            charAnimManager.PlayTargetAnimation(beingBackstabbedAnimation, true);
         }
         else if (charAnimator != null) // Fallback if no specific manager
         {
             charAnimator.CrossFade(beingBackstabbedAnimation, 0.1f);
-            charAnimator.SetBool("isInMidAction", true);
+            charAnimManager.IsInMidAction = true;
         }
         else
         {
@@ -80,7 +80,7 @@ public class CharacterManager : MonoBehaviour
     // This method would be called by an Animation Event at the end of the "Being_Backstabbed" animation
     public virtual void FinishBeingBackstabbed()
     {
-        isInMidAction = false;
+        charAnimManager.IsInMidAction = false;
         isInvulnerable = false;
         canBeBackstabbed = true;
         isBeingCriticallyHit = false;

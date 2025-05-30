@@ -25,7 +25,7 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
     {
         if (anim == null) return;
 
-        SetBool("isInMidAction", isInMidAction);
+        IsInMidAction = isInMidAction;
         anim.applyRootMotion = isInMidAction; // Typically true for actions, false for locomotion blends
         anim.CrossFade(animationName, transitionDuration);
     }

@@ -118,7 +118,7 @@ public class EnemyCombat : MonoBehaviour
         if (backstabAction == null || target == null || !(target is PlayerManager)) return false;
 
         PlayerManager playerTarget = target as PlayerManager;
-        if (playerTarget.isInMidAction || playerTarget.isInvulnerable) return false;
+        if (playerTarget.charAnimManager.IsInMidAction || playerTarget.isInvulnerable) return false;
 
         // Check position: Enemy behind player?
         Vector3 directionFromPlayerToEnemy = (transform.position - playerTarget.transform.position).normalized;

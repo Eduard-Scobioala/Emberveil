@@ -35,6 +35,7 @@ public class ChaseState : IEnemyState
         }
 
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
+        Debug.Log("Distance towards player: " + distanceToTarget);
         if (distanceToTarget <= manager.defaultStoppingDistance)
         {
             return manager.combatStanceState;
