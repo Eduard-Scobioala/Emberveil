@@ -1777,8 +1777,6 @@ MonoBehaviour:
   isInAir: 0
   isGrounded: 0
   canDoCombo: 0
-  isUsingRightHand: 0
-  isUsingLeftHand: 0
   isCrouching: 0
   currentBackstabTarget: {fileID: 0}
 --- !u!114 &3569286514129032211
@@ -1877,10 +1875,10 @@ MonoBehaviour:
   sprintSpeed: 7
   crouchSpeed: 3
   rotationSpeed: 18
-  fallingSpeed: 300
-  movementSmoothTime: 0.05
+  jumpForce: 5
+  airControlFactor: 0.5
+  customGravity: 35
   maxFallSpeed: 350
-  airControlFactor: 1
   lockOnStrafeSpeedMultiplier: 1
   lockOnBackwardSpeedMultiplier: 0.8
   groundDetectionRayStartPoint: 0.5
@@ -1889,6 +1887,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 16928
   inAirTimer: 0
+  movementSmoothTime: 0.05
 --- !u!1 &7630567604707857878
 GameObject:
   m_ObjectHideFlags: 0

@@ -26,8 +26,6 @@ public class PlayerManager : CharacterManager
     public bool isInAir;
     public bool isGrounded;
     public bool canDoCombo;
-    //public bool isUsingRightHand;
-    //public bool isUsingLeftHand;
     public bool isCrouching;
 
     private bool pickedUpItem = false;
@@ -84,20 +82,15 @@ public class PlayerManager : CharacterManager
 
     private void Update()
     {
-        // Read flags from animator (base CharacterManager fields)
         isInMidAction = charAnimator.GetBool("isInMidAction");
         isInvulnerable = charAnimator.GetBool("isInvulnerable");
-        // isBeingCriticallyHit is managed by GetBackstabbed / FinishBeingBackstabbed
-
-        // Player specific animator reads
         canDoCombo = charAnimator.GetBool("canDoCombo");
-        //isUsingRightHand = charAnimator.GetBool("isUsingRightHand");
-        //isUsingLeftHand = charAnimator.GetBool("isUsingLeftHand");
 
         // Update animator with player state
         charAnimator.SetBool("isInAir", isInAir);
         charAnimator.SetBool("isGrounded", isGrounded);
         charAnimator.SetBool("isCrouching", isCrouching);
+        //charAnimator.SetBool("isInMidAction", isInMidAction);
 
         // Execute pending command when action ends
         if (pendingCommand != null && pendingCommand.CanExecute())
@@ -147,17 +140,22 @@ public class PlayerManager : CharacterManager
 
             CrouchCommand = new RelayCommand(
                 () => !isInMidAction && isGrounded,
-                HandleToggleCrouch)
+                ToggleCrouchState)
         };
     }
 
-    private void HandleToggleCrouch()
+    public void ToggleCrouchState()
     {
-        isCrouching = !isCrouching; // the bool will handle transition from Locomotion blend tree in animator
+        if (isInAir) return;
+
+        isCrouching = !isCrouching;
+
         if (isCrouching)
         {
-            isSprinting = false;
+            isSprinting = false; // Cannot sprint while crouching
         }
+
+        playerLocomotion.ResetInputAndMovementState(); // Reset movement input when toggling crouch
     }
 
     public override void GetBackstabbed(Transform attacker)

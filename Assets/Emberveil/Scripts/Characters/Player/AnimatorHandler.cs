@@ -2,10 +2,12 @@ using UnityEngine;
 
 public class AnimatorHandler : AnimatorManager
 {
-    private readonly int hashVertical = Animator.StringToHash("Vertical");
-    private readonly int hashHorizontal = Animator.StringToHash("Horizontal");
+    public readonly int hashVertical = Animator.StringToHash("Vertical");
+    public readonly int hashHorizontal = Animator.StringToHash("Horizontal");
     private readonly int hashIsCrouching = Animator.StringToHash("isCrouching");
     private readonly int hashIsDodging = Animator.StringToHash("isDodging");
+    private readonly int hashIsGrounded = Animator.StringToHash("isGrounded");
+    private readonly int hashIsInAir = Animator.StringToHash("isInAir");
 
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
@@ -74,6 +76,8 @@ public class AnimatorHandler : AnimatorManager
         anim.SetFloat(hashVertical, v, 0.1f, Time.deltaTime);
         anim.SetFloat(hashHorizontal, h, 0.1f, Time.deltaTime);
         anim.SetBool(hashIsCrouching, isCrouching);
+        anim.SetBool(hashIsGrounded, playerManager.isGrounded);
+        anim.SetBool(hashIsInAir, playerManager.isInAir);
     }
 
     public void PlayTargetAnimation(string targetAnim, bool isPlayerInAction, float crossFadeDuration = 0.1f)
@@ -101,9 +105,10 @@ public class AnimatorHandler : AnimatorManager
                 {
                     playerLocomotion.rigidbody.drag = 0;
                     Vector3 deltaPosition = anim.deltaPosition;
-                    deltaPosition.y = 0; // Typically ignore Y root motion for grounded characters unless it's for jumps
+                    deltaPosition.y = 0; // Comment this out IF the animation (like a hop in an attack) has intentional Y movement
                     Vector3 velocity = deltaPosition / deltaTime;
-                    playerLocomotion.rigidbody.velocity = new Vector3(velocity.x, playerLocomotion.rigidbody.velocity.y, velocity.z); // Preserve Y for gravity/jumps
+                    playerLocomotion.rigidbody.velocity = new Vector3(velocity.x, playerLocomotion.rigidbody.velocity.y, velocity.z);
+                    playerLocomotion.transform.rotation *= anim.deltaRotation;
                 }
             }
         }
@@ -157,6 +162,22 @@ public class AnimatorHandler : AnimatorManager
         else
         {
             Debug.LogError("AnimEvent_FinishBeingBackstabbed called, but PlayerManager is null!", this);
+        }
+    }
+
+    public void AnimEvent_ApplyJumpForce()
+    {
+        if (playerLocomotion != null)
+        {
+            playerLocomotion.TriggerApplyJumpForce();
+        }
+    }
+
+    public void AnimEvent_FinishJumpAction() // Called from Jump_End animation
+    {
+        if (playerLocomotion != null)
+        {
+            playerLocomotion.FinishJumpAction();
         }
     }
 }
