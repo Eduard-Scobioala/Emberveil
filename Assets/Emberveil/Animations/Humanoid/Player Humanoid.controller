@@ -549,7 +549,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 1
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -5738893265825328867}
@@ -742,7 +742,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 6454605031307805126}
@@ -950,7 +950,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 684927914904653767}
@@ -1005,7 +1005,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 1
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 4575411288836816496}
@@ -1504,7 +1504,7 @@ AnimatorController:
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
-  - m_Name: isTwoHanding
+  - m_Name: IsTwoHanding
     m_Type: 4
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -2011,7 +2011,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 684927914904653767}
@@ -2622,7 +2622,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 1
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 4575411288836816496}
@@ -2790,7 +2790,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 6454605031307805126}
@@ -2964,7 +2964,7 @@ AnimatorStateTransition:
     m_ConditionEvent: isCrouching
     m_EventTreshold: 0
   - m_ConditionMode: 1
-    m_ConditionEvent: isTwoHanding
+    m_ConditionEvent: IsTwoHanding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -5738893265825328867}

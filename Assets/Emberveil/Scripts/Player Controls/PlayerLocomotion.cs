@@ -97,7 +97,6 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Debug.Log("Velocity: " + rigidbody.velocity);
         float deltaTime = Time.fixedDeltaTime;
         if (playerManager == null || cameraController == null) return;
 
@@ -349,7 +348,6 @@ public class PlayerLocomotion : MonoBehaviour
     {
         playerManager.charAnimManager.IsInMidAction = false;
         animatorHandler.SetBool("isDodging", false);
-        ResetInputAndMovementState();
     }
 
     public void HandleSprintHolding()
@@ -547,20 +545,5 @@ public class PlayerLocomotion : MonoBehaviour
     {
         Vector3 targetVelocity = new Vector3(0, rigidbody.velocity.y, 0);
         rigidbody.velocity = Vector3.SmoothDamp(rigidbody.velocity, targetVelocity, ref rigidbodyVelocityRef, movementSmoothTime * 0.2f); // Very quick stop
-    }
-
-    public void ResetInputAndMovementState()
-    {
-        horizontalInput = 0f;
-        verticalInput = 0f;
-        moveAmount = 0f;
-        rigidbody.velocity = new Vector3(0, rigidbody.velocity.y, 0); // Stop horizontal movement, preserve fall
-        rigidbodyVelocityRef = Vector3.zero;
-
-        // Ensure animator values are also reflecting "no input"
-        if (animatorHandler != null)
-        {
-            animatorHandler.UpdateAnimatorValues(0f, 0f, false, playerManager.isCrouching, cameraController.IsLockedOn);
-        }
     }
 }

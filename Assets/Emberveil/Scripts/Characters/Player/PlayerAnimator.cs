@@ -21,6 +21,12 @@ public class PlayerAnimator : AnimatorManager
         set => SetAnimatorInt(value);
     }
 
+    public bool IsTwoHanding
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
     public void Initialize()
     {
         anim = GetComponent<Animator>();

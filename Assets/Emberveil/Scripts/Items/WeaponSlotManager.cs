@@ -111,6 +111,7 @@ public class WeaponSlotManager : MonoBehaviour
     private void HandleTwoHandingButtonPressed()
     {
         isTwoHanding = !isTwoHanding;
+        playerManager.animatorHandler.IsTwoHanding = isTwoHanding;
 
         if (isTwoHanding)
         {

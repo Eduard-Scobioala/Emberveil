@@ -14,12 +14,12 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    private PlayerLocomotion playerLocomotion;
+    public PlayerLocomotion playerLocomotion;
     private InteractableUI interactableUI;
     private PlayerAttacker playerAttacker;
     private PlayerStats playerStats;
     public PlayerInventory playerInventory;
-    private PlayerAnimator animatorHandler;
+    public PlayerAnimator animatorHandler;
 
     [Header("Player Flags")]
     public bool isSprinting;
@@ -163,8 +163,6 @@ public class PlayerManager : CharacterManager
         {
             isSprinting = false; // Cannot sprint while crouching
         }
-
-        playerLocomotion.ResetInputAndMovementState(); // Reset movement input when toggling crouch
     }
 
     public override void GetBackstabbed(Transform attacker)
@@ -320,12 +318,6 @@ public class PlayerManager : CharacterManager
         isInvulnerable = false;
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;
-
-        if (playerLocomotion != null)
-        {
-            playerLocomotion.enabled = true;
-            playerLocomotion.ResetInputAndMovementState();
-        }
     }
     #endregion
 }

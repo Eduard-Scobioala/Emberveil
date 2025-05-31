@@ -124,12 +124,6 @@ public class PlayerAttacker : MonoBehaviour
         playerManager.isBeingCriticallyHit = true; // Player is also in a critical sequence
         playerManager.currentBackstabTarget = victim;
 
-        if (playerManager.GetComponent<PlayerLocomotion>() != null)
-        {
-            playerManager.GetComponent<PlayerLocomotion>().enabled = false; // Disable movement during snap/animation
-            playerManager.GetComponent<PlayerLocomotion>().rigidbody.velocity = Vector3.zero; // Stop any existing movement
-        }
-
         // Snap player to victim's backstab receiver point.
         // The receiver point on the enemy should be positioned where the player *stands* to initiate the backstab.
         // The player should then look towards the enemy's core.
