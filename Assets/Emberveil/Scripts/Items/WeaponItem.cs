@@ -11,22 +11,25 @@ public class WeaponItem : Item
     public string Left_Arm_Idle;
     public string Two_Handed_Idle;
 
-    [Header("One Handed Attack Animations")]
+    [Header("Attack Animations")]
     public string OH_Light_Attack_01;
     public string OH_Light_Attack_02;
     public string TH_Light_Attack_01;
     public string TH_Light_Attack_02;
-    public string OH_Heavy_Attack_01;
 
     [Header("Stamina Costs")]
     public int baseStamina;
     public float lightAttackStaminaMultiplier;
-    public float heavyAttackStaminaMultiplier;
+    public float rollAttackStaminaMultiplier = 1.2f;
+    public float backstepAttackStaminaMultiplier = 1.0f;
+    public float jumpAttackStaminaMultiplier = 1.1f;
 
     [Header("Damage Stats")]
-    public int lightAttackDmg;
-    public int heavyAttackDmg;
-    public int critDmgMultiplier;
+    public int lightAttackDmg = 15;
+    public int rollAttackDmg = 20;
+    public int backstepAttackDmg = 18;
+    public int jumpAttackDmg = 25;
+    public int critDmgMultiplier = 2;
 
     public int GetBackstabDmg()
     {

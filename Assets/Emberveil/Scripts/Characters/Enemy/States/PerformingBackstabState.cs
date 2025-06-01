@@ -19,7 +19,7 @@ public class PerformingBackstabState : IEnemyState
             return;
         }
 
-        manager.isInvulnerable = true;
+        manager.EnemyAnimator.IsInvulnerable = true;
         manager.Locomotion.DisableAgentAndPhysicsControl();
 
         // Snap enemy to player's backstab receiver point
@@ -77,7 +77,7 @@ public class PerformingBackstabState : IEnemyState
     public void Exit()
     {
         manager.charAnimManager.IsInMidAction = false;
-        manager.isInvulnerable = false;
+        manager.EnemyAnimator.IsInvulnerable = false;
         manager.Locomotion.EnableAgentNavigation();
         manager.Combat.ClearBackstabVictim();
         // Set cooldown for the backstab action via Combat

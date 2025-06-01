@@ -116,12 +116,12 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
 
     public void AnimEvent_EnableInvulnerability()
     {
-        if (enemyManager != null) enemyManager.isInvulnerable = true;
+        if (enemyManager != null) IsInvulnerable = true;
     }
 
     public void AnimEvent_DisableInvulnerability()
     {
-        if (enemyManager != null) enemyManager.isInvulnerable = false;
+        if (enemyManager != null) IsInvulnerable = false;
     }
 
     public void AnimEvent_CanCombo() // If enemies have combos

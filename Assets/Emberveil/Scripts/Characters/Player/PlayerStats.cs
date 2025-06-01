@@ -68,7 +68,7 @@ public class PlayerStats : CharacterStats
         if (isDead)
             return;
 
-        if (playerManager.isInvulnerable)
+        if (animatorHandler.IsInvulnerable)
             return;
 
         currentHealth -= damange;

@@ -69,7 +69,7 @@ public class EnemySenses : MonoBehaviour
                 {
                     PlayerManager player = pTarget as PlayerManager;
                     // Proximity only detects non-crouching players, or any non-player CharacterManager
-                    if (player == null || (player != null && !player.isCrouching))
+                    if (player == null || (player != null && !player.playerAnimator.IsCrouching))
                     {
                         freshlyDetectedThisFrame = pTarget;
                         currentFrameDetectionMethod = DetectionMethod.Proximity;

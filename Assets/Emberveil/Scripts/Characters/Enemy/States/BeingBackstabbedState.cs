@@ -16,7 +16,7 @@ public class BeingBackstabbedState : IEnemyState
         this.manager = manager;
         animationFinishedNotified = false;
         manager.isBeingCriticallyHit = true;
-        manager.isInvulnerable = true;  // Invulnerable while being backstabbed
+        manager.EnemyAnimator.IsInvulnerable = true;  // Invulnerable while being backstabbed
 
         manager.Locomotion.DisableAgentAndPhysicsControl(); // Animation takes full control
 
@@ -68,8 +68,8 @@ public class BeingBackstabbedState : IEnemyState
     public void Exit()
     {
         manager.isBeingCriticallyHit = false;
-        manager.isInvulnerable = false;
-        manager.charAnimManager.IsInMidAction = false;
+        manager.EnemyAnimator.IsInvulnerable = false;
+        manager.EnemyAnimator.IsInMidAction = false;
         manager.canBeBackstabbed = true;
         // Re-enable appropriate locomotion, handled by the next state's Enter usually
         // manager.Locomotion.EnableAgentNavigation(); // Example

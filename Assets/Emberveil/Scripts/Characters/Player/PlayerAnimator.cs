@@ -4,27 +4,60 @@ public class PlayerAnimator : AnimatorManager
 {
     public readonly int hashVertical = Animator.StringToHash("Vertical");
     public readonly int hashHorizontal = Animator.StringToHash("Horizontal");
-    private readonly int hashIsCrouching = Animator.StringToHash("isCrouching");
-    private readonly int hashIsDodging = Animator.StringToHash("isDodging");
-    private readonly int hashIsGrounded = Animator.StringToHash("isGrounded");
-    private readonly int hashIsInAir = Animator.StringToHash("isInAir");
+    public readonly int hashTriggerAttack = Animator.StringToHash("Attack");
 
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
     private CameraController cameraController;
 
-    public bool canRotate;
-
-    public int RollDirection
-    {
-        get => GetAnimatorInt();
-        set => SetAnimatorInt(value);
-    }
+    public bool CanRotate { get; set; } = true;
 
     public bool IsTwoHanding
     {
         get => GetAnimatorBool();
         set => SetAnimatorBool(value);
+    }
+
+    public bool IsDodging
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
+    public bool IsCrouching
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
+    public bool CanDoCombo
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
+    public bool IsGrounded
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+    
+    public bool IsInAir
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+    
+    public bool IsCharging
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
+    public int RollDirection
+    {
+        get => GetAnimatorInt();
+        set => SetAnimatorInt(value);
     }
 
     public void Initialize()
@@ -38,6 +71,40 @@ public class PlayerAnimator : AnimatorManager
         if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent for AnimatorHandler", this);
         if (cameraController == null) Debug.LogError("CameraController not found in scene for AnimatorHandler", this);
     }
+
+    public void OnAnimatorMove()
+    {
+        // Only apply root motion if playerManager says they are in an action that *should* use it.
+        // And if not in air where root motion can be problematic unless specifically designed for it.
+        if (playerManager != null && IsInMidAction && IsGrounded)
+        {
+            if (anim != null && anim.applyRootMotion)
+            {
+                float deltaTime = Time.deltaTime;
+                if (deltaTime > 0)
+                {
+                    playerLocomotion.rigidbody.drag = 0;
+                    Vector3 deltaPosition = anim.deltaPosition;
+                    deltaPosition.y = 0; // Comment this out IF the animation (like a hop in an attack) has intentional Y movement
+                    Vector3 velocity = deltaPosition / deltaTime;
+                    playerLocomotion.rigidbody.velocity = new Vector3(velocity.x, playerLocomotion.rigidbody.velocity.y, velocity.z);
+                    playerLocomotion.transform.rotation *= anim.deltaRotation;
+
+                    if (CanRotate) // If manual rotation is generally allowed by PlayerLocomotion during this action
+                    {
+                        // Manual rotation is handled by PlayerLocomotion.HandleRotation()
+                        // Do nothing here with anim.deltaRotation.
+                    }
+                    else // Animation has explicitly set canRotate = false, so root motion rotation should dominate
+                    {
+                        playerLocomotion.transform.rotation *= anim.deltaRotation;
+                    }
+                }
+            }
+        }
+    }
+
+    
 
     public void UpdateAnimatorValues(float verticalInput, float horizontalInput, bool isSprinting, bool isCrouching, bool isLockedOn)
     {
@@ -87,9 +154,7 @@ public class PlayerAnimator : AnimatorManager
 
         anim.SetFloat(hashVertical, v, 0.1f, Time.deltaTime);
         anim.SetFloat(hashHorizontal, h, 0.1f, Time.deltaTime);
-        anim.SetBool(hashIsCrouching, isCrouching);
-        anim.SetBool(hashIsGrounded, playerManager.isGrounded);
-        anim.SetBool(hashIsInAir, playerManager.isInAir);
+        IsCrouching = isCrouching;
     }
 
     public void PlayTargetAnimation(string targetAnim, bool isPlayerInAction, float crossFadeDuration = 0.1f, bool? rootMotion = null)
@@ -100,42 +165,25 @@ public class PlayerAnimator : AnimatorManager
         anim.CrossFade(targetAnim, crossFadeDuration);
     }
 
-    public void EnableRotation() => canRotate = true;
+    public void EnableRotation() => CanRotate = true;
 
-    public void DisableRotation() => canRotate = false;
-
-    public void OnAnimatorMove()
-    {
-        // Only apply root motion if playerManager says they are in an action that *should* use it.
-        // And if not in air where root motion can be problematic unless specifically designed for it.
-        if (playerManager != null && IsInMidAction && playerManager.isGrounded)
-        {
-            if (anim != null && anim.applyRootMotion)
-            {
-                float deltaTime = Time.deltaTime;
-                if (deltaTime > 0)
-                {
-                    playerLocomotion.rigidbody.drag = 0;
-                    Vector3 deltaPosition = anim.deltaPosition;
-                    deltaPosition.y = 0; // Comment this out IF the animation (like a hop in an attack) has intentional Y movement
-                    Vector3 velocity = deltaPosition / deltaTime;
-                    playerLocomotion.rigidbody.velocity = new Vector3(velocity.x, playerLocomotion.rigidbody.velocity.y, velocity.z);
-                    playerLocomotion.transform.rotation *= anim.deltaRotation;
-                }
-            }
-        }
-    }
+    public void DisableRotation() => CanRotate = false;
 
     public void SetBool(string paramName, bool value)
     {
         if (anim != null) anim.SetBool(paramName, value);
     }
 
-    public void EnableCombo() => anim.SetBool("canDoCombo", true);
-    public void DisableCombo() => anim.SetBool("canDoCombo", false);
+    public void EnableCombo() => CanDoCombo = true;
+    public void DisableCombo() => CanDoCombo = false;
 
-    public void EnableInvulnerability() => anim.SetBool("isInvulnerable", true);
-    public void DisableInvulnerability() => anim.SetBool("isInvulnerable", false);
+    public void TriggerAttack()
+    {
+        anim.SetTrigger(hashTriggerAttack);
+    }
+
+    public void EnableInvulnerability() => IsInvulnerable = true;
+    public void DisableInvulnerability() => IsInvulnerable = false;
 
     public void OnDodgeAnimationEnd() => playerLocomotion.OnDodgeAnimationEnd();
 

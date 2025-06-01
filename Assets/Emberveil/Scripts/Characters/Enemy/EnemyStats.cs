@@ -54,7 +54,7 @@ public class EnemyStats : CharacterStats
     public void TakeDamage(int damage, DamageType damageType, Transform attacker)
     {
         if (isDead) return;
-        if (enemyManager.isInvulnerable && damageType != DamageType.BackstabCritical) // Backstabs should always hit
+        if (enemyManager.EnemyAnimator.IsInvulnerable && damageType != DamageType.BackstabCritical) // Backstabs should always hit
         {
             // TODO: Maybe some damage types bypass invulnerability
             Debug.Log($"{gameObject.name} is invulnerable. Damage blocked.");

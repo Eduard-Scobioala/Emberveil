@@ -200,12 +200,12 @@ public class EnemyManager : CharacterManager
         // are now effectively controlled by being IN these specific states.
         if (isPerforming)
         {
-            isInvulnerable = true; // Usually invulnerable during criticals
+            EnemyAnimator.IsInvulnerable = true; // Usually invulnerable during criticals
             Locomotion.DisableAgentAndPhysicsControl();
         }
         else
         {
-            isInvulnerable = false; // Reset on exit from critical state
+            EnemyAnimator.IsInvulnerable = false; // Reset on exit from critical state
             // Locomotion re-enabled by the exiting state
         }
         // The boolean flags on EnemyManager are now less important than the state itself
