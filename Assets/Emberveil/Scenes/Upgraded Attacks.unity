@@ -5971,7 +5971,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   anim: {fileID: 0}
-  canRotate: 0
 --- !u!1 &245743128 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: 7252bbd0415a72a4a824ced924c251a1,
@@ -9165,7 +9164,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lockOnTransform: {fileID: 5538635033512766916}
-  isInvulnerable: 0
   isBeingCriticallyHit: 0
   backstabReceiverPoint: {fileID: 7663441693016756131}
   beingBackstabbedAnimation: Enemy_Backstab_Main_Victim_01
@@ -9257,7 +9255,7 @@ MonoBehaviour:
   maxAttackCooldown: 3
   backstabCheckMaxDistance: 1.5
   backstabCheckMaxAngle: 45
-  chanceToAttemptBackstab: 1
+  chanceToAttemptBackstab: 0.3
   rightHandDamageCollider: {fileID: 0}
 --- !u!1 &1501720957
 GameObject:
@@ -9433,6 +9431,11 @@ PrefabInstance:
       propertyPath: cameraController
       value: 
       objectReference: {fileID: 1290671395}
+    - target: {fileID: 134953928314530544, guid: d1d9d6542d224c74fab4e17d1e6f8596,
+        type: 3}
+      propertyPath: actionRotationSpeed
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 134953928314530544, guid: d1d9d6542d224c74fab4e17d1e6f8596,
         type: 3}
       propertyPath: jumpLandHorizontalVelocityDampFactor

@@ -11,6 +11,12 @@ public class AnimatorManager : MonoBehaviour
         set => SetAnimatorBool(value);
     }
 
+    public bool IsInvulnerable
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
     protected bool GetAnimatorBool([CallerMemberName] string name = "") => anim.GetBool(name);
     protected void SetAnimatorBool(bool value, [CallerMemberName] string name = "") => anim.SetBool(name, value);
 

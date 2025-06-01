@@ -222,18 +222,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""Light Attack"",
+                    ""name"": ""Attack"",
                     ""type"": ""Button"",
                     ""id"": ""a8d7f64d-8245-4983-954e-718ff3a14ecf"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""Heavy Attack"",
-                    ""type"": ""Button"",
-                    ""id"": ""ef576d2e-e65c-4985-afc9-b8f82d1cb091"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -324,7 +315,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Light Attack"",
+                    ""action"": ""Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -335,29 +326,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Light Attack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""ee070a34-61d7-4699-8af3-22441f87971f"",
-                    ""path"": ""<Keyboard>/t"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Heavy Attack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b6c540e9-d34a-4e8d-ab7e-fa28ea61dd4a"",
-                    ""path"": ""<Gamepad>/buttonNorth"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Heavy Attack"",
+                    ""action"": ""Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -662,8 +631,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_PlayerActions = asset.FindActionMap("Player Actions", throwIfNotFound: true);
         m_PlayerActions_Sprint = m_PlayerActions.FindAction("Sprint", throwIfNotFound: true);
         m_PlayerActions_Dodge = m_PlayerActions.FindAction("Dodge", throwIfNotFound: true);
-        m_PlayerActions_LightAttack = m_PlayerActions.FindAction("Light Attack", throwIfNotFound: true);
-        m_PlayerActions_HeavyAttack = m_PlayerActions.FindAction("Heavy Attack", throwIfNotFound: true);
+        m_PlayerActions_Attack = m_PlayerActions.FindAction("Attack", throwIfNotFound: true);
         m_PlayerActions_Interact = m_PlayerActions.FindAction("Interact", throwIfNotFound: true);
         m_PlayerActions_Jump = m_PlayerActions.FindAction("Jump", throwIfNotFound: true);
         m_PlayerActions_Options = m_PlayerActions.FindAction("Options", throwIfNotFound: true);
@@ -816,8 +784,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private List<IPlayerActionsActions> m_PlayerActionsActionsCallbackInterfaces = new List<IPlayerActionsActions>();
     private readonly InputAction m_PlayerActions_Sprint;
     private readonly InputAction m_PlayerActions_Dodge;
-    private readonly InputAction m_PlayerActions_LightAttack;
-    private readonly InputAction m_PlayerActions_HeavyAttack;
+    private readonly InputAction m_PlayerActions_Attack;
     private readonly InputAction m_PlayerActions_Interact;
     private readonly InputAction m_PlayerActions_Jump;
     private readonly InputAction m_PlayerActions_Options;
@@ -830,8 +797,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         public PlayerActionsActions(@PlayerControls wrapper) { m_Wrapper = wrapper; }
         public InputAction @Sprint => m_Wrapper.m_PlayerActions_Sprint;
         public InputAction @Dodge => m_Wrapper.m_PlayerActions_Dodge;
-        public InputAction @LightAttack => m_Wrapper.m_PlayerActions_LightAttack;
-        public InputAction @HeavyAttack => m_Wrapper.m_PlayerActions_HeavyAttack;
+        public InputAction @Attack => m_Wrapper.m_PlayerActions_Attack;
         public InputAction @Interact => m_Wrapper.m_PlayerActions_Interact;
         public InputAction @Jump => m_Wrapper.m_PlayerActions_Jump;
         public InputAction @Options => m_Wrapper.m_PlayerActions_Options;
@@ -853,12 +819,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Dodge.started += instance.OnDodge;
             @Dodge.performed += instance.OnDodge;
             @Dodge.canceled += instance.OnDodge;
-            @LightAttack.started += instance.OnLightAttack;
-            @LightAttack.performed += instance.OnLightAttack;
-            @LightAttack.canceled += instance.OnLightAttack;
-            @HeavyAttack.started += instance.OnHeavyAttack;
-            @HeavyAttack.performed += instance.OnHeavyAttack;
-            @HeavyAttack.canceled += instance.OnHeavyAttack;
+            @Attack.started += instance.OnAttack;
+            @Attack.performed += instance.OnAttack;
+            @Attack.canceled += instance.OnAttack;
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
@@ -887,12 +850,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Dodge.started -= instance.OnDodge;
             @Dodge.performed -= instance.OnDodge;
             @Dodge.canceled -= instance.OnDodge;
-            @LightAttack.started -= instance.OnLightAttack;
-            @LightAttack.performed -= instance.OnLightAttack;
-            @LightAttack.canceled -= instance.OnLightAttack;
-            @HeavyAttack.started -= instance.OnHeavyAttack;
-            @HeavyAttack.performed -= instance.OnHeavyAttack;
-            @HeavyAttack.canceled -= instance.OnHeavyAttack;
+            @Attack.started -= instance.OnAttack;
+            @Attack.performed -= instance.OnAttack;
+            @Attack.canceled -= instance.OnAttack;
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
@@ -1009,8 +969,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     {
         void OnSprint(InputAction.CallbackContext context);
         void OnDodge(InputAction.CallbackContext context);
-        void OnLightAttack(InputAction.CallbackContext context);
-        void OnHeavyAttack(InputAction.CallbackContext context);
+        void OnAttack(InputAction.CallbackContext context);
         void OnInteract(InputAction.CallbackContext context);
         void OnJump(InputAction.CallbackContext context);
         void OnOptions(InputAction.CallbackContext context);

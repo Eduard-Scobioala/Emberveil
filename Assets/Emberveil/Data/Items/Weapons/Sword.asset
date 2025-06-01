@@ -24,10 +24,33 @@ MonoBehaviour:
   OH_Light_Attack_02: OH_Light_Attack_02
   TH_Light_Attack_01: TH_Light_Attack_01
   TH_Light_Attack_02: TH_Light_Attack_02
-  OH_Heavy_Attack_01: OH_Heavy_Attack_01
+  OH_Roll_Attack_01: OH_Roll_Attack_01
+  TH_Roll_Attack_01: 
+  OH_Backstep_Attack_01: 
+  TH_Backstep_Attack_01: 
+  OH_Jump_Attack_Start: 
+  OH_Jump_Attack_Fall: 
+  OH_Jump_Attack_Land: 
+  TH_Jump_Attack_Start: 
+  TH_Jump_Attack_Fall: 
+  TH_Jump_Attack_Land: 
+  OH_Charge_Attack_ChargeUp: 
+  OH_Charge_Attack_Hold: 
+  OH_Charge_Attack_Release: 
+  TH_Charge_Attack_ChargeUp: 
+  TH_Charge_Attack_Hold: 
+  TH_Charge_Attack_Release: 
+  animationTimeToMaxCharge: 2
   baseStamina: 20
   lightAttackStaminaMultiplier: 1
-  heavyAttackStaminaMultiplier: 2
+  rollAttackStaminaMultiplier: 1.2
+  backstepAttackStaminaMultiplier: 1
+  jumpAttackStaminaMultiplier: 1.1
+  chargedAttackStaminaMultiplier: 2
   lightAttackDmg: 5
-  heavyAttackDmg: 12
+  rollAttackDmg: 20
+  backstepAttackDmg: 18
+  jumpAttackDmg: 25
+  chargedAttackMinDmg: 15
+  chargedAttackMaxDmg: 40
   critDmgMultiplier: 2

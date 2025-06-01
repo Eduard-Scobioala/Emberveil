@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
@@ -13,8 +14,7 @@ public class InputHandler : MonoBehaviour
 
     // Action Buttons
     public static event Action JumpButtonPressed;
-    public static event Action LightAttackButtonPressed;
-    public static event Action HeavyAttackButtonPressed;
+    public static event Action AttackButtonPressed;
     public static event Action InteractButtonPressed;
     public static event Action OptionsButtonPressed;
     public static event Action LockOnButtonPressed;
@@ -58,8 +58,7 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerActions.Sprint.performed += _ => SprintHolding?.Invoke();
         inputActions.PlayerActions.Sprint.canceled += _ => SprintReleased?.Invoke();
         inputActions.PlayerActions.Jump.performed += _ => JumpButtonPressed?.Invoke();
-        inputActions.PlayerActions.LightAttack.performed += _ => LightAttackButtonPressed?.Invoke();
-        inputActions.PlayerActions.HeavyAttack.performed += _ => HeavyAttackButtonPressed?.Invoke();
+        inputActions.PlayerActions.Attack.performed += _ => AttackButtonPressed?.Invoke();
         inputActions.PlayerActions.Interact.performed += _ => InteractButtonPressed?.Invoke();
         inputActions.PlayerActions.LockOn.performed += _ => LockOnButtonPressed?.Invoke();
         inputActions.PlayerActions.TwoHanding.performed += _ => TwoHandingButtonPressed?.Invoke();

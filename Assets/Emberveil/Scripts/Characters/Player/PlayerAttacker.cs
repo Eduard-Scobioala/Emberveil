@@ -2,13 +2,11 @@ using UnityEngine;
 
 public class PlayerAttacker : MonoBehaviour
 {
-    private PlayerAnimator animatorHandler;
+    private PlayerAnimator playerAnimator;
     private WeaponSlotManager weaponSlotManager;
     private PlayerManager playerManager;
     private PlayerInventory playerInventory;
-
-    private string lastAttack;
-    private bool comboFlag;
+    private PlayerStats playerStats;
 
     [Header("Backstab Settings")]
     [SerializeField] private float backstabRaycastDistance = 1.5f;
@@ -20,10 +18,11 @@ public class PlayerAttacker : MonoBehaviour
 
     private void Awake()
     {
-        animatorHandler = GetComponentInChildren<PlayerAnimator>();
+        playerAnimator = GetComponentInChildren<PlayerAnimator>();
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         playerManager = GetComponent<PlayerManager>();
         playerInventory = GetComponent<PlayerInventory>();
+        playerStats = GetComponent<PlayerStats>();
 
         if (backstabLayerMask == 0) // If not set in inspector
         {
@@ -31,30 +30,35 @@ public class PlayerAttacker : MonoBehaviour
         }
     }
 
-    public void HandleLightAttackButtonPressed()
+    public void HandleAttackButton()
     {
-        if (!animatorHandler.IsInMidAction && playerManager.isGrounded)
+        if (playerAnimator.IsInMidAction && !playerAnimator.CanDoCombo)
+            return;
+
+        WeaponItem currentWeapon = playerInventory.RightHandWeapon;
+        if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeapon;
+
+        weaponSlotManager.attackingWeapon = currentWeapon; // For stamina/damage later
+
+        // Check for Backstab (highest priority)
+        if (!playerAnimator.IsInMidAction && playerAnimator.IsGrounded && TryPerformBackstab())
         {
-            if (TryPerformBackstab())
-            {
-                playerManager.isCrouching = false;
-                return; // Backstab initiated
-            }
+            playerAnimator.IsCrouching = false; // Stand up for backstab
+            return;
         }
 
-        if (playerManager.canDoCombo)
-        {
-            comboFlag = true;
-            HandleWeaponCombo(playerInventory.RightHandWeapon);
-            comboFlag = false;
-        }
-        else
-        {
-            if (animatorHandler.IsInMidAction)
-                return;
+        // Attack / Combo
+        PerformAttack(currentWeapon);
+    }
 
-            LightAttack(playerInventory.RightHandWeapon);
-        }
+    public void PerformAttack(WeaponItem weapon)
+    {
+        if (weapon == null) return;
+        // playerStats.ConsumeStamina(Mathf.RoundToInt(weapon.baseStamina * weapon.lightAttackStaminaMultiplier)); // Stamina handled by Anim Event
+
+        playerAnimator.IsInMidAction = true;
+        playerAnimator.ApplyRootMotion(true);
+        playerAnimator.TriggerAttack();
     }
 
     private bool TryPerformBackstab()
@@ -119,9 +123,9 @@ public class PlayerAttacker : MonoBehaviour
     private void ExecuteBackstab(CharacterManager victim)
     {
         Debug.Log($"Executing backstab on {victim.name}");
-        animatorHandler.IsInMidAction = true;
-        playerManager.isInvulnerable = true;
-        playerManager.isBeingCriticallyHit = true; // Player is also in a critical sequence
+        playerAnimator.IsInMidAction = true;
+        playerAnimator.IsInvulnerable = true;
+        //playerManager.isBeingCriticallyHit = true; // Player is also in a critical sequence
         playerManager.currentBackstabTarget = victim;
 
         // Snap player to victim's backstab receiver point.
@@ -140,63 +144,10 @@ public class PlayerAttacker : MonoBehaviour
         victim.GetBackstabbed(playerManager.transform); // Pass player's transform as attacker
 
         // Play player's backstab animation
-        animatorHandler.PlayTargetAnimation(playerBackstabAnimation, true);
+        playerAnimator.PlayTargetAnimation(playerBackstabAnimation, true);
 
         // Animation events on playerBackstabAnimation will call:
         // 1. PlayerManager.AnimEvent_ApplyBackstabDamage()
         // 2. PlayerManager.AnimEvent_FinishPerformingBackstab()
-    }
-
-    public void HandleHeavyAttackButtonPressed()
-    {
-        HeavyAttack(playerInventory.RightHandWeapon);
-    }
-
-    public void HandleWeaponCombo(WeaponItem weaponItem)
-    {
-        if (comboFlag)
-        {
-            animatorHandler.anim.SetBool("canDoCombo", false);
-
-            if (lastAttack == weaponItem.OH_Light_Attack_01)
-            {
-                animatorHandler.PlayTargetAnimation(weaponItem.OH_Light_Attack_02, true);
-            }
-            else if (lastAttack == weaponItem.TH_Light_Attack_01)
-            {
-                animatorHandler.PlayTargetAnimation(weaponItem.TH_Light_Attack_02, true);
-            }
-        }
-    }
-
-    public void LightAttack(WeaponItem weapon)
-    {
-        weaponSlotManager.attackingWeapon = weapon;
-
-        if (weaponSlotManager.isTwoHanding)
-        {
-            animatorHandler.PlayTargetAnimation(weapon.TH_Light_Attack_01, true);
-            lastAttack = weapon.TH_Light_Attack_01;
-        }
-        else
-        {
-            animatorHandler.PlayTargetAnimation(weapon.OH_Light_Attack_01, true);
-            lastAttack = weapon.OH_Light_Attack_01;
-        }
-    }
-
-    public void HeavyAttack(WeaponItem weapon)
-    {
-        weaponSlotManager.attackingWeapon = weapon;
-
-        if (weaponSlotManager.isTwoHanding)
-        {
-
-        }
-        else
-        {
-            animatorHandler.PlayTargetAnimation(weapon.OH_Heavy_Attack_01, true);
-            lastAttack = weapon.OH_Heavy_Attack_01;
-        }
     }
 }

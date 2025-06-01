@@ -15,7 +15,7 @@ public class HitReactionState : IEnemyState
     {
         this.manager = manager;
         manager.isPerformingNonCriticalAction = true; // Busy during hit react
-        manager.isInvulnerable = true; // Brief invulnerability during hit stun
+        manager.EnemyAnimator.IsInvulnerable = true; // Brief invulnerability during hit stun
         manager.Locomotion.StopMovement();
         manager.Locomotion.DisableAgentNavigation(true); // Allow root motion or physics pushes
 
@@ -59,6 +59,6 @@ public class HitReactionState : IEnemyState
     public void Exit()
     {
         manager.isPerformingNonCriticalAction = false;
-        manager.isInvulnerable = false;
+        manager.EnemyAnimator.IsInvulnerable = false;
     }
 }

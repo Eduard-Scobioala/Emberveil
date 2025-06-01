@@ -111,7 +111,7 @@ public class WeaponSlotManager : MonoBehaviour
     private void HandleTwoHandingButtonPressed()
     {
         isTwoHanding = !isTwoHanding;
-        playerManager.animatorHandler.IsTwoHanding = isTwoHanding;
+        playerManager.playerAnimator.IsTwoHanding = isTwoHanding;
 
         if (isTwoHanding)
         {
@@ -169,14 +169,6 @@ public class WeaponSlotManager : MonoBehaviour
         if (attackingWeapon != null)
         {
             playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackStaminaMultiplier));
-        }
-    }
-
-    public void DrainStaminaHeavyAttack()
-    {
-        if (attackingWeapon != null)
-        {
-            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.heavyAttackStaminaMultiplier));
         }
     }
     #endregion

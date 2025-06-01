@@ -10,7 +10,6 @@ public class CharacterManager : MonoBehaviour
     public Transform lockOnTransform;
 
     [Header("Interaction Flags")]
-    public bool isInvulnerable;
     public bool isBeingCriticallyHit;
     
     [Header("Backstab Settings")]
@@ -44,11 +43,11 @@ public class CharacterManager : MonoBehaviour
 
     public virtual void GetBackstabbed(Transform attacker)
     {
-        if (!canBeBackstabbed || isInvulnerable || charAnimManager.IsInMidAction) return;
+        if (!canBeBackstabbed || charAnimManager.IsInvulnerable || charAnimManager.IsInMidAction) return;
 
         Debug.Log($"{gameObject.name} is being backstabbed by {attacker.name}");
         charAnimManager.IsInMidAction = true;
-        isInvulnerable = true;
+        charAnimManager.IsInvulnerable = true;
         isBeingCriticallyHit = true;
         canBeBackstabbed = false; // Cannot be backstabbed again while being backstabbed
 
@@ -81,7 +80,7 @@ public class CharacterManager : MonoBehaviour
     public virtual void FinishBeingBackstabbed()
     {
         charAnimManager.IsInMidAction = false;
-        isInvulnerable = false;
+        charAnimManager.IsInvulnerable = false;
         canBeBackstabbed = true;
         isBeingCriticallyHit = false;
         Debug.Log($"{gameObject.name} finished being backstabbed.");

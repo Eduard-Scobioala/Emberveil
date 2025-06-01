@@ -3,8 +3,7 @@ using UnityEngine;
 
 public struct Commands
 {
-    public ICommand LightAttackCommand;
-    public ICommand HeavyAttackCommand;
+    public ICommand AttackCommand;
     public ICommand JumpCommand;
     public ICommand DodgeCommand;
     public ICommand SprintHoldCommand;
@@ -14,24 +13,21 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    public PlayerLocomotion playerLocomotion;
     private InteractableUI interactableUI;
     private PlayerAttacker playerAttacker;
     private PlayerStats playerStats;
+
+    public PlayerLocomotion playerLocomotion;
     public PlayerInventory playerInventory;
-    public PlayerAnimator animatorHandler;
+    public PlayerAnimator playerAnimator;
 
     [Header("Player Flags")]
     public bool isSprinting;
-    public bool isInAir;
-    public bool isGrounded;
-    public bool canDoCombo;
-    public bool isCrouching;
 
+    private bool isPickingUp = false;
     private bool pickedUpItem = false;
-    private bool isInteracting = false;
 
-    private List<Interactable> nearbyInteractables = new ();
+    private readonly List<Interactable> nearbyInteractables = new ();
 
     // Command buffering
     private ICommand pendingCommand;
@@ -47,7 +43,7 @@ public class PlayerManager : CharacterManager
         playerStats = GetComponent<PlayerStats>();
         playerInventory = GetComponent<PlayerInventory>();
         charAnimator = GetComponentInChildren<Animator>();
-        animatorHandler = GetComponentInChildren<PlayerAnimator>();
+        playerAnimator = GetComponentInChildren<PlayerAnimator>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         playerAttacker = GetComponent<PlayerAttacker>();
         interactableUI = FindObjectOfType<InteractableUI>();
@@ -58,40 +54,8 @@ public class PlayerManager : CharacterManager
         InitCommands();
     }
 
-    private void OnEnable()
-    {
-        InputHandler.InteractButtonPressed += HandleInteractButtonPressed;
-        InputHandler.LightAttackButtonPressed += HandleLightAttackInput;
-        InputHandler.HeavyAttackButtonPressed += HandleHeavyAttackInput;
-        InputHandler.JumpButtonPressed += HandleJumpInput;
-        InputHandler.DodgeTapped += HandleDodgeButton;
-        InputHandler.SprintHolding += HandleSprintHolding;
-        InputHandler.SprintReleased += HandleSprintReleased;
-        InputHandler.CrouchButtonPressed += HandleCrouchInput;
-    }
-
-    private void OnDisable()
-    {
-        InputHandler.InteractButtonPressed -= HandleInteractButtonPressed;
-        InputHandler.LightAttackButtonPressed -= HandleLightAttackInput;
-        InputHandler.HeavyAttackButtonPressed -= HandleHeavyAttackInput;
-        InputHandler.JumpButtonPressed -= HandleJumpInput;
-        InputHandler.DodgeTapped -= HandleDodgeButton;
-        InputHandler.SprintHolding -= HandleSprintHolding;
-        InputHandler.SprintReleased -= HandleSprintReleased;
-        InputHandler.CrouchButtonPressed -= HandleCrouchInput;
-    }
-
     private void Update()
     {
-        isInvulnerable = charAnimator.GetBool("isInvulnerable");
-        canDoCombo = charAnimator.GetBool("canDoCombo");
-
-        // Update animator with player state
-        charAnimator.SetBool("isInAir", isInAir);
-        charAnimator.SetBool("isGrounded", isGrounded);
-        charAnimator.SetBool("isCrouching", isCrouching);
-
         // Execute pending command when action ends
         if (pendingCommand != null)
         {
@@ -107,40 +71,58 @@ public class PlayerManager : CharacterManager
                 pendingCommand = null;
             }
         }
-        
+
         HandleInteractableUI();
     }
 
     private void LateUpdate()
     {
-        if (isInAir)
+        if (playerAnimator.IsInAir)
         {
             playerLocomotion.inAirTimer += Time.deltaTime;
         }
+    }
+
+    private void OnEnable()
+    {
+        InputHandler.InteractButtonPressed += HandleInteractButtonPressed;
+        InputHandler.JumpButtonPressed += HandleJumpInput;
+        InputHandler.DodgeTapped += HandleDodgeButton;
+        InputHandler.SprintHolding += HandleSprintHolding;
+        InputHandler.SprintReleased += HandleSprintReleased;
+        InputHandler.CrouchButtonPressed += HandleCrouchInput;
+        InputHandler.AttackButtonPressed += HandleAttackInput;
+    }
+
+    private void OnDisable()
+    {
+        InputHandler.InteractButtonPressed -= HandleInteractButtonPressed;
+        InputHandler.JumpButtonPressed -= HandleJumpInput;
+        InputHandler.DodgeTapped -= HandleDodgeButton;
+        InputHandler.SprintHolding -= HandleSprintHolding;
+        InputHandler.SprintReleased -= HandleSprintReleased;
+        InputHandler.CrouchButtonPressed -= HandleCrouchInput;
+        InputHandler.AttackButtonPressed -= HandleAttackInput;
     }
 
     private void InitCommands()
     {
         commands = new Commands
         {
-            LightAttackCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction || canDoCombo,
-                playerAttacker.HandleLightAttackButtonPressed),
-
-            HeavyAttackCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction || canDoCombo,
-                playerAttacker.HandleHeavyAttackButtonPressed),
+            AttackCommand = new RelayCommand(
+                () => (!playerAnimator.IsInMidAction || playerAnimator.CanDoCombo),
+                playerAttacker.HandleAttackButton),
 
             JumpCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction && isGrounded,
+                () => !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
                 playerLocomotion.HandleJumpButtonPressed),
 
             DodgeCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction,
+                () => !playerAnimator.IsInMidAction,
                 playerLocomotion.HandleDodgeTapped),
 
             SprintHoldCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction && !isCrouching,
+                () => !playerAnimator.IsInMidAction && !playerAnimator.IsCrouching,
                 playerLocomotion.HandleSprintHolding),
 
             SprintReleaseCommand = new RelayCommand(
@@ -148,18 +130,18 @@ public class PlayerManager : CharacterManager
                 playerLocomotion.HandleSprintReleased),
 
             CrouchCommand = new RelayCommand(
-                () => !charAnimManager.IsInMidAction && isGrounded,
+                () => !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
                 ToggleCrouchState)
         };
     }
 
     public void ToggleCrouchState()
     {
-        if (isInAir) return;
+        if (playerAnimator.IsInAir) return;
 
-        isCrouching = !isCrouching;
+        playerAnimator.IsCrouching = !playerAnimator.IsCrouching;
 
-        if (isCrouching)
+        if (playerAnimator.IsCrouching)
         {
             isSprinting = false; // Cannot sprint while crouching
         }
@@ -167,14 +149,13 @@ public class PlayerManager : CharacterManager
 
     public override void GetBackstabbed(Transform attacker)
     {
-        if (isCrouching) // Force stand up if backstabbed while crouching
+        if (playerAnimator.IsCrouching) // Force stand up if backstabbed while crouching
         {
-            isCrouching = false;
+            playerAnimator.IsCrouching = false;
             // Animator should transition out of crouch automatically due to isCrouching=false
         }
         base.GetBackstabbed(attacker);
     }
-
 
     #region Handle Commands
     private void HandleCommand(ICommand command)
@@ -193,14 +174,13 @@ public class PlayerManager : CharacterManager
         }
     }
 
-    private void HandleLightAttackInput() => HandleCommand(commands.LightAttackCommand);
-    private void HandleHeavyAttackInput() => HandleCommand(commands.HeavyAttackCommand);
+    private void HandleAttackInput() => HandleCommand(commands.AttackCommand);
     private void HandleJumpInput() => HandleCommand(commands.JumpCommand);
     private void HandleDodgeButton() => HandleCommand(commands.DodgeCommand);
     private void HandleSprintHolding() => HandleCommand(commands.SprintHoldCommand);
     private void HandleSprintReleased() => HandleCommand(commands.SprintReleaseCommand);
     private void HandleCrouchInput() => HandleCommand(commands.CrouchCommand);
-    private void HandleInteractButtonPressed() => isInteracting = true;
+    private void HandleInteractButtonPressed() => isPickingUp = true;
     #endregion
 
     #region Handle Interactables UI
@@ -235,9 +215,9 @@ public class PlayerManager : CharacterManager
                 interactableUI.interactableInfoText.text = closest.interactableInfoText;
                 interactableUI.EnableInteractionPopUpGameObject(true);
 
-                if (isInteracting)
+                if (isPickingUp)
                 {
-                    isInteracting = false;
+                    isPickingUp = false;
 
                     interactableUI.itemInfoText.text = closest.GetItemName();
                     interactableUI.itemImage.sprite = closest.GetItemIcon();
@@ -259,9 +239,9 @@ public class PlayerManager : CharacterManager
         {
             interactableUI.EnableInteractionPopUpGameObject(false);
 
-            if (isInteracting || pickedUpItem)
+            if (isPickingUp || pickedUpItem)
             {
-                isInteracting = false;
+                isPickingUp = false;
 
                 interactableUI.EnableItemPopUpGameObject(false);
                 pickedUpItem = false;
@@ -315,7 +295,7 @@ public class PlayerManager : CharacterManager
     {
         Debug.Log("Player finished performing backstab animation.");
         charAnimManager.IsInMidAction = false;
-        isInvulnerable = false;
+        charAnimManager.IsInvulnerable = false;
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;
     }
