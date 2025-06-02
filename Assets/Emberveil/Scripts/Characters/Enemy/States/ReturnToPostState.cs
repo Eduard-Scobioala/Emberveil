@@ -11,7 +11,6 @@ public class ReturnToPostState : IEnemyState
         this.manager = manager;
         Debug.Log($"{manager.name} entered ReturnToPostState, returning to {manager.initialPosition}.");
 
-        manager.isPerformingNonCriticalAction = false;
         manager.CurrentTarget = null; // Ensure no target is being tracked
         manager.Senses.ForceLoseTarget(); // Explicitly clear senses
 

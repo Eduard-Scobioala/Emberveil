@@ -86,7 +86,7 @@ public class EnemyLocomotion : MonoBehaviour
             agent.ResetPath();
             agent.velocity = Vector3.zero; // Explicitly stop
         }
-        rb.velocity = Vector3.zero; // Stop Rigidbody too if it was moving
+        //rb.velocity = Vector3.zero; // Stop Rigidbody too if it was moving
     }
 
     public void RotateTowards(Vector3 targetPosition, float customRotationSpeed = -1f)

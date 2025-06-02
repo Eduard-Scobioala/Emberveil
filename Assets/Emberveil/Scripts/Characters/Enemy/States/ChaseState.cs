@@ -10,7 +10,6 @@ public class ChaseState : IEnemyState
         manager.Locomotion.EnableAgentNavigation();
         manager.Locomotion.SetAgentSpeed(manager.Locomotion.chaseSpeed);
         Debug.Log($"{manager.name} entered ChaseState, chasing {manager.CurrentTarget?.name}.");
-        manager.isPerformingNonCriticalAction = false;
     }
 
     public void Tick()
@@ -35,7 +34,7 @@ public class ChaseState : IEnemyState
         }
 
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-        Debug.Log("Distance towards player: " + distanceToTarget);
+        //Debug.Log("Distance towards player: " + distanceToTarget);
         if (distanceToTarget <= manager.defaultStoppingDistance)
         {
             return manager.combatStanceState;

@@ -72,12 +72,14 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
         // Only apply root motion if the locomotion system is prepared for it
         // (e.g., RB is non-kinematic, NavAgent is off or overridden by current state)
         // Or if in a critical action where animation fully dictates movement
-        if ((!enemyLocomotion.GetComponent<NavMeshAgent>().enabled && !enemyLocomotion.GetComponent<Rigidbody>().isKinematic) ||
+        if ((AgentIsNull() || !enemyLocomotion.GetComponent<NavMeshAgent>().enabled && !enemyLocomotion.GetComponent<Rigidbody>().isKinematic) ||
             enemyManager.IsPerformingCriticalAction || enemyManager.IsReceivingCriticalHit)
         {
             enemyLocomotion.ApplyRootMotion(anim.deltaPosition, anim.deltaRotation);
         }
     }
+
+    private bool AgentIsNull() => enemyLocomotion.GetComponent<NavMeshAgent>() == null;
 
     // --- Animation Event Handlers ---
     // These are called by name from Animation Events in animation clips
@@ -137,5 +139,15 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
     public void AnimEvent_Footstep()
     {
         // TODO: Play footstep sound
+    }
+
+    public void AnimEvent_AttackActionConcluded() // NEW Animation Event Handler
+    {
+        enemyManager?.Notify_AttackActionConcluded();
+    }
+
+    public void AnimEvent_FinishAction()
+    {
+        IsInMidAction = false;
     }
 }

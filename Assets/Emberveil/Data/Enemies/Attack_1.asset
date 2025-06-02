@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   actionName: Lickt Attack
   animationName: OH_Light_Attack_01
-  recoveryTime: 1.5
+  recoveryTime: 3
   staminaCost: 5
   minAttackDistance: 0
   maxAttackDistance: 3

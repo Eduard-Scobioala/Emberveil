@@ -15,7 +15,6 @@ public class IdleState : IEnemyState
         manager.EnemyAnimator.SetMovementValues(0, 0);
         //manager.EnemyAnimator.PlayTargetAnimation("Idle", false);
         idleTimer = Random.Range(minIdleTime, maxIdleTime);
-        manager.isPerformingNonCriticalAction = false;
         Debug.Log($"{manager.name} entered IdleState.");
     }
 

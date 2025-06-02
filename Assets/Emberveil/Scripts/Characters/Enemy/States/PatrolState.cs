@@ -13,7 +13,6 @@ public class PatrolState : IEnemyState
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
-        manager.isPerformingNonCriticalAction = false;
 
         if (manager.patrolRoute == null || manager.patrolRoute.patrolPoints.Count == 0)
         {

@@ -20,19 +20,24 @@ public class EnemyManager : CharacterManager
     public BeingBackstabbedState beingBackstabbedState;   // Victim
     public HitReactionState hitReactionState;
     public ReturnToPostState returnToPostState;
+    public RepositionState repositionState;
     public DeadState deadState;
     // TODO: Add more states: InvestigateState, PoiseBreakState
 
-    //"AI Behavior"
     public CharacterManager CurrentTarget { get; set; } // Who the AI is focused on
     public PatrolRoute patrolRoute;
-    public float defaultStoppingDistance = 1.5f;
     [HideInInspector] public Vector3 initialPosition;
     [HideInInspector] public Quaternion initialRotation;
 
+    [Header("AI Behavior Settings")]
+    public bool canRepositionWhileOnCooldown = true;
+    public float defaultStoppingDistance = 1.5f;
+
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
-    public bool isPerformingNonCriticalAction; // For regular attacks
+
+    public bool HasAttackActionConcluded { get; set; }
+
 
     protected override void Awake()
     {
@@ -67,6 +72,7 @@ public class EnemyManager : CharacterManager
         beingBackstabbedState = new BeingBackstabbedState();
         hitReactionState = new HitReactionState();
         returnToPostState = new ReturnToPostState();
+        repositionState = new RepositionState();
         deadState = new DeadState();
     }
 
@@ -127,6 +133,9 @@ public class EnemyManager : CharacterManager
 
         CurrentState?.Exit();
         CurrentState = newState;
+
+        HasAttackActionConcluded = false;
+
         Debug.Log($"{name} transitioning to {newState.GetType().Name}");
         CurrentState.Enter(this);
     }
@@ -233,5 +242,11 @@ public class EnemyManager : CharacterManager
         {
             SwitchState(deadState);
         }
+    }
+
+    public void Notify_AttackActionConcluded()
+    {
+        Debug.Log($"{name}: AttackActionConcluded reported by animation.");
+        HasAttackActionConcluded = true;
     }
 }
