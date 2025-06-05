@@ -4,7 +4,14 @@ public class HitReactionState : IEnemyState
 {
     private EnemyManager manager;
     private Transform attacker;
-    private float hitStunDuration = 0.5f; // Or get from attack data / animation length
+    private bool isInvincibleDuringStun;
+    private float hitStunDuration; // Or get from attack data / animation length
+
+    public HitReactionState(bool isInvincibleDuringStun = false, float hitStunDuration = 0.1f)
+    {
+        this.isInvincibleDuringStun = isInvincibleDuringStun;
+        this.hitStunDuration = hitStunDuration;
+    }
 
     public void SetAttacker(Transform attackerTransform)
     {
@@ -14,9 +21,10 @@ public class HitReactionState : IEnemyState
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
-        manager.EnemyAnimator.IsInvulnerable = true; // Brief invulnerability during hit stun
         manager.Locomotion.StopMovement();
         manager.Locomotion.DisableAgentNavigation(true); // Allow root motion or physics pushes
+
+        if (isInvincibleDuringStun) manager.EnemyAnimator.IsInvulnerable = true;
 
         if (attacker != null) manager.Locomotion.FaceTargetInstantly(attacker);
 
@@ -30,7 +38,7 @@ public class HitReactionState : IEnemyState
 
     public void Tick()
     {
-        hitStunDuration -= Time.deltaTime;
+        hitStunDuration = isInvincibleDuringStun ? (hitStunDuration - Time.deltaTime) : 0;
     }
 
     public void FixedTick() { }
@@ -57,6 +65,6 @@ public class HitReactionState : IEnemyState
 
     public void Exit()
     {
-        manager.EnemyAnimator.IsInvulnerable = false;
+        if (isInvincibleDuringStun) manager.EnemyAnimator.IsInvulnerable = false;
     }
 }

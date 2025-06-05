@@ -32,6 +32,8 @@ public class EnemyManager : CharacterManager
     [Header("AI Behavior Settings")]
     public bool canRepositionWhileOnCooldown = true;
     public float defaultStoppingDistance = 1.5f;
+    public bool isInvincibleDuringStun = false;
+    public float hitStunDuration = 0.1f;
 
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
@@ -70,7 +72,7 @@ public class EnemyManager : CharacterManager
         attackingState = new AttackingState();
         performingBackstabState = new PerformingBackstabState();
         beingBackstabbedState = new BeingBackstabbedState();
-        hitReactionState = new HitReactionState();
+        hitReactionState = new HitReactionState(isInvincibleDuringStun, hitStunDuration);
         returnToPostState = new ReturnToPostState();
         repositionState = new RepositionState();
         deadState = new DeadState();
