@@ -2,14 +2,14 @@ using UnityEngine;
 
 public class EnemyManager : CharacterManager
 {
-    //"AI Core Components"
+    // AI Core Components
     public EnemyStats Stats { get; private set; }
     public EnemyLocomotion Locomotion { get; private set; }
     public EnemyAnimator EnemyAnimator { get; private set; }
     public EnemyCombat Combat { get; private set; }
     public EnemySenses Senses { get; private set; }
 
-    //"State Machine"
+    // State Machine
     public IEnemyState CurrentState { get; private set; }
     public IdleState idleState;
     public PatrolState patrolState;
@@ -23,6 +23,8 @@ public class EnemyManager : CharacterManager
     public RepositionState repositionState;
     public DeadState deadState;
     // TODO: Add more states: InvestigateState, PoiseBreakState
+
+    public EnemyWeaponSlotManager EnemyWeaponSlotManager { get; private set; }
 
     public CharacterManager CurrentTarget { get; set; } // Who the AI is focused on
     public PatrolRoute patrolRoute;
@@ -56,6 +58,9 @@ public class EnemyManager : CharacterManager
         if (EnemyAnimator == null) Debug.LogError("EnemyAnimator not found or not assigned!", this);
         if (Combat == null) Debug.LogError("EnemyCombat not found!", this);
         if (Senses == null) Debug.LogError("EnemySenses not found!", this);
+
+        EnemyWeaponSlotManager = GetComponentInChildren<EnemyWeaponSlotManager>();
+        if (EnemyWeaponSlotManager == null) Debug.LogWarning($"{name} is missing an EnemyWeaponSlotManager component in children.");
 
         // Initialize components
         //Stats.Initialize(this);

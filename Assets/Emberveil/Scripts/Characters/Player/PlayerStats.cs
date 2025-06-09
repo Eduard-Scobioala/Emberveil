@@ -5,7 +5,7 @@ public class PlayerStats : CharacterStats
     [SerializeField] private StatUIBar healthBar;
     [SerializeField] private StatUIBar staminaBar;
 
-    private PlayerAnimator animatorHandler;
+    private PlayerAnimator playerAnimator;
     private PlayerManager playerManager;
 
     [Header("Stats Settings")]
@@ -14,11 +14,16 @@ public class PlayerStats : CharacterStats
     [SerializeField] private float staminaRegenAmount = 10;
     [SerializeField] private float staminaRegenDelay = 1;
 
+    [Header("Hit Animation Names")]
+    [SerializeField] private string frontHitAnimation = "Damage_Front_01";
+    [SerializeField] private string backHitAnimation = "Damage_Back_01";
+    [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
+
     private float staminaRegenTimer = 0;
 
     private void Awake()
     {
-        animatorHandler = GetComponentInChildren<PlayerAnimator>();
+        playerAnimator = GetComponentInChildren<PlayerAnimator>();
         playerManager = GetComponent<PlayerManager>();
     }
 
@@ -26,11 +31,13 @@ public class PlayerStats : CharacterStats
     {
         maxHealth = GetMaxHealthBasedOnHealthLevel();
         currentHealth = maxHealth;
-        healthBar.SetMaxSliderValue(maxHealth);
+        if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
+        else Debug.LogWarning("PlayerStats: HealthBar reference not set.");
 
         maxStamina = GetMaxStaminaBasedOnStaminaLevel();
         currentStamina = maxStamina;
-        staminaBar.SetMaxSliderValue(maxStamina);
+        if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
+        else Debug.LogWarning("PlayerStats: StaminaBar reference not set.");
     }
 
     private void Update()
@@ -63,26 +70,49 @@ public class PlayerStats : CharacterStats
         return baseStaminaAmout + staminaLevel * 5;
     }
 
-    public void TakeDamange(int damange)
+    public void TakeDamange(int damange, Transform attackerTransform = null)
     {
         if (isDead)
             return;
 
-        if (animatorHandler.IsInvulnerable)
+        if (playerAnimator.IsInvulnerable)
             return;
 
         currentHealth -= damange;
         healthBar.SetCurrentStatValue(currentHealth);
 
-        // Play damage animation ONLY if not in a critical hit sequence (like being backstabbed)
-        // and if damage is not lethal (lethal damage will trigger backstab death or regular death anim)
         if (!playerManager.isBeingCriticallyHit && currentHealth > 0)
         {
-            animatorHandler.PlayTargetAnimation("Damage_01", true);
-        }
-        else
-        {
-            animatorHandler.PlayTargetAnimation("Backstab_Main_Victim_01", true);
+            string hitAnimToPlay = genericHitAnimation;
+
+            if (attackerTransform != null)
+            {
+                Vector3 directionFromAttacker = (playerManager.transform.position - attackerTransform.position).normalized;
+                directionFromAttacker.y = 0; // Ignore vertical difference for front/back determination
+
+                float dotProduct = Vector3.Dot(playerManager.transform.forward, directionFromAttacker);
+
+                if (dotProduct < -0.3f)
+                {
+                    hitAnimToPlay = frontHitAnimation;
+                }
+                else if (dotProduct > 0.3f)
+                {
+                    hitAnimToPlay = backHitAnimation;
+                }
+                // else, if dotProduct is close to 0, it's a side hit.
+            }
+
+            if (string.IsNullOrEmpty(hitAnimToPlay) || (hitAnimToPlay == frontHitAnimation && string.IsNullOrEmpty(frontHitAnimation)) || (hitAnimToPlay == backHitAnimation && string.IsNullOrEmpty(backHitAnimation)))
+            {
+                hitAnimToPlay = genericHitAnimation;
+            }
+
+            // Reset bools that may conflict because were interuped by taking dmg
+            playerAnimator.IsDodging = false;
+            playerAnimator.IsCrouching = false;
+
+            playerAnimator.PlayTargetAnimation(hitAnimToPlay, false, rootMotion: true);
         }
 
         if (currentHealth <= 0 && !isDead)
@@ -90,48 +120,60 @@ public class PlayerStats : CharacterStats
             currentHealth = 0;
             isDead = true;
 
-            animatorHandler.anim.SetBool("isDead", true);
+            playerAnimator.anim.SetBool("isDead", true);
 
             // If not already in a critical hit (backstab), play normal death.
             // If being critically hit, the backstab victim animation sequence will handle death.
             if (!playerManager.isBeingCriticallyHit)
             {
-                animatorHandler.PlayTargetAnimation("Death_01", true);
+                playerAnimator.PlayTargetAnimation("Death_01", true);
             }
             
             //playerManager.RaiseDeath();
         }
     }
 
-    public void ConsumeStamina(int stamina)
+    public bool CanPerformStaminaConsumingAction()
     {
-        currentStamina -= stamina;
+        return currentStamina > 0;
+    }
+    
+    public void ConsumeStamina(float staminaToConsume)
+    {
+        if (staminaToConsume <= 0) return;
 
-        if (currentStamina <= 0) currentStamina = 0;
+        currentStamina -= staminaToConsume;
+        if (currentStamina < 0)
+        {
+            currentStamina = 0;
+        }
 
-        staminaBar.SetCurrentStatValue(currentStamina);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
 
-        // Reset regen timer after consuming stamina
         staminaRegenTimer = 0;
     }
 
     public void RegenerateStamina()
     {
-        if (playerManager.charAnimManager.IsInMidAction)
+        if (currentStamina >= maxStamina)
             return;
+
+        if (playerManager.playerAnimator.IsInMidAction && !playerManager.playerAnimator.IsInAir) // while falling stamina is regenerating
+        {
+            staminaRegenTimer = 0;
+            return;
+        }
 
         staminaRegenTimer += Time.deltaTime;
 
-        if (currentStamina < maxStamina && staminaRegenTimer > staminaRegenDelay)
+        if (staminaRegenTimer > staminaRegenDelay)
         {
             currentStamina += staminaRegenAmount * Time.deltaTime;
-
             if (currentStamina > maxStamina)
             {
                 currentStamina = maxStamina;
             }
-            
-            staminaBar.SetCurrentStatValue(currentStamina);
+            if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
         }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.XR;
 
 public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
 {
@@ -86,12 +87,12 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
 
     public void AnimEvent_EnableDamageCollider()
     {
-        enemyCombat?.EnableWeaponCollider(WeaponHand.Right); // Assuming right hand for now
+        enemyManager.EnemyWeaponSlotManager?.OpenDamageCollider(WeaponHand.Right);
     }
 
     public void AnimEvent_DisableDamageCollider()
     {
-        enemyCombat?.DisableWeaponCollider(WeaponHand.Right);
+        enemyManager.EnemyWeaponSlotManager?.CloseDamageCollider(WeaponHand.Right);
     }
 
     public void AnimEvent_AttackLanded()

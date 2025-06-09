@@ -5,8 +5,6 @@ using UnityEngine;
 public class EnemyCombat : MonoBehaviour
 {
     private EnemyManager enemyManager;
-    private EnemyAnimator enemyAnimator;
-    private EnemyLocomotion enemyLocomotion;
 
     [Header("Actions")]
     public List<EnemyAttackActionSO> attackActions = new List<EnemyAttackActionSO>();
@@ -27,16 +25,9 @@ public class EnemyCombat : MonoBehaviour
 
     public CharacterManager CurrentBackstabVictim { get; private set; }
 
-    // TODO: Weapon handling - for now, assume a default damage collider
-    [SerializeField] private DamageCollider rightHandDamageCollider; // Assign in inspector
-
     public void Initialize(EnemyManager manager)
     {
         enemyManager = manager;
-        enemyAnimator = manager.EnemyAnimator;
-        enemyLocomotion = manager.Locomotion;
-        // TODO: Find/Setup DamageCollider, possibly from a weapon script
-        if (rightHandDamageCollider == null) Debug.LogWarning("RightHandDamageCollider not set on EnemyCombat");
     }
 
     public void TickCombat()
@@ -183,39 +174,18 @@ public class EnemyCombat : MonoBehaviour
         if (victimCollider.CompareTag("Player"))
         {
             PlayerStats playerStats = victimCollider.GetComponent<PlayerStats>();
-            if (playerStats != null)
+            if (playerStats != null && !playerStats.isDead)
             {
                 EnemyAttackActionSO currentAction = enemyManager.attackingState.GetCurrentAttackAction();
                 if (currentAction != null)
                 {
-                    playerStats.TakeDamange(currentAction.damage);
+                    playerStats.TakeDamange(currentAction.damage, enemyManager.transform);
                 }
                 else if (attackingWeapon != null)
                 {
-                    playerStats.TakeDamange(attackingWeapon.lightAttackDmg);
+                    playerStats.TakeDamange(attackingWeapon.lightAttackDmg, enemyManager.transform);
                 }
             }
-        }
-    }
-
-    public void EnableWeaponCollider(WeaponHand hand)
-    {
-        // TODO: Handle left/right hand
-        if (rightHandDamageCollider != null)
-        {
-            // Pass damage from current attack action
-            // rightHandDamageCollider.SetDamage(currentAttackAction.damage);
-            rightHandDamageCollider.EnableDamageCollider();
-            Debug.Log($"{enemyManager.name} enabled damage collider.");
-        }
-    }
-
-    public void DisableWeaponCollider(WeaponHand hand)
-    {
-        if (rightHandDamageCollider != null)
-        {
-            rightHandDamageCollider.DisableDamageCollider();
-            Debug.Log($"{enemyManager.name} disabled damage collider.");
         }
     }
 

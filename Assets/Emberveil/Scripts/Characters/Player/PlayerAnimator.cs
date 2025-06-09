@@ -48,12 +48,6 @@ public class PlayerAnimator : AnimatorManager
         get => GetAnimatorBool();
         set => SetAnimatorBool(value);
     }
-    
-    public bool IsCharging
-    {
-        get => GetAnimatorBool();
-        set => SetAnimatorBool(value);
-    }
 
     public int RollDirection
     {

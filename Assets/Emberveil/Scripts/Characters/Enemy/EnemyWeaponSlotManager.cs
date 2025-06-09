@@ -8,57 +8,76 @@ public class EnemyWeaponSlotManager : MonoBehaviour
     private WeaponHolderSlot rightHandSlot;
     private DamageCollider rightHandDamageCollider;
 
-    private void Start()
-    {
-        LoadWeaponOnBothHands();
-    }
-
     private void Awake()
     {
-        WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
-        foreach (WeaponHolderSlot weaponSlot in weaponHolderSlots)
+        if (enemyManager == null)
+            enemyManager = GetComponentInParent<EnemyManager>();
+        if (enemyManager == null)
+            Debug.LogError("EnemyWeaponSlotManager: EnemyManager reference not set!", this);
+
+        rightHandSlot = GetComponentInChildren<WeaponHolderSlot>();
+        if (rightHandSlot == null)
+            Debug.LogError("EnemyWeaponSlotManager: No WeaponHolderSlot found in children!", this);
+    }
+
+    private void Start()
+    {
+        if (rightHandWeapon != null && rightHandSlot != null)
         {
-            rightHandSlot = weaponSlot;
+            LoadWeaponOnSlot(rightHandWeapon, WeaponHand.Right);
         }
     }
 
-    public void LoadWeaponOnBothHands()
+    public void LoadWeaponOnSlot(WeaponItem weapon, WeaponHand hand)
     {
-        if (rightHandWeapon != null)
+        if (hand == WeaponHand.Right && rightHandSlot != null)
         {
-            LoadWeaponOnSlot(rightHandWeapon, false);
-        }
-    }
+            if (rightHandDamageCollider != null)
+            {
+                rightHandDamageCollider.OnDamageableHit -= HandleRightHandHit;
+            }
 
-    public void LoadWeaponOnSlot(WeaponItem weapon, bool isLeft)
-    {
-        rightHandSlot.LoadWeaponModel(weapon);
-        LoadWeaponsDamageCollider(false);
-    }
+            rightHandSlot.LoadWeaponModel(weapon);
+            rightHandDamageCollider = null;
 
-    public void LoadWeaponsDamageCollider(bool isLeft)
-    {
-        rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
-        if (rightHandDamageCollider != null)
-        {
-            rightHandDamageCollider.Wielder = enemyManager;
-            rightHandDamageCollider.OnDamageableHit += HandleRightHandHit;
+            if (rightHandSlot.currentWeaponModel != null)
+            {
+                rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+                if (rightHandDamageCollider != null)
+                {
+                    rightHandDamageCollider.Wielder = enemyManager; // Set wielder
+                    rightHandDamageCollider.OnDamageableHit += HandleRightHandHit; // Subscribe
+                }
+            }
+            else if (weapon != null && weapon.isUnarmed) // Handle unarmed "fist" collider for enemy
+            {
+
+            }
         }
     }
 
     private void HandleRightHandHit(Collider victimCollider)
     {
-        enemyManager.Combat.ProcessHit(victimCollider, rightHandWeapon);
+        if (enemyManager != null && enemyManager.Combat != null)
+        {
+            enemyManager.Combat.ProcessHit(victimCollider, rightHandWeapon); 
+        }
     }
 
-    public void OpenDamageCollider()
+    public void OpenDamageCollider(WeaponHand hand)
     {
-        rightHandDamageCollider.EnableDamageCollider();
+        if (hand == WeaponHand.Right && rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.EnableDamageCollider();
+        }
     }
 
-    public void CloseDamageCollider()
+    public void CloseDamageCollider(WeaponHand hand)
     {
-        rightHandDamageCollider.DisableDamageCollider();
+        if (hand == WeaponHand.Right && rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.DisableDamageCollider();
+        }
     }
 
     #region Handle Weapon's Stamina Consumption

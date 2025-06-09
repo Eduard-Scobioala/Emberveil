@@ -110,19 +110,22 @@ public class PlayerManager : CharacterManager
         commands = new Commands
         {
             AttackCommand = new RelayCommand(
-                () => (!playerAnimator.IsInMidAction || playerAnimator.CanDoCombo),
+                () => playerStats.CanPerformStaminaConsumingAction() &&
+                    (!playerAnimator.IsInMidAction || playerAnimator.CanDoCombo),
                 playerAttacker.HandleAttackButton),
 
             JumpCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
+                () => playerStats.CanPerformStaminaConsumingAction() &&
+                    !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
                 playerLocomotion.HandleJumpButtonPressed),
 
             DodgeCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction,
+                () => playerStats.CanPerformStaminaConsumingAction() && !playerAnimator.IsInMidAction,
                 playerLocomotion.HandleDodgeTapped),
 
             SprintHoldCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction && !playerAnimator.IsCrouching,
+                () => playerStats.CanPerformStaminaConsumingAction() && 
+                    !playerAnimator.IsInMidAction && !playerAnimator.IsCrouching && playerAnimator.IsGrounded,
                 playerLocomotion.HandleSprintHolding),
 
             SprintReleaseCommand = new RelayCommand(

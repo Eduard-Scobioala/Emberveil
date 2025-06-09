@@ -8,6 +8,7 @@ public class PlayerLocomotion : MonoBehaviour
     private Transform playerTransform;
     private PlayerManager playerManager;
     private PlayerAnimator playerAnimator;
+    private PlayerStats playerStats;
 
     public new Rigidbody rigidbody;
 
@@ -27,6 +28,11 @@ public class PlayerLocomotion : MonoBehaviour
     [Header("Falling Stats")]
     [SerializeField] private float customGravity = 25f;
     [SerializeField] private float maxFallSpeed = 50f;
+
+    [Header("Stamina Costs")]
+    [SerializeField] private float dodgeStaminaCost = 10f;
+    [SerializeField] private float jumpStaminaCost = 8f;
+    [SerializeField] private float sprintTickStaminaCost = 8f;
 
     //[SerializeField] private float lockOnMovementForwardMultiplier = 0.125f;
     //[SerializeField] private float lockOnDodgeForwardMultiplier = 0.9f;
@@ -59,6 +65,7 @@ public class PlayerLocomotion : MonoBehaviour
         playerTransform = transform;
         rigidbody = GetComponent<Rigidbody>();
         playerManager = GetComponent<PlayerManager>();
+        playerStats = GetComponent<PlayerStats>();
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
 
         if (cameraController == null) Debug.LogError("CameraController not assigned on PlayerLocomotion!", this);
@@ -68,6 +75,8 @@ public class PlayerLocomotion : MonoBehaviour
 
         if (playerManager == null) Debug.LogError("PlayerManager not found on this GameObject!", this);
         else playerAnimator.IsGrounded = true;
+
+        if (playerStats == null) Debug.LogError("PlayerStats not found on this GameObject!", this);
 
         rigidbody.useGravity = false; // We use custom gravity
     }
@@ -91,6 +100,26 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerAnimator.IsInAir)
         {
             inAirTimer += Time.deltaTime;
+        }
+
+        if (playerManager.isSprinting && playerAnimator.IsGrounded)
+        {
+            if (playerStats.currentStamina > 0)
+            {
+                float staminaToConsumeThisFrame = sprintTickStaminaCost * Time.deltaTime;
+                // ConsumeStamina will handle setting it to 0 if it overdrafts
+                playerStats.ConsumeStamina(staminaToConsumeThisFrame);
+
+                // If after consumption, stamina is 0, stop sprinting.
+                if (playerStats.currentStamina <= 0)
+                {
+                    playerManager.isSprinting = false;
+                }
+            }
+            else
+            {
+                playerManager.isSprinting = false;
+            }
         }
     }
 
@@ -306,6 +335,8 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void PerformDodge()
     {
+        playerStats.ConsumeStamina(dodgeStaminaCost);
+
         playerManager.charAnimManager.IsInMidAction = true; // Player is busy
         playerAnimator.IsDodging = true;
 
@@ -450,6 +481,9 @@ public class PlayerLocomotion : MonoBehaviour
         {
             return;
         }
+
+        playerStats.ConsumeStamina(jumpStaminaCost);
+
         if (playerAnimator.IsCrouching)
         {
             playerManager.ToggleCrouchState();

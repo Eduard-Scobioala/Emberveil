@@ -47,7 +47,7 @@ public class DamageCollider : MonoBehaviour
         if (logHits) Debug.Log($"{Wielder?.name ?? "Unknown Wielder"}'s DamageCollider Disabled.");
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (!_collider.enabled || Wielder == null) return;
 

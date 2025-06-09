@@ -10,7 +10,7 @@ public class DamagePlayer : MonoBehaviour
 
         if (playerStats != null )
         {
-            playerStats.TakeDamange(damage);
+            playerStats.TakeDamange(damage, transform);
         }
     }
 }

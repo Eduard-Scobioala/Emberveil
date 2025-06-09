@@ -164,27 +164,19 @@ public class WeaponSlotManager : MonoBehaviour
     // Open/CloseLeftHandDamageCollider for shields later
 
     // Stamina consumption will be triggered by Animation Events on PlayerAnimator
-    // PlayerAnimator would then call these methods on WeaponSlotManager
     public void DrainStaminaForAttack(PlayerAttackType attackType)
     {
         if (attackingWeapon == null || playerStats == null) return;
 
-        float multiplier = 1.0f;
-        switch (attackType)
+        float multiplier = attackType switch
         {
-            case PlayerAttackType.LightAttack:
-                multiplier = attackingWeapon.lightAttackStaminaMultiplier;
-                break;
-            case PlayerAttackType.RollAttack:
-                multiplier = attackingWeapon.rollAttackStaminaMultiplier;
-                break;
-            case PlayerAttackType.BackstepAttack:
-                multiplier = attackingWeapon.backstepAttackStaminaMultiplier;
-                break;
-            case PlayerAttackType.JumpAttack:
-                multiplier = attackingWeapon.jumpAttackStaminaMultiplier;
-                break;
-        }
-        playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * multiplier));
+            PlayerAttackType.LightAttack => attackingWeapon.lightAttackStaminaMultiplier,
+            PlayerAttackType.RollAttack => attackingWeapon.rollAttackStaminaMultiplier,
+            PlayerAttackType.BackstepAttack => attackingWeapon.backstepAttackStaminaMultiplier,
+            PlayerAttackType.JumpAttack => attackingWeapon.jumpAttackStaminaMultiplier,
+            _ => 1f
+        };
+
+        playerStats.ConsumeStamina(attackingWeapon.baseStamina * multiplier);
     }
 }
