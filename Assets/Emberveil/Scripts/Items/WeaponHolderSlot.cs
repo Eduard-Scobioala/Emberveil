@@ -3,26 +3,17 @@ using UnityEngine;
 public class WeaponHolderSlot : MonoBehaviour
 {
     public Transform parentOverride;
-    public WeaponItem currentWeapon;
-    public bool isLeftHandSlot;
-    public bool isRightHandSlot;
-    public bool isBackSlot;
+    public GameObject currentWeaponModel { get; private set; }
 
-    public GameObject currentWeaponModel;
-
-    public void UnloadWeapon()
-    {
-        if (currentWeaponModel != null)
-        {
-            currentWeaponModel.SetActive(false);
-        }
-    }
+    // Shield specific logic might be added later if this slot is also for shields
+    // public bool isShieldSlot;
 
     public void UnloadWeaponAndDestroy()
     {
-        if(currentWeaponModel != null)
+        if (currentWeaponModel != null)
         {
             Destroy(currentWeaponModel);
+            currentWeaponModel = null;
         }
     }
 
@@ -30,28 +21,21 @@ public class WeaponHolderSlot : MonoBehaviour
     {
         UnloadWeaponAndDestroy();
 
-        if (weaponItem == null)
+        if (weaponItem == null || weaponItem.isUnarmed || weaponItem.modelPrefab == null)
         {
-            UnloadWeapon();
-            return;
+            return; // Nothing to load for unarmed or if no prefab
         }
 
-        GameObject model = Instantiate(weaponItem.modelPrefab) as GameObject;
-        if (model != null)
+        currentWeaponModel = Instantiate(weaponItem.modelPrefab);
+        if (currentWeaponModel != null)
         {
-            if (parentOverride != null)
-            {
-                model.transform.parent = parentOverride;
-            }
-            else
-            {
-                model.transform.parent = transform;
-            }
+            Transform actualParent = parentOverride != null ? parentOverride : transform;
+            currentWeaponModel.transform.SetParent(actualParent, false); // Set parent and reset local transform
 
-            model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-            model.transform.localScale = Vector3.one;
+            // If your weapon prefabs are not zeroed out, you might need this:
+            // currentWeaponModel.transform.localPosition = Vector3.zero;
+            // currentWeaponModel.transform.localRotation = Quaternion.identity;
+            // currentWeaponModel.transform.localScale = Vector3.one;
         }
-
-        currentWeaponModel = model;
     }
 }

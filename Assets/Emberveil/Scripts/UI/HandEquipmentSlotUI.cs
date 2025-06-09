@@ -7,7 +7,7 @@ public class HandEquipmentSlotUI : MonoBehaviour
     [SerializeField] private Image icon;
     private Item item;
 
-    public EquipSlotType equipSlotType;
+    //public EquipSlotType equipSlotType;
 
 
     public void AddItem(Item newItem)
@@ -28,6 +28,6 @@ public class HandEquipmentSlotUI : MonoBehaviour
 
     public void SelectSlot()
     {
-        uiManager.currentSelectedSlotType = equipSlotType;
+        //uiManager.currentSelectedSlotType = equipSlotType;
     }
 }

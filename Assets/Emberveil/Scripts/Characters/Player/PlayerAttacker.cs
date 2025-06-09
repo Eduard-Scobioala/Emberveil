@@ -6,7 +6,6 @@ public class PlayerAttacker : MonoBehaviour
     private WeaponSlotManager weaponSlotManager;
     private PlayerManager playerManager;
     private PlayerInventory playerInventory;
-    private PlayerStats playerStats;
 
     [Header("Backstab Settings")]
     [SerializeField] private float backstabRaycastDistance = 1.5f;
@@ -14,7 +13,9 @@ public class PlayerAttacker : MonoBehaviour
     [SerializeField] private float backstabMaxAngle = 45f;
     [SerializeField] private LayerMask backstabLayerMask;
     [SerializeField] private string playerBackstabAnimation = "Backstab_Main_01";
-    [SerializeField] private float playerSnapSpeed = 15f;
+    //[SerializeField] private float playerSnapSpeed = 15f;
+
+    private PlayerAttackType currentAttackTypePerforming = PlayerAttackType.None;
 
     private void Awake()
     {
@@ -22,7 +23,6 @@ public class PlayerAttacker : MonoBehaviour
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         playerManager = GetComponent<PlayerManager>();
         playerInventory = GetComponent<PlayerInventory>();
-        playerStats = GetComponent<PlayerStats>();
 
         if (backstabLayerMask == 0) // If not set in inspector
         {
@@ -35,31 +35,90 @@ public class PlayerAttacker : MonoBehaviour
         if (playerAnimator.IsInMidAction && !playerAnimator.CanDoCombo)
             return;
 
-        WeaponItem currentWeapon = playerInventory.RightHandWeapon;
-        if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeapon;
+        WeaponItem currentWeapon = playerInventory.EquippedWeapon;
+        if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeaponData;
 
-        weaponSlotManager.attackingWeapon = currentWeapon; // For stamina/damage later
+        weaponSlotManager.attackingWeapon = currentWeapon;
 
-        // Check for Backstab (highest priority)
         if (!playerAnimator.IsInMidAction && playerAnimator.IsGrounded && TryPerformBackstab())
         {
             playerAnimator.IsCrouching = false; // Stand up for backstab
             return;
         }
 
-        // Attack / Combo
         PerformAttack(currentWeapon);
     }
 
     public void PerformAttack(WeaponItem weapon)
     {
         if (weapon == null) return;
-        // playerStats.ConsumeStamina(Mathf.RoundToInt(weapon.baseStamina * weapon.lightAttackStaminaMultiplier)); // Stamina handled by Anim Event
 
         playerAnimator.IsInMidAction = true;
         playerAnimator.ApplyRootMotion(true);
+
+        if (playerManager.playerAnimator.IsInAir)
+        {
+            currentAttackTypePerforming = PlayerAttackType.JumpAttack;
+        }
+        else if (playerManager.playerAnimator.IsDodging)
+        {
+            currentAttackTypePerforming = playerManager.playerAnimator.RollDirection == -1 ?
+                PlayerAttackType.BackstepAttack : PlayerAttackType.RollAttack;
+        }
+        else
+        {
+            currentAttackTypePerforming = PlayerAttackType.LightAttack;
+        }
+
         playerAnimator.TriggerAttack();
     }
+
+    public void ProcessHit(Collider victimCollider, WeaponItem attackingWeaponUsed)
+    {
+        if (attackingWeaponUsed == null)
+        {
+            Debug.LogWarning("PlayerAttacker.ProcessHit: attackingWeaponUsed is null.");
+            return;
+        }
+
+        int damageToDeal = 0;
+        DamageType damageTypeToDeal = DamageType.Standard;
+
+        switch (currentAttackTypePerforming)
+        {
+            case PlayerAttackType.LightAttack:
+                damageToDeal = attackingWeaponUsed.lightAttackDmg;
+                break;
+            case PlayerAttackType.RollAttack:
+                damageToDeal = attackingWeaponUsed.rollAttackDmg;
+                break;
+            case PlayerAttackType.BackstepAttack:
+                damageToDeal = attackingWeaponUsed.backstepAttackDmg;
+                break;
+            case PlayerAttackType.JumpAttack:
+                damageToDeal = attackingWeaponUsed.jumpAttackDmg;
+                break;
+            case PlayerAttackType.None:
+                break;
+            default:
+                damageToDeal = attackingWeaponUsed.lightAttackDmg > 0 ? attackingWeaponUsed.lightAttackDmg : 5;
+                break;
+        }
+        if (attackingWeaponUsed.isUnarmed && damageToDeal <= 0) damageToDeal = 5; // Ensure unarmed does some damage
+
+        // Apply to Enemy
+        if (victimCollider.CompareTag("Enemy"))
+        {
+            EnemyStats enemyStats = victimCollider.GetComponent<EnemyStats>();
+            if (enemyStats != null && !enemyStats.isDead)
+            {
+                Debug.Log($"Player's [{currentAttackTypePerforming}] with [{attackingWeaponUsed.name}] hit Enemy [{victimCollider.name}] for {damageToDeal} damage.");
+                enemyStats.TakeDamage(damageToDeal, damageTypeToDeal, playerManager.transform);
+            }
+        }
+        // TODO: add logic for hitting other damageable objects if they have different tags/components
+    }
+
 
     private bool TryPerformBackstab()
     {

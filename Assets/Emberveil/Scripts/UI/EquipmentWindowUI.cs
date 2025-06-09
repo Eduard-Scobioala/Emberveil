@@ -8,7 +8,7 @@ public class EquipmentWindowUI : MonoBehaviour
     {
         foreach (var slot in handEquipmentSlotsUI)
         {
-            slot.AddItem(playerInventory.GetItemFromEquipSlot(slot.equipSlotType));
+            //slot.AddItem(playerInventory.GetItemFromEquipSlot(slot.equipSlotType));
         }
     }
 }

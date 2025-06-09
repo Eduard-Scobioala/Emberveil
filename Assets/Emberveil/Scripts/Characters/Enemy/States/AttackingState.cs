@@ -73,4 +73,9 @@ public class AttackingState : IEnemyState
         currentAttack = null;
         Debug.Log($"{manager.name} exited AttackingState.");
     }
+
+    public EnemyAttackActionSO GetCurrentAttackAction()
+    {
+        return currentAttack;
+    }
 }

@@ -9,6 +9,7 @@ public class PlayerAnimator : AnimatorManager
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
     private CameraController cameraController;
+    private WeaponSlotManager weaponSlotManager;
 
     public bool CanRotate { get; set; } = true;
 
@@ -66,10 +67,12 @@ public class PlayerAnimator : AnimatorManager
         playerLocomotion = GetComponentInParent<PlayerLocomotion>();
         playerManager = GetComponentInParent<PlayerManager>();
         cameraController = FindObjectOfType<CameraController>();
+        weaponSlotManager = GetComponentInParent<WeaponSlotManager>();
 
-        if (playerManager == null) Debug.LogError("PlayerManager not found in parent for AnimatorHandler", this);
-        if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent for AnimatorHandler", this);
-        if (cameraController == null) Debug.LogError("CameraController not found in scene for AnimatorHandler", this);
+        if (playerManager == null) Debug.LogError("PlayerManager not found in parent", this);
+        if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent", this);
+        if (cameraController == null) Debug.LogError("CameraController not found in scene", this);
+        if (weaponSlotManager == null) Debug.LogError("WeaponSlotManager not found in scene", this);
     }
 
     public void OnAnimatorMove()
@@ -104,7 +107,6 @@ public class PlayerAnimator : AnimatorManager
         }
     }
 
-    
 
     public void UpdateAnimatorValues(float verticalInput, float horizontalInput, bool isSprinting, bool isCrouching, bool isLockedOn)
     {
@@ -239,5 +241,36 @@ public class PlayerAnimator : AnimatorManager
         {
             playerLocomotion.FinishJumpAction();
         }
+    }
+
+    public void AnimEvent_OpenDamageCollider_RH()
+    {
+        weaponSlotManager?.OpenRightHandDamageCollider();
+    }
+
+    public void AnimEvent_CloseDamageCollider_RH()
+    {
+        weaponSlotManager?.CloseRightHandDamageCollider();
+    }
+
+    public void AnimEvent_DrainLightAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.LightAttack);
+    }
+    public void AnimEvent_DrainRollAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.RollAttack);
+    }
+    public void AnimEvent_DrainBackstepAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.BackstepAttack);
+    }
+    public void AnimEvent_DrainJumpAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.JumpAttack);
     }
 }

@@ -1,156 +1,144 @@
 using System.Collections.Generic;
 using UnityEngine;
-
-public enum EquipSlotType
-{
-    RightHandSlot01,
-    RightHandSlot02,
-    RightHandSlot03,
-    RightHandSlot04,
-    LeftHandSlot01,
-    LeftHandSlot02,
-    LeftHandSlot03,
-    LeftHandSlot04,
-}
+using System;
 
 public class PlayerInventory : MonoBehaviour
 {
-    WeaponSlotManager weaponSlotManager;
+    public static event Action<WeaponItem> OnEquippedWeaponChanged;
 
-    public WeaponItem RightHandWeapon { get; private set; }
-    public WeaponItem LeftHandWeapon { get; private set; }
+    [Header("References")]
+    [SerializeField] private WeaponSlotManager weaponSlotManager;
+    [SerializeField] public WeaponItem unarmedWeaponData;
 
-    public WeaponItem unarmedWeapon;
+    public WeaponItem EquippedWeapon { get; private set; }
 
-    public WeaponItem[] weaponsInRightHandSlots = new WeaponItem[1];
-    public WeaponItem[] weaponsInLeftHandSlots = new WeaponItem[1];
+    // Quick Slots for Right Hand Weapons
+    [Tooltip("Maximum 3 weapons for quick slots.")]
+    public WeaponItem[] quickSlotWeapons = new WeaponItem[3];
+    private int currentQuickSlotIndex = -1; // -1 means unarmed, 0-2 for quickSlotWeapons
 
-    private int currentRightWeaponIndex = 0;
-    private int currentLeftWeaponIndex = 0;
-
-    public List<WeaponItem> weaponsInventory;
+    [Header("Inventory")]
+    public List<WeaponItem> collectedWeapons = new List<WeaponItem>(); // All weapons player has found
 
     private void Awake()
     {
-        weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         if (weaponSlotManager == null)
-        {
-            Debug.LogError("WeaponSlotManager not found in children.");
-        }
+            weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
+        if (weaponSlotManager == null)
+            Debug.LogError("PlayerInventory: WeaponSlotManager not found!");
+        if (unarmedWeaponData == null)
+            Debug.LogError("PlayerInventory: Unarmed Weapon Data (SO_UnarmedWeapon) not assigned!");
     }
 
     private void Start()
     {
-        EquipWeapon(TryGetWeapon(weaponsInRightHandSlots), false);
-        EquipWeapon(TryGetWeapon(weaponsInLeftHandSlots), true);
+        EquipWeaponFromQuickSlot(0, true); // Force equip initial, even if null
     }
 
     private void OnEnable()
     {
-        InputHandler.DPadLeftButtonPressed += HandleDPadLeftButtonPressed;
-        InputHandler.DPadRightButtonPressed += HandleDPadRightButtonPressed;
+        InputHandler.DPadRightButtonPressed += CycleNextWeapon;
     }
 
     private void OnDisable()
     {
-        InputHandler.DPadLeftButtonPressed -= HandleDPadLeftButtonPressed;
-        InputHandler.DPadRightButtonPressed -= HandleDPadRightButtonPressed;
+        InputHandler.DPadRightButtonPressed -= CycleNextWeapon;
     }
 
-    private void HandleDPadLeftButtonPressed()
+    public void AddWeaponToInventory(WeaponItem weapon)
     {
-        ChangeLeftWeapon();
-    }
-
-    private void HandleDPadRightButtonPressed()
-    {
-        ChangeRightWeapon();
-    }
-
-    private WeaponItem TryGetWeapon(WeaponItem[] weaponItems)
-    {
-        if (weaponItems !=  null && weaponItems.Length > 0)
+        if (weapon != null && !weapon.isUnarmed && !collectedWeapons.Contains(weapon))
         {
-            return weaponItems[0];
-        }
-        else
-        {
-            return unarmedWeapon;
+            collectedWeapons.Add(weapon);
+            Debug.Log($"Added {weapon.name} to inventory.");
         }
     }
 
-    public void ChangeLeftWeapon()
+    public void AssignWeaponToQuickSlot(WeaponItem weapon, int slotIndex)
     {
-        ChangeWeapon(ref currentLeftWeaponIndex, weaponsInLeftHandSlots, true);
-    }
-
-    public void ChangeRightWeapon()
-    {
-        ChangeWeapon(ref currentRightWeaponIndex, weaponsInRightHandSlots, false);
-    }
-
-    private void ChangeWeapon(ref int currentWeaponIndex, WeaponItem[] weaponSlots, bool isLeftHand)
-    {
-        currentWeaponIndex++;
-
-        if (currentWeaponIndex > weaponSlots.Length - 1 || weaponSlots[currentWeaponIndex] == null)
+        if (slotIndex < 0 || slotIndex >= quickSlotWeapons.Length)
         {
-            currentWeaponIndex = -1;
-            EquipWeapon(unarmedWeapon, isLeftHand);
+            Debug.LogError($"Invalid quick slot index: {slotIndex}");
+            return;
         }
-        else
+        if (weapon != null && weapon.isUnarmed)
         {
-            EquipWeapon(weaponSlots[currentWeaponIndex], isLeftHand);
-        }
-    }
-
-    private void EquipWeapon(WeaponItem weapon, bool isLeftHand)
-    {
-        if (weaponSlotManager == null) return;
-
-        if (isLeftHand)
-        {
-            LeftHandWeapon = weapon;
-        }
-        else
-        {
-            RightHandWeapon = weapon;
+            Debug.LogWarning("Cannot assign Unarmed as a quick slot weapon. It's the default.");
+            return;
         }
 
-        weaponSlotManager.LoadWeaponOnSlot(weapon, isLeftHand);
+        quickSlotWeapons[slotIndex] = weapon;
+        Debug.Log($"Assigned {weapon?.name ?? "nothing"} to quick slot {slotIndex}.");
+
+        // If this was the currently equipped weapon's slot, re-evaluate equipped weapon
+        if (currentQuickSlotIndex == slotIndex)
+        {
+            EquipWeaponFromQuickSlot(slotIndex); // This will update EquippedWeapon and visuals
+        }
+        OnEquippedWeaponChanged?.Invoke(EquippedWeapon); // Notify UI
     }
 
-    public Item GetItemFromEquipSlot(EquipSlotType slotType)
+    public void CycleNextWeapon()
     {
-        return slotType switch
+        if (playerManager != null && playerManager.playerAnimator.IsInMidAction) return; // Don't switch mid-action
+
+        int initialIndex = currentQuickSlotIndex;
+        int nextIndex = currentQuickSlotIndex;
+        int attempts = 0;
+
+        do
         {
-            EquipSlotType.RightHandSlot01 => weaponsInRightHandSlots[0],
-            EquipSlotType.RightHandSlot02 => weaponsInRightHandSlots[1],
-            EquipSlotType.RightHandSlot03 => weaponsInRightHandSlots[2],
-            EquipSlotType.RightHandSlot04 => weaponsInRightHandSlots[3],
-
-            EquipSlotType.LeftHandSlot01 => weaponsInLeftHandSlots[0],
-            EquipSlotType.LeftHandSlot02 => weaponsInLeftHandSlots[1],
-            EquipSlotType.LeftHandSlot03 => weaponsInLeftHandSlots[2],
-            EquipSlotType.LeftHandSlot04 => weaponsInLeftHandSlots[3],
-
-            _ => throw new System.NotImplementedException(),
-        };
-    }
-
-    public void SetItemFromEquipSlot(EquipSlotType slotType, WeaponItem item)
-    {
-        switch (slotType)
-        {
-            case >= EquipSlotType.RightHandSlot01 and <= EquipSlotType.RightHandSlot04:
-                weaponsInRightHandSlots[(int)slotType - (int)EquipSlotType.RightHandSlot01] = item;
-                RightHandWeapon = item;
+            nextIndex++;
+            if (nextIndex >= quickSlotWeapons.Length)
+            {
+                nextIndex = -1; // Cycle to unarmed
+            }
+            attempts++;
+            // If next slot is not null OR we've cycled back to unarmed (-1) OR we've tried all slots
+            if (nextIndex == -1 || (quickSlotWeapons[nextIndex] != null && quickSlotWeapons[nextIndex] != EquippedWeapon) || attempts > quickSlotWeapons.Length + 1)
+            {
                 break;
-
-            case >= EquipSlotType.LeftHandSlot01 and <= EquipSlotType.LeftHandSlot04:
-                weaponsInLeftHandSlots[(int)slotType - (int)EquipSlotType.LeftHandSlot01] = item;
-                LeftHandWeapon = item;
-                break;
+            }
         }
+        while (nextIndex != initialIndex && attempts <= quickSlotWeapons.Length + 1); // attempts check prevents infinite loop if all slots are same weapon
+
+        EquipWeaponFromQuickSlot(nextIndex);
     }
+
+    // Call this to equip a weapon. Index -1 for unarmed.
+    public void EquipWeaponFromQuickSlot(int slotIndex, bool forceEquip = false)
+    {
+        if (!forceEquip && playerManager != null && playerManager.playerAnimator.IsInMidAction) return;
+
+        currentQuickSlotIndex = slotIndex;
+
+        if (slotIndex >= 0 && slotIndex < quickSlotWeapons.Length && quickSlotWeapons[slotIndex] != null)
+        {
+            EquippedWeapon = quickSlotWeapons[slotIndex];
+        }
+        else
+        {
+            EquippedWeapon = unarmedWeaponData; // Default to unarmed
+            currentQuickSlotIndex = -1; // Explicitly set index for unarmed
+        }
+
+        // Debug.Log($"Equipping: {EquippedWeapon.name} (Slot: {currentQuickSlotIndex})");
+        weaponSlotManager.LoadWeaponOnSlot(EquippedWeapon, true); // false for right hand
+        OnEquippedWeaponChanged?.Invoke(EquippedWeapon);
+    }
+
+
+    // For UI to get weapon in a slot
+    public WeaponItem GetWeaponInQuickSlot(int slotIndex)
+    {
+        if (slotIndex >= 0 && slotIndex < quickSlotWeapons.Length)
+        {
+            return quickSlotWeapons[slotIndex];
+        }
+        return null;
+    }
+
+    // Lazy reference for PlayerManager if needed
+    private PlayerManager _playerManager;
+    private PlayerManager playerManager => _playerManager ??= GetComponent<PlayerManager>();
 }

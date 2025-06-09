@@ -46048,21 +46048,21 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.36666667
-    functionName: OpenDamageCollider
+    functionName: AnimEvent_OpenDamageCollider_RH
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 0.46666667
-    functionName: DrainStaminaLightAttack
+    functionName: AnimEvent_DrainLightAttackStamina
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 0.53333336
-    functionName: CloseDamageCollider
+    functionName: AnimEvent_CloseDamageCollider_RH
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

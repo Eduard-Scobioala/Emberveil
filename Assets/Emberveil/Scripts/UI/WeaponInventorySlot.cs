@@ -30,14 +30,14 @@ public class WeaponInventorySlot : MonoBehaviour
 
     public void EquipItem()
     {
-        playerInventory.weaponsInventory.Add((WeaponItem)playerInventory.GetItemFromEquipSlot(uiManager.currentSelectedSlotType));
-        playerInventory.SetItemFromEquipSlot(uiManager.currentSelectedSlotType, weaponItem);
-        playerInventory.weaponsInventory.Remove(weaponItem);
+        //playerInventory.weaponsInventory.Add((WeaponItem)playerInventory.GetItemFromEquipSlot(uiManager.currentSelectedSlotType));
+        //playerInventory.SetItemFromEquipSlot(uiManager.currentSelectedSlotType, weaponItem);
+        //playerInventory.weaponsInventory.Remove(weaponItem);
 
-        weaponSlotManager.LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-        weaponSlotManager.LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
+        //weaponSlotManager.LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
+        //weaponSlotManager.LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
 
-        equipmentWindowUI.LoadWeaponOnEquipementScreen(playerInventory);
-        uiManager.currentSelectedSlotType = 0;
+        //equipmentWindowUI.LoadWeaponOnEquipementScreen(playerInventory);
+        //uiManager.currentSelectedSlotType = 0;
     }
 }

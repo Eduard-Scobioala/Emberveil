@@ -17,7 +17,7 @@ public class UIManager : MonoBehaviour
 
     private WeaponInventorySlot[] weaponInventorySlots;
 
-    public EquipSlotType currentSelectedSlotType;
+    //public EquipSlotType currentSelectedSlotType;
 
     private void Start()
     {
@@ -69,27 +69,27 @@ public class UIManager : MonoBehaviour
         #region Weapon Inventory Slots
         for (int i = 0; i < weaponInventorySlots.Length; i++)
         {
-            if (i < playerInventory.weaponsInventory.Count)
-            {
-                if (weaponInventorySlots.Length < playerInventory.weaponsInventory.Count)
-                {
-                    Instantiate(weaponInventorySlotPrefab, weaponInventorySlotsParent);
-                    weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-                }
+            //if (i < playerInventory.weaponsInventory.Count)
+            //{
+            //    if (weaponInventorySlots.Length < playerInventory.weaponsInventory.Count)
+            //    {
+            //        Instantiate(weaponInventorySlotPrefab, weaponInventorySlotsParent);
+            //        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
+            //    }
 
-                weaponInventorySlots[i].AddItem(playerInventory.weaponsInventory[i]);
-            }
-            else
-            {
-                weaponInventorySlots[i].ClearInventorySlot();
-            }
+            //    weaponInventorySlots[i].AddItem(playerInventory.weaponsInventory[i]);
+            //}
+            //else
+            //{
+            //    weaponInventorySlots[i].ClearInventorySlot();
+            //}
         }
         #endregion
     }
 
     private void CloseAllInventoryWindows()
     {
-        currentSelectedSlotType = 0;
+        //currentSelectedSlotType = 0;
 
         weaponInventoryWindow.SetActive(false);
         equipementInventoryWindow.SetActive(false);

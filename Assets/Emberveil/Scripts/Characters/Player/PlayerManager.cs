@@ -14,9 +14,9 @@ public struct Commands
 public class PlayerManager : CharacterManager
 {
     private InteractableUI interactableUI;
-    private PlayerAttacker playerAttacker;
     private PlayerStats playerStats;
 
+    public PlayerAttacker playerAttacker;
     public PlayerLocomotion playerLocomotion;
     public PlayerInventory playerInventory;
     public PlayerAnimator playerAnimator;
@@ -226,6 +226,7 @@ public class PlayerManager : CharacterManager
                     // TODO: Let OnInteract handle removal if necessary
                     //nearbyInteractables.Remove(closest);
 
+                    interactableUI.EnableInteractionPopUpGameObject(false);
                     interactableUI.EnableItemPopUpGameObject(true);
                     pickedUpItem = true;
                 }
@@ -275,7 +276,7 @@ public class PlayerManager : CharacterManager
     {
         if (currentBackstabTarget != null && playerAttacker != null)
         {
-            WeaponItem weaponItem = playerInventory.RightHandWeapon;
+            WeaponItem weaponItem = playerInventory.EquippedWeapon;
             int backstabDamage = weaponItem != null ? weaponItem.GetBackstabDmg() : 200;
             Debug.Log($"Player applying {backstabDamage} backstab damage to {currentBackstabTarget.name}");
 

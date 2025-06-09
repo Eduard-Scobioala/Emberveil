@@ -7,9 +7,6 @@ public class PatrolState : IEnemyState
     private float waitTimer;
     private bool isWaitingAtPoint = false;
 
-    [Header("Patrol Settings (Example - better to get from manager/patrolPath)")]
-    private float patrolWaitTime = 3f; // Time to wait at each patrol point
-
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;

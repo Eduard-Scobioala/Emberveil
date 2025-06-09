@@ -178,6 +178,26 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
+    public void ProcessHit(Collider victimCollider, WeaponItem attackingWeapon)
+    {
+        if (victimCollider.CompareTag("Player"))
+        {
+            PlayerStats playerStats = victimCollider.GetComponent<PlayerStats>();
+            if (playerStats != null)
+            {
+                EnemyAttackActionSO currentAction = enemyManager.attackingState.GetCurrentAttackAction();
+                if (currentAction != null)
+                {
+                    playerStats.TakeDamange(currentAction.damage);
+                }
+                else if (attackingWeapon != null)
+                {
+                    playerStats.TakeDamange(attackingWeapon.lightAttackDmg);
+                }
+            }
+        }
+    }
+
     public void EnableWeaponCollider(WeaponHand hand)
     {
         // TODO: Handle left/right hand

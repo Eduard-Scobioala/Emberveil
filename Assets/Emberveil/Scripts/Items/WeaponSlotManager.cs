@@ -2,174 +2,189 @@ using UnityEngine;
 
 public class WeaponSlotManager : MonoBehaviour
 {
-    PlayerManager playerManager;
-    private WeaponHolderSlot leftHandSlot;
-    private WeaponHolderSlot rightHandSlot;
-    private WeaponHolderSlot backSlot;
-
-    private DamageCollider leftHandDamageCollider;
-    private DamageCollider rightHandDamageCollider;
-
-    private Animator animator;
-    private QuickSlotsUI quickSlotsUI;
-    private PlayerStats playerStats;
-
+    [Header("References")]
+    [SerializeField] private PlayerManager playerManager;
     [SerializeField] private PlayerInventory playerInventory;
+    [SerializeField] private PlayerStats playerStats;
+    [SerializeField] private Animator animator;
 
-    public WeaponItem attackingWeapon = null;
+    [Header("Weapon Slots")]
+    [SerializeField] private WeaponHolderSlot rightHandSlot;
+    // [SerializeField] private WeaponHolderSlot leftHandSlot; // For shield later
+    // [SerializeField] private WeaponHolderSlot backSlot; // If you have visible sheathing
 
-    public bool isTwoHanding = false;
-    
+    private DamageCollider rightHandDamageCollider;
+    // private DamageCollider leftHandDamageCollider; // For shield bash later
+
+    public WeaponItem attackingWeapon { get; set; } // Set by PlayerAttacker
+
+    // isTwoHanding concept might be simplified or removed if only one weapon
+    // public bool isTwoHanding = false;
+
     private void Awake()
     {
-        WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
-        foreach (WeaponHolderSlot weaponSlot in weaponHolderSlots)
-        {
-            if (weaponSlot.isLeftHandSlot)
-            {
-                leftHandSlot = weaponSlot;
-            }
-            else if (weaponSlot.isRightHandSlot)
-            {
-                rightHandSlot = weaponSlot;
-            }
-            else if (weaponSlot.isBackSlot)
-            {
-                backSlot = weaponSlot;
-            }
-        }
+        if (playerManager == null) playerManager = GetComponentInParent<PlayerManager>();
+        if (playerInventory == null) playerInventory = GetComponentInParent<PlayerInventory>();
+        if (playerStats == null) playerStats = GetComponentInParent<PlayerManager>().GetComponent<PlayerStats>();
+        if (animator == null && playerManager != null) animator = playerManager.GetComponentInChildren<Animator>(); // Get player animator
 
-        playerManager = GetComponentInParent<PlayerManager>();
-        animator = GetComponent<Animator>();
-        quickSlotsUI = FindObjectOfType<QuickSlotsUI>();
-        playerStats = GetComponentInParent<PlayerStats>();
+        if (rightHandSlot == null) Debug.LogError("WeaponSlotManager: Right Hand Slot not assigned!");
     }
 
-    private void OnEnable()
+    // No longer needs OnEnable/OnDisable for TwoHandingButtonPressed
+    // Two-handing logic would need to be re-evaluated if you want to keep it.
+    // For now, assuming single right-hand weapon focus.
+
+    public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isRightHand)
     {
-        InputHandler.TwoHandingButtonPressed += HandleTwoHandingButtonPressed;
+        if (!isRightHand)
+        {
+            // Handle left hand (shield) later
+            return;
+        }
+
+        if (rightHandSlot == null) return;
+
+        // Unsubscribe from old collider's event if it exists
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.OnDamageableHit -= HandleRightHandHit;
+        }
+
+        rightHandSlot.LoadWeaponModel(weaponItem);
+        attackingWeapon = weaponItem ?? playerInventory.unarmedWeaponData;
+
+        LoadRightWeaponDamageCollider(); // This finds/initializes the new collider
+        //UpdateAnimatorOverrides(attackingWeapon); // Use the potentially unarmed weapon data
     }
 
-    private void OnDisable()
+    private void UpdateAnimatorOverrides(WeaponItem weaponItem)
     {
-        InputHandler.TwoHandingButtonPressed -= HandleTwoHandingButtonPressed;
-    }
+        // This is a more advanced setup. For now, let's assume the main animator state machine
+        // handles different attack animations based on parameters or weapon type checks.
+        // If you use Animator Override Controllers:
+        // AnimatorOverrideController overrideController = playerManager.playerAnimator.anim.runtimeAnimatorController as AnimatorOverrideController;
+        // if (overrideController == null && playerManager.playerAnimator.anim.runtimeAnimatorController is AnimatorController)
+        // {
+        //     overrideController = new AnimatorOverrideController(playerManager.playerAnimator.anim.runtimeAnimatorController);
+        //     playerManager.playerAnimator.anim.runtimeAnimatorController = overrideController;
+        // }
+        //
+        // if (overrideController != null && weaponItem != null)
+        // {
+        //     overrideController["Default_RH_Idle"] = Resources.Load<AnimationClip>(weaponItem.Right_Arm_Idle_Override); // Example
+        //     // Override other animations based on weaponItem.XXX_Override fields
+        // }
+        // else if (overrideController != null && weaponItem == playerInventory.unarmedWeaponData)
+        // {
+        //     // Revert to default unarmed animations
+        // }
 
-    public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isLeft)
-    {
-        if (isLeft)
+        // Simpler: rely on animator parameters like "WeaponType" or booleans like "IsUnarmed"
+        // And have your state machine branch accordingly.
+        // PlayerAnimator.IsTwoHanding is an example of this.
+        // You might add playerAnimator.SetInteger("WeaponClass", weaponItem.classID) if weapons have classes.
+        playerManager.playerAnimator.anim.SetBool("IsUnarmed", weaponItem == null || weaponItem.isUnarmed);
+
+        // CrossFade to appropriate idle based on current weapon
+        string idleAnimToPlay = "Humanoid_Idle"; // A generic default
+        if (weaponItem != null && !weaponItem.isUnarmed && !string.IsNullOrEmpty(weaponItem.Right_Arm_Idle))
         {
-            leftHandSlot.currentWeapon = weaponItem;
-            leftHandSlot.LoadWeaponModel(weaponItem);
-            LoadLeftWeaponDamageCollider();
-            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, true);
-            #region Handle Left Weapon Idle Animations
-            if (weaponItem !=  null)
-            {
-                animator.CrossFade(weaponItem.Left_Arm_Idle, 0.2f);
-            }
-            else
-            {
-                animator.CrossFade("Left Arm Empty", 0.2f);
-            }
-            #endregion
+            idleAnimToPlay = weaponItem.Right_Arm_Idle;
         }
-        else
+        else if (weaponItem != null && weaponItem.isUnarmed && !string.IsNullOrEmpty(playerInventory.unarmedWeaponData.Right_Arm_Idle))
         {
-            if (isTwoHanding)
-            {
-                backSlot.LoadWeaponModel(leftHandSlot.currentWeapon);
-                leftHandSlot.UnloadWeaponAndDestroy();
-                animator.CrossFade(weaponItem.Two_Handed_Idle, 0.2f);
-            }
-            else
-            {
-                #region Handle Right Weapon Idle Animations
-
-                animator.CrossFade("Both Arms Empty", .2f);
-
-                backSlot.UnloadWeaponAndDestroy();
-
-                if (weaponItem != null)
-                {
-                    animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
-                }
-                else
-                {
-                    animator.CrossFade("Right Arm Empty", 0.2f);
-                }
-                #endregion
-            }
-
-            rightHandSlot.currentWeapon = weaponItem;
-            rightHandSlot.LoadWeaponModel(weaponItem);
-            LoadRightWeaponDamageCollider();
-            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
+            idleAnimToPlay = playerInventory.unarmedWeaponData.Right_Arm_Idle;
         }
-    }
-
-    private void HandleTwoHandingButtonPressed()
-    {
-        isTwoHanding = !isTwoHanding;
-        playerManager.playerAnimator.IsTwoHanding = isTwoHanding;
-
-        if (isTwoHanding)
-        {
-            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-        }
-        else
-        {
-            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-            LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
-        }
-    }
-
-    #region Handle Weapon's Damage Collider
-
-    private void LoadLeftWeaponDamageCollider()
-    {
-        leftHandDamageCollider = leftHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+        // Debug.Log($"Fading to idle: {idleAnimToPlay}");
+        if (animator != null) animator.CrossFade(idleAnimToPlay, 0.2f);
     }
 
     private void LoadRightWeaponDamageCollider()
     {
-        rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
-    }
-
-    public void OpenDamageCollider()
-    {
-        //if (playerManager.isUsingRightHand)
-        //{
-            rightHandDamageCollider.EnableDamageCollider();
-        //}
-        //else if (playerManager.isUsingLeftHand)
-        //{ 
-            leftHandDamageCollider.EnableDamageCollider();
-        //}
-        
-    }
-
-    public void CloseDamageCollider()
-    {
-        //if (playerManager.isUsingRightHand)
-        //{
-            rightHandDamageCollider.DisableDamageCollider();
-        //}
-        //else if (playerManager.isUsingLeftHand)
-        //{
-            leftHandDamageCollider.DisableDamageCollider();
-        //}
-    }
-
-    #endregion
-
-    #region Handle Weapon's Stamina Consumption
-    public void DrainStaminaLightAttack()
-    {
-        if (attackingWeapon != null)
+        DamageCollider newCollider;
+        if (rightHandSlot.currentWeaponModel != null)
         {
-            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackStaminaMultiplier));
+            newCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+        }
+        else // Unarmed: Try to find a persistent DamageCollider on the player's hand model
+        {
+            newCollider = playerManager.GetComponentInChildren<DamageCollider>(true); // Find inactive ones too
+            if (newCollider != null && newCollider.transform.parent != rightHandSlot.transform) // Ensure it's not a weapon's collider
+            {
+                // This is likely the fist collider.
+            }
+            else
+            {
+                newCollider = null; // Didn't find a dedicated fist collider
+            }
+        }
+
+        rightHandDamageCollider = newCollider;
+
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.Wielder = playerManager; // Set the wielder
+            rightHandDamageCollider.OnDamageableHit += HandleRightHandHit; // Subscribe to the event
+        }
+        else
+        {
+            Debug.LogWarning("No DamageCollider found for right hand/unarmed.");
         }
     }
-    #endregion
+
+    private void HandleRightHandHit(Collider victimCollider)
+    {
+        playerManager.playerAttacker.ProcessHit(victimCollider, attackingWeapon);
+    }
+
+    // Left hand would be similar if/when shields are added
+    // private void LoadLeftWeaponDamageCollider() { ... }
+
+    public void OpenRightHandDamageCollider()
+    {
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.EnableDamageCollider();
+        }
+        else
+        {
+            Debug.LogWarning("Attempted to open Right Hand Damage Collider, but it's null.");
+        }
+    }
+
+    public void CloseRightHandDamageCollider()
+    {
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.DisableDamageCollider();
+        }
+    }
+
+    // Open/CloseLeftHandDamageCollider for shields later
+
+    // Stamina consumption will be triggered by Animation Events on PlayerAnimator
+    // PlayerAnimator would then call these methods on WeaponSlotManager
+    public void DrainStaminaForAttack(PlayerAttackType attackType)
+    {
+        if (attackingWeapon == null || playerStats == null) return;
+
+        float multiplier = 1.0f;
+        switch (attackType)
+        {
+            case PlayerAttackType.LightAttack:
+                multiplier = attackingWeapon.lightAttackStaminaMultiplier;
+                break;
+            case PlayerAttackType.RollAttack:
+                multiplier = attackingWeapon.rollAttackStaminaMultiplier;
+                break;
+            case PlayerAttackType.BackstepAttack:
+                multiplier = attackingWeapon.backstepAttackStaminaMultiplier;
+                break;
+            case PlayerAttackType.JumpAttack:
+                multiplier = attackingWeapon.jumpAttackStaminaMultiplier;
+                break;
+        }
+        playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * multiplier));
+    }
 }

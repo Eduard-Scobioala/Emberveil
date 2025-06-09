@@ -3,42 +3,50 @@ using UnityEngine.UI;
 
 public class WeaponPickUp : Interactable
 {
-    [SerializeField] private WeaponItem weapon;
+    [SerializeField] private WeaponItem weaponToPickUp;
     [SerializeField] private string pickUpAnimation = "Pick_Up_Item";
-    [SerializeField] private float pickUpTime = 1f;
 
     public override void OnInteract(PlayerManager playerManager)
     {
-        base.OnInteract(playerManager);
-
+        if (weaponToPickUp == null)
+        {
+            Debug.LogError("WeaponPickUp: weaponToPickUp is not assigned!", this);
+            return;
+        }
         PickUpItem(playerManager);
     }
 
     private void PickUpItem(PlayerManager playerManager)
     {
-        PlayerInventory playerInventory = playerManager.GetComponent<PlayerInventory>();
-        PlayerLocomotion playerLocomotion = playerManager.GetComponent<PlayerLocomotion>();
-        PlayerAnimator animatorHandler = playerManager.GetComponentInChildren<PlayerAnimator>();
+        if (playerManager.playerAnimator.IsInMidAction) return; // Don't pickup if busy
 
-        playerLocomotion.rigidbody.velocity = Vector3.zero;
-        animatorHandler.PlayTargetAnimation(pickUpAnimation, true);
-        playerInventory.weaponsInventory.Add(weapon);
+        playerManager.playerAnimator.IsInMidAction = true;
+        playerManager.playerLocomotion.rigidbody.velocity = Vector3.zero;
+        playerManager.playerAnimator.PlayTargetAnimation(pickUpAnimation, true);
 
-        Invoke(nameof(DestroyGameObject), pickUpTime);
-    }
+        playerManager.playerInventory.AddWeaponToInventory(weaponToPickUp);
 
-    private void DestroyGameObject()
-    {
-        Destroy(gameObject);
+        // Disable interactable immediately to prevent re-interaction
+        GetComponent<Collider>().enabled = false;
+        // Visually disable or hide the pickup model
+        foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+        foreach (Light l in GetComponentsInChildren<Light>()) l.enabled = false;
+
+
+        // The pickup animation should have an AnimEvent_FinishAction which sets IsInMidAction false.
+        // Destroy this GameObject after a delay (or after animation via another event from PlayerManager)
+        // For simplicity now, destroy after a slight delay. A better way is an event from PlayerManager
+        // when the pickup animation is truly finished.
+        Destroy(gameObject, 2f); // Adjust delay or use animation event system
     }
 
     public override string GetItemName()
     {
-        return weapon.name;
+        return weaponToPickUp != null ? weaponToPickUp.name : "Unknown Weapon";
     }
 
     public override Sprite GetItemIcon()
     {
-        return weapon.itemIcon;
+        return weaponToPickUp != null ? weaponToPickUp.itemIcon : null;
     }
 }
