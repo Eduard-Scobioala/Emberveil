@@ -1,144 +1,132 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 
 public class PlayerInventory : MonoBehaviour
 {
-    public static event Action<WeaponItem> OnEquippedWeaponChanged;
+    public static event Action OnInventoryUpdated; // Fire when any item is added/removed
+    public static event Action OnEquipmentUpdated; // Fire when any equipped item changes
 
-    [Header("References")]
+    [Header("Core References")]
     [SerializeField] private WeaponSlotManager weaponSlotManager;
     [SerializeField] public WeaponItem unarmedWeaponData;
 
-    public WeaponItem EquippedWeapon { get; private set; }
+    // --- Equipped Items ---
+    [Header("Current Loadout")]
+    public WeaponItem[] rightHandWeaponSlots = new WeaponItem[3];
+    public Item leftHandItem; // Could be a shield or other item later
+    public ArmorItem headArmor, bodyArmor, handArmor, legArmor;
+    public TalismanItem[] talismanSlots = new TalismanItem[4];
+    public ConsumableItem[] consumableSlots = new ConsumableItem[2]; // For D-Pad Up/Down
 
-    // Quick Slots for Right Hand Weapons
-    [Tooltip("Maximum 3 weapons for quick slots.")]
-    public WeaponItem[] quickSlotWeapons = new WeaponItem[3];
-    private int currentQuickSlotIndex = -1; // -1 means unarmed, 0-2 for quickSlotWeapons
+    public int currentRightWeaponIndex { get; private set; } = 0; // Index for rightHandWeaponSlots
+    public WeaponItem EquippedRightWeapon => rightHandWeaponSlots[currentRightWeaponIndex];
 
-    [Header("Inventory")]
-    public List<WeaponItem> collectedWeapons = new List<WeaponItem>(); // All weapons player has found
+    // --- Master Item Lists ---
+    [Header("Collected Items")]
+    public List<WeaponItem> weaponsInventory = new();
+    public List<ArmorItem> armorInventory = new();
+    public List<TalismanItem> talismanInventory = new();
+    public List<ConsumableItem> consumableInventory = new();
 
     private void Awake()
     {
-        if (weaponSlotManager == null)
-            weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
-        if (weaponSlotManager == null)
-            Debug.LogError("PlayerInventory: WeaponSlotManager not found!");
-        if (unarmedWeaponData == null)
-            Debug.LogError("PlayerInventory: Unarmed Weapon Data (SO_UnarmedWeapon) not assigned!");
+        if (weaponSlotManager == null) weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
+        if (unarmedWeaponData == null) Debug.LogError("PlayerInventory: Unarmed Weapon Data not assigned!");
     }
 
     private void Start()
     {
-        EquipWeaponFromQuickSlot(0, true); // Force equip initial, even if null
+        // Set initial state
+        EquipWeapon(currentRightWeaponIndex);
     }
 
     private void OnEnable()
     {
         InputHandler.DPadRightButtonPressed += CycleNextWeapon;
+        InputHandler.DPadUpButtonPressed += UseConsumableSlot1;
+        InputHandler.DPadDownButtonPressed += UseConsumableSlot2;
     }
 
     private void OnDisable()
     {
         InputHandler.DPadRightButtonPressed -= CycleNextWeapon;
+        InputHandler.DPadUpButtonPressed -= UseConsumableSlot1;
+        InputHandler.DPadDownButtonPressed -= UseConsumableSlot2;
     }
 
-    public void AddWeaponToInventory(WeaponItem weapon)
+    public void AddItem(Item item)
     {
-        if (weapon != null && !weapon.isUnarmed && !collectedWeapons.Contains(weapon))
-        {
-            collectedWeapons.Add(weapon);
-            Debug.Log($"Added {weapon.name} to inventory.");
-        }
+        if (item is WeaponItem weapon) weaponsInventory.Add(weapon);
+        else if (item is ArmorItem armor) armorInventory.Add(armor);
+        else if (item is TalismanItem talisman) talismanInventory.Add(talisman);
+        else if (item is ConsumableItem consumable) consumableInventory.Add(consumable);
+
+        OnInventoryUpdated?.Invoke();
     }
 
-    public void AssignWeaponToQuickSlot(WeaponItem weapon, int slotIndex)
+    public void RemoveItem(Item item)
     {
-        if (slotIndex < 0 || slotIndex >= quickSlotWeapons.Length)
-        {
-            Debug.LogError($"Invalid quick slot index: {slotIndex}");
-            return;
-        }
-        if (weapon != null && weapon.isUnarmed)
-        {
-            Debug.LogWarning("Cannot assign Unarmed as a quick slot weapon. It's the default.");
-            return;
-        }
+        if (item is WeaponItem weapon) weaponsInventory.Remove(weapon);
+        else if (item is ArmorItem armor) armorInventory.Remove(armor);
+        else if (item is TalismanItem talisman) talismanInventory.Remove(talisman);
+        else if (item is ConsumableItem consumable) consumableInventory.Remove(consumable);
 
-        quickSlotWeapons[slotIndex] = weapon;
-        Debug.Log($"Assigned {weapon?.name ?? "nothing"} to quick slot {slotIndex}.");
-
-        // If this was the currently equipped weapon's slot, re-evaluate equipped weapon
-        if (currentQuickSlotIndex == slotIndex)
-        {
-            EquipWeaponFromQuickSlot(slotIndex); // This will update EquippedWeapon and visuals
-        }
-        OnEquippedWeaponChanged?.Invoke(EquippedWeapon); // Notify UI
+        OnInventoryUpdated?.Invoke();
     }
 
-    public void CycleNextWeapon()
+    // --- Equipment Management ---
+
+    public void EquipWeapon(int slotIndex)
     {
-        if (playerManager != null && playerManager.playerAnimator.IsInMidAction) return; // Don't switch mid-action
+        if (slotIndex < 0 || slotIndex >= rightHandWeaponSlots.Length) return;
 
-        int initialIndex = currentQuickSlotIndex;
-        int nextIndex = currentQuickSlotIndex;
-        int attempts = 0;
-
-        do
-        {
-            nextIndex++;
-            if (nextIndex >= quickSlotWeapons.Length)
-            {
-                nextIndex = -1; // Cycle to unarmed
-            }
-            attempts++;
-            // If next slot is not null OR we've cycled back to unarmed (-1) OR we've tried all slots
-            if (nextIndex == -1 || (quickSlotWeapons[nextIndex] != null && quickSlotWeapons[nextIndex] != EquippedWeapon) || attempts > quickSlotWeapons.Length + 1)
-            {
-                break;
-            }
-        }
-        while (nextIndex != initialIndex && attempts <= quickSlotWeapons.Length + 1); // attempts check prevents infinite loop if all slots are same weapon
-
-        EquipWeaponFromQuickSlot(nextIndex);
+        currentRightWeaponIndex = slotIndex;
+        weaponSlotManager.LoadWeaponOnSlot(EquippedRightWeapon ?? unarmedWeaponData, true);
+        OnEquipmentUpdated?.Invoke();
     }
 
-    // Call this to equip a weapon. Index -1 for unarmed.
-    public void EquipWeaponFromQuickSlot(int slotIndex, bool forceEquip = false)
+    public void EquipArmor(ArmorItem armor)
     {
-        if (!forceEquip && playerManager != null && playerManager.playerAnimator.IsInMidAction) return;
-
-        currentQuickSlotIndex = slotIndex;
-
-        if (slotIndex >= 0 && slotIndex < quickSlotWeapons.Length && quickSlotWeapons[slotIndex] != null)
+        if (armor == null) return;
+        switch (armor.armorType)
         {
-            EquippedWeapon = quickSlotWeapons[slotIndex];
+            case ArmorType.Head: headArmor = armor; break;
+            case ArmorType.Body: bodyArmor = armor; break;
+            case ArmorType.Hands: handArmor = armor; break;
+            case ArmorType.Legs: legArmor = armor; break;
         }
-        else
-        {
-            EquippedWeapon = unarmedWeaponData; // Default to unarmed
-            currentQuickSlotIndex = -1; // Explicitly set index for unarmed
-        }
-
-        // Debug.Log($"Equipping: {EquippedWeapon.name} (Slot: {currentQuickSlotIndex})");
-        weaponSlotManager.LoadWeaponOnSlot(EquippedWeapon, true); // false for right hand
-        OnEquippedWeaponChanged?.Invoke(EquippedWeapon);
+        // TODO: Logic to visually change player model
+        OnEquipmentUpdated?.Invoke();
     }
 
+    // Add similar EquipTalisman, EquipConsumable methods...
 
-    // For UI to get weapon in a slot
-    public WeaponItem GetWeaponInQuickSlot(int slotIndex)
+    // --- Action Handlers ---
+
+    private void CycleNextWeapon()
     {
-        if (slotIndex >= 0 && slotIndex < quickSlotWeapons.Length)
+        if (GetComponent<PlayerManager>().playerAnimator.IsInMidAction) return;
+
+        int nextIndex = currentRightWeaponIndex + 1;
+        if (nextIndex >= rightHandWeaponSlots.Length)
         {
-            return quickSlotWeapons[slotIndex];
+            nextIndex = 0;
         }
-        return null;
+        EquipWeapon(nextIndex);
     }
 
-    // Lazy reference for PlayerManager if needed
-    private PlayerManager _playerManager;
-    private PlayerManager playerManager => _playerManager ??= GetComponent<PlayerManager>();
+    private void UseConsumableSlot1() => UseConsumable(consumableSlots[0]);
+    private void UseConsumableSlot2() => UseConsumable(consumableSlots[1]);
+
+    private void UseConsumable(ConsumableItem consumable)
+    {
+        if (consumable != null && !GetComponent<PlayerManager>().playerAnimator.IsInMidAction)
+        {
+            // TODO: Play use animation, then call consumable.Use() via an animation event
+            consumable.Use(GetComponent<PlayerManager>());
+            // Optional: Remove from inventory if it's a one-time use item
+            // RemoveItem(consumable);
+        }
+    }
 }

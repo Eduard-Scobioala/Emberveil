@@ -35,7 +35,7 @@ public class PlayerAttacker : MonoBehaviour
         if (playerAnimator.IsInMidAction && !playerAnimator.CanDoCombo)
             return;
 
-        WeaponItem currentWeapon = playerInventory.EquippedWeapon;
+        WeaponItem currentWeapon = playerInventory.EquippedRightWeapon;
         if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeaponData;
 
         weaponSlotManager.attackingWeapon = currentWeapon;

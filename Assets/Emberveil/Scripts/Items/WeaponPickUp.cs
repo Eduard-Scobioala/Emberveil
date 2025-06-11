@@ -24,7 +24,7 @@ public class WeaponPickUp : Interactable
         playerManager.playerLocomotion.rigidbody.velocity = Vector3.zero;
         playerManager.playerAnimator.PlayTargetAnimation(pickUpAnimation, true);
 
-        playerManager.playerInventory.AddWeaponToInventory(weaponToPickUp);
+        playerManager.playerInventory.AddItem(weaponToPickUp);
 
         // Disable interactable immediately to prevent re-interaction
         GetComponent<Collider>().enabled = false;

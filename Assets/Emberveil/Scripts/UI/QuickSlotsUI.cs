@@ -3,24 +3,24 @@ using UnityEngine.UI;
 
 public class QuickSlotsUI : MonoBehaviour
 {
-    [SerializeField] Image rightWeaponIcon;
+    [SerializeField] private PlayerInventory inventory;
+    [SerializeField] private Image rightWeaponIcon;
     // [SerializeField] Image leftWeaponIcon; // For shield later
 
     private void OnEnable()
     {
-        PlayerInventory.OnEquippedWeaponChanged += UpdateEquippedWeaponUI;
-        // If you have access to PlayerInventory at start, you can do an initial update
-        // PlayerInventory inv = FindObjectOfType<PlayerInventory>();
-        // if(inv) UpdateEquippedWeaponUI(inv.EquippedWeapon);
+        PlayerInventory.OnEquipmentUpdated += UpdateEquippedWeaponUI;
     }
 
     private void OnDisable()
     {
-        PlayerInventory.OnEquippedWeaponChanged -= UpdateEquippedWeaponUI;
+        PlayerInventory.OnEquipmentUpdated -= UpdateEquippedWeaponUI;
     }
 
-    private void UpdateEquippedWeaponUI(WeaponItem equippedWeapon)
+    private void UpdateEquippedWeaponUI()
     {
+        var equippedWeapon = inventory.EquippedRightWeapon;
+
         if (equippedWeapon != null && !equippedWeapon.isUnarmed && equippedWeapon.itemIcon != null)
         {
             rightWeaponIcon.sprite = equippedWeapon.itemIcon;
@@ -42,8 +42,8 @@ public class QuickSlotsUI : MonoBehaviour
         }
     }
 
-    public void RefreshAllQuickSlots(PlayerInventory playerInventory)
+    public void RefreshAllQuickSlots()
     {
-        UpdateEquippedWeaponUI(playerInventory.EquippedWeapon);
+        UpdateEquippedWeaponUI();
     }
 }

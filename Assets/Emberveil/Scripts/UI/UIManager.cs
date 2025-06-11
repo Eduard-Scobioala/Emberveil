@@ -2,96 +2,106 @@ using UnityEngine;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("Core References")]
+    [SerializeField] private InputHandler inputHandler;
     [SerializeField] private PlayerInventory playerInventory;
-    [SerializeField] private EquipmentWindowUI equipmentWindow;
 
     [Header("UI Windows")]
-    [SerializeField] private GameObject HUDInterface;
+    [SerializeField] private GameObject hudWindow;
+    [SerializeField] private GameObject mainMenuWindow; // Loadout, Inventory, Options buttons
+    [SerializeField] private GameObject equipmentWindow;
+    [SerializeField] private GameObject inventoryWindow;
     [SerializeField] private GameObject optionsWindow;
-    [SerializeField] private GameObject weaponInventoryWindow;
-    [SerializeField] private GameObject equipementInventoryWindow;
 
-    [Header("Weapon Inventory")]
-    [SerializeField] private Transform weaponInventorySlotsParent;
-    [SerializeField] private GameObject weaponInventorySlotPrefab;
+    public bool IsMenuOpen { get; private set; }
 
-    private WeaponInventorySlot[] weaponInventorySlots;
-
-    //public EquipSlotType currentSelectedSlotType;
-
-    private void Start()
+    private void Awake()
     {
-        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-        equipmentWindow.LoadWeaponOnEquipementScreen(playerInventory);
+        if (inputHandler == null) inputHandler = FindObjectOfType<InputHandler>();
     }
 
     private void OnEnable()
     {
-        InputHandler.OptionsButtonPressed += HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed += ToggleMainMenu;
+        InputHandler.UICancelPressed += HandleCancel; // Listen for UI cancel to close menu
     }
 
     private void OnDisable()
     {
-        InputHandler.OptionsButtonPressed -= HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed -= ToggleMainMenu;
+        InputHandler.UICancelPressed -= HandleCancel;
     }
 
-    private void HandleOptionsButtonPressed()
+    public void ToggleMainMenu()
     {
-        bool isHUDActive = HUDInterface.activeSelf;
+        IsMenuOpen = !IsMenuOpen;
 
-        ToggleHUDInterface(!isHUDActive);
-        ToggleOptionsWindow(isHUDActive);
-
-        // ESQ pressed while HUD active - prepare the UI for the Inventory
-        if (isHUDActive)
+        if (IsMenuOpen)
         {
-            UpdateUI();
+            OpenMainMenu();
         }
-        // ESQ pressed while in inventory - close all windows
         else
         {
-            CloseAllInventoryWindows();
+            CloseAllMenus();
         }
     }
 
-    public void ToggleOptionsWindow(bool windowStatus)
+    private void OpenMainMenu()
     {
-        optionsWindow.SetActive(windowStatus);
+        hudWindow.SetActive(false);
+        mainMenuWindow.SetActive(true);
+
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+
+        Time.timeScale = 0f; // Pause game
+        inputHandler.EnableUIInput();
+        // TODO: Select the first button in mainMenuWindow for controller navigation
     }
 
-    public void ToggleHUDInterface(bool windowStatus)
+    public void CloseAllMenus()
     {
-        HUDInterface.SetActive(windowStatus);
+        IsMenuOpen = false;
+        hudWindow.SetActive(true);
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+
+        Time.timeScale = 1f; // Resume game
+        inputHandler.EnableGameplayInput();
+        Cursor.lockState = CursorLockMode.Locked; // Re-lock cursor
+        Cursor.visible = false;
     }
 
-    private void UpdateUI()
+    private void HandleCancel()
     {
-        #region Weapon Inventory Slots
-        for (int i = 0; i < weaponInventorySlots.Length; i++)
+        // If any sub-menu is open (like filtered inventory), close it first.
+        // If only the main menu is open, then close everything.
+        if (IsMenuOpen)
         {
-            //if (i < playerInventory.weaponsInventory.Count)
-            //{
-            //    if (weaponInventorySlots.Length < playerInventory.weaponsInventory.Count)
-            //    {
-            //        Instantiate(weaponInventorySlotPrefab, weaponInventorySlotsParent);
-            //        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-            //    }
-
-            //    weaponInventorySlots[i].AddItem(playerInventory.weaponsInventory[i]);
-            //}
-            //else
-            //{
-            //    weaponInventorySlots[i].ClearInventorySlot();
-            //}
+            // Add more complex logic here if you have deeper menus
+            CloseAllMenus();
         }
-        #endregion
     }
 
-    private void CloseAllInventoryWindows()
+    // --- Methods to be called by main menu buttons ---
+    public void OpenEquipmentWindow()
     {
-        //currentSelectedSlotType = 0;
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(true);
+    }
 
-        weaponInventoryWindow.SetActive(false);
-        equipementInventoryWindow.SetActive(false);
+    public void OpenInventoryWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        inventoryWindow.SetActive(true);
+    }
+
+    public void OpenOptionsWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        optionsWindow.SetActive(true);
     }
 }

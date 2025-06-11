@@ -249,22 +249,22 @@ public class PlayerAnimator : AnimatorManager
 
     public void AnimEvent_DrainLightAttackStamina()
     {
-        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
             weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.LightAttack);
     }
     public void AnimEvent_DrainRollAttackStamina()
     {
-        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
             weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.RollAttack);
     }
     public void AnimEvent_DrainBackstepAttackStamina()
     {
-        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
             weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.BackstepAttack);
     }
     public void AnimEvent_DrainJumpAttackStamina()
     {
-        if (weaponSlotManager != null && playerManager.playerInventory.EquippedWeapon != null)
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
             weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.JumpAttack);
     }
 }
