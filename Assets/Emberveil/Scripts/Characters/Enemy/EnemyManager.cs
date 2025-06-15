@@ -37,6 +37,11 @@ public class EnemyManager : CharacterManager
     public bool isInvincibleDuringStun = false;
     public float hitStunDuration = 0.1f;
 
+    [Header("UI")]
+    [SerializeField] private GameObject healthBarPrefab;
+    [SerializeField] private Transform healthBarAttachPoint;
+    private EnemyHealthBarUI healthBarUI;
+
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
 
@@ -89,6 +94,15 @@ public class EnemyManager : CharacterManager
         initialPosition = transform.position;
         initialRotation = transform.rotation;
 
+        if (healthBarPrefab != null)
+        {
+            GameObject healthBarInstance = Instantiate(healthBarPrefab, healthBarAttachPoint);
+            healthBarUI = healthBarInstance.GetComponent<EnemyHealthBarUI>();
+            // Initialize the UI with the stats component, passing the reference
+            healthBarUI.Initialize(Stats);
+        }
+        else Debug.LogWarning($"Enemy {name} is missing a Health Bar Prefab.");
+
         // Subscribe to events
         Stats.OnDamagedEvent += HandleDamageTaken;
         Stats.OnDeathEvent += HandleDeath;
@@ -134,6 +148,21 @@ public class EnemyManager : CharacterManager
         }
     }
 
+    private void FindAndAssignAttachPoint()
+    {
+        healthBarAttachPoint = transform.Find("HealthBarAttachPoint");
+        if (healthBarAttachPoint == null)
+        {
+            // Create one dynamically if it doesn't exist
+            GameObject attachPointGO = new GameObject("HealthBarAttachPoint");
+            attachPointGO.transform.SetParent(transform);
+            // Position it above the character's head.
+            float height = GetComponent<CapsuleCollider>()?.height ?? 2.0f;
+            attachPointGO.transform.localPosition = new Vector3(0, height + 0.5f, 0);
+            healthBarAttachPoint = attachPointGO.transform;
+        }
+    }
+
     public void SwitchState(IEnemyState newState)
     {
         if (CurrentState == deadState && newState != deadState) return; // Cannot leave dead state except for cleanup
@@ -142,6 +171,14 @@ public class EnemyManager : CharacterManager
         CurrentState = newState;
 
         HasAttackActionConcluded = false;
+
+        if (healthBarUI != null)
+        {
+            // Show health bar if in combat-related states, hide otherwise
+            bool shouldBeVisible = (newState is ChaseState || newState is CombatStanceState ||
+                                    newState is AttackingState || newState is RepositionState);
+            healthBarUI.SetVisibility(shouldBeVisible);
+        }
 
         Debug.Log($"{name} transitioning to {newState.GetType().Name}");
         CurrentState.Enter(this);

@@ -10047,6 +10047,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 44d2cc7e489f2284fa80511b524a3a70, type: 3}
+--- !u!1 &1218857076
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1218857077}
+  m_Layer: 11
+  m_Name: Health Bar Attach Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1218857077
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218857076}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.023, y: 1.85, z: 0.07}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1087054308417739396}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1219695204
 GameObject:
   m_ObjectHideFlags: 0
@@ -11985,6 +12016,9 @@ MonoBehaviour:
   defaultStoppingDistance: 1.6
   isInvincibleDuringStun: 0
   hitStunDuration: 0.1
+  healthBarPrefab: {fileID: 3721031369748802503, guid: 613e2ff5463c30b43add92faf0ff52c6,
+    type: 3}
+  healthBarAttachPoint: {fileID: 1218857077}
 --- !u!114 &1455925455
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25226,6 +25260,7 @@ Transform:
   - {fileID: 5538635033512766916}
   - {fileID: 1378666268892144318}
   - {fileID: 7663441693016756131}
+  - {fileID: 1218857077}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1121367935401666288

@@ -5,8 +5,10 @@ public class EnemyStats : CharacterStats
 {
     public event Action<int, DamageType, Transform> OnDamagedEvent;
     public event Action OnDeathEvent;
+    public event Action<int, int> OnHealthChanged; // First int: currentHealth, Second int: maxHealth
 
     private EnemyManager enemyManager;
+    private EnemyHealthBarUI healthBarUI;
 
     [Header("Enemy Specific Stats")]
     [SerializeField] private int baseHealthAmount = 100;
@@ -27,6 +29,9 @@ public class EnemyStats : CharacterStats
     {
         maxHealth = CalculateMaxHealth();
         currentHealth = maxHealth;
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
         currentPoise = poise;
         isDead = false;
     }
@@ -64,6 +69,7 @@ public class EnemyStats : CharacterStats
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}/{maxHealth}");
 
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnDamagedEvent?.Invoke(damage, damageType, attacker); // Notify EnemyManager
 
         if (currentHealth <= 0)
@@ -72,6 +78,7 @@ public class EnemyStats : CharacterStats
             if (!isDead) // Ensure OnDeathEvent is invoked only once
             {
                 isDead = true;
+                if (healthBarUI != null) healthBarUI.gameObject.SetActive(false);
                 OnDeathEvent?.Invoke(); // Notify EnemyManager
             }
         }
@@ -87,7 +94,7 @@ public class EnemyStats : CharacterStats
     {
         if (isDead) return;
 
-        currentHealth += amount;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 }
