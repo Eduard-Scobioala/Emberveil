@@ -4,16 +4,19 @@ using TMPro;
 
 public class ItemInfoPanelUI : MonoBehaviour
 {
+    [SerializeField] private Image itemIcon;
     [SerializeField] private TMP_Text itemNameText;
     [SerializeField] private TMP_Text itemDescriptionText;
-    [SerializeField] private Image itemIcon; // Optional, for larger icon
+    [SerializeField] private TMP_Text itemStatsText;
 
     public void DisplayItemInfo(Item item)
     {
         if (item != null)
         {
-            itemNameText.text = item.name;
-            itemDescriptionText.text = item.itemText; // Assumes itemText is the description
+            gameObject.SetActive(true);
+            itemNameText.text = item.itemName;
+            itemDescriptionText.text = item.itemDescription;
+            itemStatsText.text = item.GetItemStatsText();
             if (itemIcon != null)
             {
                 itemIcon.sprite = item.itemIcon;
@@ -26,14 +29,29 @@ public class ItemInfoPanelUI : MonoBehaviour
         }
     }
 
-    public void ClearPanel()
+    public void DisplayUnequipInfo()
     {
-        itemNameText.text = "";
-        itemDescriptionText.text = "";
+        gameObject.SetActive(true);
+        itemNameText.text = "Unequip";
+        itemDescriptionText.text = "Remove the item from this slot.";
+        itemStatsText.text = "";
         if (itemIcon != null)
         {
             itemIcon.sprite = null;
             itemIcon.enabled = false;
         }
+    }
+
+    public void ClearPanel()
+    {
+        itemNameText.text = "";
+        itemDescriptionText.text = "";
+        itemStatsText.text = "";
+        if (itemIcon != null)
+        {
+            itemIcon.sprite = null;
+            itemIcon.enabled = false;
+        }
+        gameObject.SetActive(false);
     }
 }

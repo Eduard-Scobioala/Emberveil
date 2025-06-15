@@ -655,12 +655,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4129162139449587017}
   serializedVersion: 2
-  m_LocalRotation: {x: -1.0083177e-16, y: -0.035830766, z: -1.1722682e-15, w: 0.9993579}
-  m_LocalPosition: {x: 27.11449, y: -2.842171e-14, z: 0.038136087}
-  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_LocalRotation: {x: 0.000000117479594, y: 0.000000033527606, z: -0.000000040631626,
+    w: 1}
+  m_LocalPosition: {x: 0.00005876389, y: 0, z: 0}
+  m_LocalScale: {x: 0.7999999, y: 0.8000001, z: 0.80000025}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 6860482255062394148}
+  m_Father: {fileID: 2483169033807091771}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4253642186227753453
 GameObject:
@@ -870,11 +871,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 674755289205537802}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 1
-  isRightHandSlot: 0
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!1 &5353741786140800318
 GameObject:
   m_ObjectHideFlags: 0
@@ -1195,7 +1191,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1506167395937801292}
   - component: {fileID: 5694337870150742952}
-  - component: {fileID: 6844446258454229948}
   - component: {fileID: 3621209575734056447}
   m_Layer: 10
   m_Name: Character
@@ -1241,20 +1236,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &6844446258454229948
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5855861412599736176}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b99295519dceed94dae16522f2c04f93, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  anim: {fileID: 0}
-  canRotate: 1
 --- !u!114 &3621209575734056447
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1267,9 +1248,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1df180205d10a443b5aef398a17ea1c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerManager: {fileID: 0}
   playerInventory: {fileID: 5996394775482851198}
-  attackingWeapon: {fileID: 0}
-  isTwoHanding: 0
+  playerStats: {fileID: 0}
+  animator: {fileID: 0}
+  rightHandSlot: {fileID: 0}
 --- !u!1 &6059567129464112901
 GameObject:
   m_ObjectHideFlags: 0
@@ -1537,11 +1520,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 8000449791007916375}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 0
-  isRightHandSlot: 0
-  isBackSlot: 1
-  currentWeaponModel: {fileID: 0}
 --- !u!1 &7199271736650608615
 GameObject:
   m_ObjectHideFlags: 0
@@ -1639,6 +1617,7 @@ Transform:
   - {fileID: 5307436327758820620}
   - {fileID: 9000041190425344522}
   - {fileID: 8630447344912912905}
+  - {fileID: 1793920268228402819}
   m_Father: {fileID: 6860482255062394148}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4758398573691250198
@@ -1654,11 +1633,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 1793920268228402819}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 0
-  isRightHandSlot: 1
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!1 &7392619686556425504
 GameObject:
   m_ObjectHideFlags: 0
@@ -1766,18 +1740,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lockOnTransform: {fileID: 6191335808686067161}
-  isInMidAction: 0
-  isInvulnerable: 0
   isBeingCriticallyHit: 0
   backstabReceiverPoint: {fileID: 5021777785780805348}
   beingBackstabbedAnimation: Backstab_Main_Victim_01
   canBeBackstabbed: 1
+  charAnimManager: {fileID: 0}
+  playerAttacker: {fileID: 0}
+  playerLocomotion: {fileID: 0}
   playerInventory: {fileID: 0}
+  playerAnimator: {fileID: 0}
   isSprinting: 0
-  isInAir: 0
-  isGrounded: 0
-  canDoCombo: 0
-  isCrouching: 0
+  pendingCommandInterval: 0.2
   currentBackstabTarget: {fileID: 0}
 --- !u!114 &3569286514129032211
 MonoBehaviour:
@@ -1803,14 +1776,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f020a938df78ddf409d5f43e42e59780, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unarmedWeapon: {fileID: 11400000, guid: 7f9c2f1299d671b4381e6cadf753c650, type: 2}
-  weaponsInRightHandSlots:
-  - {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
-  - {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
-  weaponsInLeftHandSlots:
-  - {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
-  - {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
+  weaponSlotManager: {fileID: 0}
+  unarmedWeaponData: {fileID: 0}
+  rightHandWeaponSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  leftHandItem: {fileID: 0}
+  headArmor: {fileID: 0}
+  bodyArmor: {fileID: 0}
+  handArmor: {fileID: 0}
+  legArmor: {fileID: 0}
+  talismanSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  consumableSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   weaponsInventory: []
+  armorInventory: []
+  talismanInventory: []
+  consumableInventory: []
 --- !u!114 &2719513274266845588
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1830,7 +1825,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2048
   playerBackstabAnimation: Backstab_Main_01
-  playerSnapSpeed: 15
 --- !u!114 &8842606515577052609
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1856,6 +1850,9 @@ MonoBehaviour:
   baseStaminaAmout: 100
   staminaRegenAmount: 10
   staminaRegenDelay: 1
+  frontHitAnimation: Damage_Front_01
+  backHitAnimation: Damage_Back_01
+  genericHitAnimation: Damage_01
 --- !u!114 &134953928314530544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1875,10 +1872,15 @@ MonoBehaviour:
   sprintSpeed: 7
   crouchSpeed: 3
   rotationSpeed: 18
+  actionRotationSpeed: 7
   jumpForce: 5
   airControlFactor: 0.5
+  maxAirSpeed: 4
   customGravity: 35
   maxFallSpeed: 350
+  dodgeStaminaCost: 10
+  jumpStaminaCost: 8
+  sprintTickStaminaCost: 8
   lockOnStrafeSpeedMultiplier: 1
   lockOnBackwardSpeedMultiplier: 0.8
   groundDetectionRayStartPoint: 0.5
@@ -2310,7 +2312,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2483169033807091771}
-  - {fileID: 1793920268228402819}
   m_Father: {fileID: 5681295303666701620}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9166447935805056259

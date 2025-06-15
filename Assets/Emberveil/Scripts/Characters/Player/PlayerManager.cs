@@ -13,7 +13,7 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    private InteractableUI interactableUI;
+    public InteractableUI interactableUI;
     private PlayerStats playerStats;
 
     public PlayerAttacker playerAttacker;

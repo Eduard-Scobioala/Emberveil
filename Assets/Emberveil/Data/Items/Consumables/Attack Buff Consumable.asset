@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fce0e5d0b3756c4d93df2bd8155cbca, type: 3}
+  m_Name: Attack Buff Consumable
+  m_EditorClassIdentifier: 
+  itemIcon: {fileID: 21300000, guid: b23087b91127e1a478203922653f74ac, type: 3}
+  itemName: Elixir of the Shattered Peak
+  itemDescription: A murky brew distilled from the bones of mountain giants. Drinking
+    it sets the blood ablaze, lending unnatural strength for a fleeting moment.
+  itemStatsText: +20 Attack Power for 40 seconds.
+  isDroppable: 1
+  itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
+    type: 3}
+  useAnimation: 
+  attackBonus: 20
+  buffDuration: 40

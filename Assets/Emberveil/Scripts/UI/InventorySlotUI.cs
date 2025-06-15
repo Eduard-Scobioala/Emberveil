@@ -14,6 +14,7 @@ public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     {
         heldItem = item;
         parentWindow = parent;
+
         icon.sprite = item.itemIcon;
         icon.enabled = true;
         if (equippedIndicator != null) equippedIndicator.SetActive(false);

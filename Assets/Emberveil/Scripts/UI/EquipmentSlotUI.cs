@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
-public enum EquipmentSlotCategory { RightHand, LeftHand, Head, Body, Hands, Legs, Talisman, Consumable }
+public enum EquipmentSlotCategory { RightHand, LeftHand, Armor, Head, Body, Hands, Legs, Talisman, Consumable }
 
-public class EquipmentSlotUI : MonoBehaviour
+public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandler
 {
     [Header("Slot Info")]
     public EquipmentSlotCategory slotCategory;
@@ -12,7 +13,9 @@ public class EquipmentSlotUI : MonoBehaviour
 
     [Header("UI References")]
     [SerializeField] private Image icon;
-    [SerializeField] private TMP_Text itemNameText; // Optional
+    [SerializeField] private TMP_Text itemNameText;
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private ItemInfoPanelUI itemInfoPanel;
 
     private Item currentItem;
 
@@ -35,9 +38,23 @@ public class EquipmentSlotUI : MonoBehaviour
 
     public void OnSlotClicked()
     {
-        // Tell the UIManager or EquipmentWindow to open the filtered inventory
-        // for this slot type and index.
-        Debug.Log($"Clicked on slot: {slotCategory}, index: {slotIndex}");
-        // FindObjectOfType<UIManager>().ShowFilteredInventoryForSlot(this);
+        uiManager.ShowInventoryForSelection(this);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayItemInfo(currentItem);
+        }
+    }
+
+    // For controller navigation
+    public void OnSelect(BaseEventData eventData)
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayItemInfo(currentItem);
+        }
     }
 }

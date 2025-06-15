@@ -12,12 +12,16 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject equipmentWindow;
     [SerializeField] private GameObject inventoryWindow;
     [SerializeField] private GameObject optionsWindow;
+    [SerializeField] private GameObject itemInfoWindow;
+    [SerializeField] private InventoryWindowUI inventoryWindowUI;
+    [SerializeField] private GameObject statusWindow;
 
     public bool IsMenuOpen { get; private set; }
 
     private void Awake()
     {
         if (inputHandler == null) inputHandler = FindObjectOfType<InputHandler>();
+        if (inventoryWindowUI == null) inventoryWindowUI = inventoryWindow.GetComponent<InventoryWindowUI>();
     }
 
     private void OnEnable()
@@ -54,9 +58,12 @@ public class UIManager : MonoBehaviour
         equipmentWindow.SetActive(false);
         inventoryWindow.SetActive(false);
         optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
 
-        Time.timeScale = 0f; // Pause game
+        //Time.timeScale = 0f; // Pause game
         inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None; // Re-lock cursor
+        Cursor.visible = true;
         // TODO: Select the first button in mainMenuWindow for controller navigation
     }
 
@@ -68,8 +75,12 @@ public class UIManager : MonoBehaviour
         equipmentWindow.SetActive(false);
         inventoryWindow.SetActive(false);
         optionsWindow.SetActive(false);
+        itemInfoWindow.SetActive(false);
+        statusWindow.SetActive(false);
 
-        Time.timeScale = 1f; // Resume game
+        inventoryWindowUI?.ExitSelectionMode();
+
+        //Time.timeScale = 1f; // Resume game
         inputHandler.EnableGameplayInput();
         Cursor.lockState = CursorLockMode.Locked; // Re-lock cursor
         Cursor.visible = false;
@@ -84,6 +95,20 @@ public class UIManager : MonoBehaviour
             // Add more complex logic here if you have deeper menus
             CloseAllMenus();
         }
+    }
+
+    public void ShowInventoryForSelection(EquipmentSlotUI clickedSlot)
+    {
+        if (inventoryWindowUI == null) return;
+
+        // Hide other windows
+        equipmentWindow.SetActive(false);
+
+        // Tell the inventory window to open in selection mode
+        inventoryWindowUI.OpenInSelectionMode(clickedSlot.slotCategory, clickedSlot.slotIndex);
+
+        // Show the inventory window
+        inventoryWindow.SetActive(true);
     }
 
     // --- Methods to be called by main menu buttons ---
@@ -103,5 +128,11 @@ public class UIManager : MonoBehaviour
     {
         mainMenuWindow.SetActive(false);
         optionsWindow.SetActive(true);
+    }
+
+    public void OpenStatusWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        statusWindow.SetActive(true);
     }
 }

@@ -1,4 +1,14 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+
+// Struct to hold information about an active buff for the UI
+public struct ActiveBuffInfo
+{
+    public string BuffName;
+    public Sprite BuffIcon;
+    public float RemainingDuration;
+}
 
 public class PlayerStats : CharacterStats
 {
@@ -7,17 +17,30 @@ public class PlayerStats : CharacterStats
 
     private PlayerAnimator playerAnimator;
     private PlayerManager playerManager;
+    private PlayerInventory playerInventory;
+
+    [Header("Hit Animation Names")]
+    [SerializeField] private string frontHitAnimation = "Damage_Front_01";
+    [SerializeField] private string backHitAnimation = "Damage_Back_01";
+    [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
 
     [Header("Stats Settings")]
     [SerializeField] private int baseHealthAmout = 300;
     [SerializeField] private int baseStaminaAmout = 100;
     [SerializeField] private float staminaRegenAmount = 10;
     [SerializeField] private float staminaRegenDelay = 1;
+    [SerializeField] private int baseDefense = 5;
 
-    [Header("Hit Animation Names")]
-    [SerializeField] private string frontHitAnimation = "Damage_Front_01";
-    [SerializeField] private string backHitAnimation = "Damage_Back_01";
-    [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
+    // Buffs
+    public int CurrentAttackBuff { get; private set; } = 0;
+    public float CurrentStaminaRegenBuff { get; private set; } = 0f;
+
+    private Dictionary<string, Coroutine> activeBuffCoroutines = new ();
+    private List<ActiveBuffInfo> activeBuffsForUI = new ();
+
+    public float FinalStaminaRegen => staminaRegenAmount + CurrentStaminaRegenBuff;
+    public int TotalAttackPower => CalculateAttackDamage(playerManager.playerInventory.EquippedRightWeapon, PlayerAttackType.LightAttack);
+    public int TotalDefense => baseDefense; // Later this will be: baseDefense + armorDefense;
 
     private float staminaRegenTimer = 0;
 
@@ -25,19 +48,12 @@ public class PlayerStats : CharacterStats
     {
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
         playerManager = GetComponent<PlayerManager>();
+        playerInventory = GetComponent<PlayerInventory>();
     }
 
     private void Start()
     {
-        maxHealth = GetMaxHealthBasedOnHealthLevel();
-        currentHealth = maxHealth;
-        if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
-        else Debug.LogWarning("PlayerStats: HealthBar reference not set.");
-
-        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
-        currentStamina = maxStamina;
-        if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
-        else Debug.LogWarning("PlayerStats: StaminaBar reference not set.");
+        RecalculateStats();
     }
 
     private void Update()
@@ -45,32 +61,123 @@ public class PlayerStats : CharacterStats
         RegenerateStamina();
     }
 
+    private void OnEnable()
+    {
+        PlayerInventory.OnEquipmentUpdated += RecalculateStats;
+    }
+
+    private void OnDisable()
+    {
+        PlayerInventory.OnEquipmentUpdated -= RecalculateStats;
+    }
+
+    private void RecalculateStats()
+    {
+        // Temporarily store current health/stamina percentages
+        float healthPercent = (maxHealth > 0) ? (float)currentHealth / maxHealth : 1f;
+        float staminaPercent = (maxStamina > 0) ? currentStamina / maxStamina : 1f;
+
+        // --- Calculate Max Health
+        maxHealth = GetMaxHealthBasedOnHealthLevel();
+
+        // --- Calculate Max Stamina
+        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
+
+        // Apply new max values while retaining percentage
+        currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
+        currentStamina = maxStamina * staminaPercent;
+
+        // Update UI bars with new max values
+        if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
+        if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
+
+        // Update current values on UI
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
+
+        Debug.Log($"Stats recalculated. New MaxHP: {maxHealth}, New MaxStamina: {maxStamina}");
+    }
+
     private int GetMaxHealthBasedOnHealthLevel()
     {
-        int levelBasedGainedHealth = 0;
+        int levelBasedHealth = 0;
 
         if (healthLevel < 27)
         {
-            levelBasedGainedHealth = 20 * healthLevel;
+            levelBasedHealth = 20 * healthLevel;
         }
         else if (healthLevel >= 27 && healthLevel <= 49)
         {
-            levelBasedGainedHealth = 540 + 13 * (healthLevel - 26);
+            levelBasedHealth = 540 + 13 * (healthLevel - 26);
         }
         else if (healthLevel > 49)
         {
-            levelBasedGainedHealth = 858 + 5 * (healthLevel - 49);
+            levelBasedHealth = 858 + 5 * (healthLevel - 49);
         }
-        
-        return baseHealthAmout + levelBasedGainedHealth;
+
+        int baseValue = baseHealthAmout + levelBasedHealth;
+
+        // Apply Talisman Bonuses
+        float totalHealthMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalHealthMultiplier += talisman.healthBonusMultiplier;
+            }
+        }
+
+        return Mathf.RoundToInt(baseValue * totalHealthMultiplier);
     }
 
     private float GetMaxStaminaBasedOnStaminaLevel()
     {
-        return baseStaminaAmout + staminaLevel * 5;
+        float baseValue = baseStaminaAmout + staminaLevel * 5;
+
+        // Apply Talisman Bonuses ---
+        float totalStaminaMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalStaminaMultiplier += talisman.staminaBonusMultiplier;
+            }
+        }
+
+        return baseValue * totalStaminaMultiplier;
     }
 
-    public void TakeDamange(int damange, Transform attackerTransform = null)
+    public int CalculateAttackDamage(WeaponItem weapon, PlayerAttackType attackType)
+    {
+        if (weapon == null) weapon = playerInventory.unarmedWeaponData; // Ensure we have data
+
+        int baseWeaponDamage = 0;
+        switch (attackType)
+        {
+            case PlayerAttackType.LightAttack: baseWeaponDamage = weapon.lightAttackDmg; break;
+            case PlayerAttackType.RollAttack: baseWeaponDamage = weapon.rollAttackDmg; break;
+            case PlayerAttackType.BackstepAttack: baseWeaponDamage = weapon.backstepAttackDmg; break;
+            case PlayerAttackType.JumpAttack: baseWeaponDamage = weapon.jumpAttackDmg; break;
+            default: baseWeaponDamage = weapon.lightAttackDmg; break;
+        }
+
+        // Combine base stats and weapon damage
+        int preMultiplierDamage = baseAttackPower + baseWeaponDamage + CurrentAttackBuff;
+
+        // Apply Talisman Damage Multiplier
+        float totalDamageMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalDamageMultiplier *= talisman.totalDamageMultiplier; // Multipliers should multiply each other
+            }
+        }
+
+        return Mathf.RoundToInt(preMultiplierDamage * totalDamageMultiplier);
+    }
+
+    public void TakeDamange(int damage, Transform attackerTransform = null)
     {
         if (isDead)
             return;
@@ -78,7 +185,9 @@ public class PlayerStats : CharacterStats
         if (playerAnimator.IsInvulnerable)
             return;
 
-        currentHealth -= damange;
+        int damageAfterDefense = Mathf.Max(1, damage - TotalDefense);
+
+        currentHealth -= damageAfterDefense;
         healthBar.SetCurrentStatValue(currentHealth);
 
         if (!playerManager.isBeingCriticallyHit && currentHealth > 0)
@@ -153,6 +262,12 @@ public class PlayerStats : CharacterStats
         staminaRegenTimer = 0;
     }
 
+    public void Heal(int amount)
+    {
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
+    }
+
     public void RegenerateStamina()
     {
         if (currentStamina >= maxStamina)
@@ -168,12 +283,77 @@ public class PlayerStats : CharacterStats
 
         if (staminaRegenTimer > staminaRegenDelay)
         {
-            currentStamina += staminaRegenAmount * Time.deltaTime;
-            if (currentStamina > maxStamina)
-            {
-                currentStamina = maxStamina;
-            }
+            float finalRegenAmount = staminaRegenAmount + CurrentStaminaRegenBuff;
+
+            currentStamina += finalRegenAmount * Time.deltaTime;
+            if (currentStamina > maxStamina) currentStamina = maxStamina;
             if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
         }
+    }
+
+    // --- Buff Application Methods ---
+    public void ApplyAttackBuff(int attackBonus, float duration, ConsumableItem sourceItem)
+    {
+        // If a buff of the same type is already active, stop the old one before starting the new one
+        if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
+        {
+            StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
+            // We need to manually remove the old buff's value before adding the new one
+            // This is complex. A simpler approach for now is just to stack or overwrite. Let's stack.
+        }
+        activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(AttackBuffCoroutine(attackBonus, duration, sourceItem));
+    }
+
+    private IEnumerator AttackBuffCoroutine(int attackBonus, float duration, ConsumableItem sourceItem)
+    {
+        CurrentAttackBuff += attackBonus;
+        var buffInfo = new ActiveBuffInfo { BuffName = sourceItem.itemName, BuffIcon = sourceItem.itemIcon, RemainingDuration = duration };
+        activeBuffsForUI.Add(buffInfo);
+
+        while (buffInfo.RemainingDuration > 0)
+        {
+            buffInfo.RemainingDuration -= Time.deltaTime;
+            // Update the entry in the list
+            int index = activeBuffsForUI.FindIndex(b => b.BuffName == sourceItem.itemName);
+            if (index != -1) activeBuffsForUI[index] = buffInfo;
+            yield return null;
+        }
+
+        CurrentAttackBuff -= attackBonus;
+        activeBuffCoroutines.Remove(sourceItem.itemName);
+        activeBuffsForUI.RemoveAll(b => b.BuffName == sourceItem.itemName);
+    }
+
+    public void ApplyStaminaBuff(float regenBonus, float duration, ConsumableItem sourceItem)
+    {
+        if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
+        {
+            StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
+        }
+        activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(StaminaBuffCoroutine(regenBonus, duration, sourceItem));
+    }
+
+    private IEnumerator StaminaBuffCoroutine(float regenBonus, float duration, ConsumableItem sourceItem)
+    {
+        CurrentStaminaRegenBuff += regenBonus;
+        var buffInfo = new ActiveBuffInfo { BuffName = sourceItem.itemName, BuffIcon = sourceItem.itemIcon, RemainingDuration = duration };
+        activeBuffsForUI.Add(buffInfo);
+
+        while (buffInfo.RemainingDuration > 0)
+        {
+            buffInfo.RemainingDuration -= Time.deltaTime;
+            int index = activeBuffsForUI.FindIndex(b => b.BuffName == sourceItem.itemName);
+            if (index != -1) activeBuffsForUI[index] = buffInfo;
+            yield return null;
+        }
+
+        CurrentStaminaRegenBuff -= regenBonus;
+        activeBuffCoroutines.Remove(sourceItem.itemName);
+        activeBuffsForUI.RemoveAll(b => b.BuffName == sourceItem.itemName);
+    }
+
+    public List<ActiveBuffInfo> GetActiveBuffs()
+    {
+        return activeBuffsForUI;
     }
 }

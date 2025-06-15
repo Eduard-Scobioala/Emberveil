@@ -12,13 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72833b8d56fd78349819f86515ffc9b6, type: 3}
   m_Name: Unarmed
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: 0}
-  itemText: 
-  modelPrefab: {fileID: 5484293387093902071, guid: 73081e6e94473fa4c992481737fdaf1c,
+  itemIcon: {fileID: 21300000, guid: 70c7347bc8fe2e84babfcbf207d5314a, type: 3}
+  itemName: 
+  itemDescription: 
+  itemStatsText: 
+  isDroppable: 1
+  itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
+    type: 3}
+  modelPrefab: {fileID: 3206114117615877577, guid: f4397f9324ffc7343a582cdeac959833,
     type: 3}
   isUnarmed: 1
   Right_Arm_Idle: Right Arm Empty
-  Left_Arm_Idle: Left Arm Empty
+  Two_Handed_Idle: 
   OH_Light_Attack_01: 
   OH_Light_Attack_02: 
-  OH_Heavy_Attack_01: 
+  TH_Light_Attack_01: 
+  TH_Light_Attack_02: 
+  OH_Roll_Attack_01: 
+  OH_Backstep_Attack_01: 
+  OH_Jump_Attack_Start: 
+  OH_Jump_Attack_Idle: 
+  OH_Jump_Attack_End: 
+  baseStamina: 0
+  lightAttackStaminaMultiplier: 0
+  rollAttackStaminaMultiplier: 1.2
+  backstepAttackStaminaMultiplier: 1
+  jumpAttackStaminaMultiplier: 1.1
+  lightAttackDmg: 0
+  rollAttackDmg: 0
+  backstepAttackDmg: 0
+  jumpAttackDmg: 0
+  critDmgMultiplier: 2

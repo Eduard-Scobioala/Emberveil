@@ -12,5 +12,8 @@ public class CharacterStats : MonoBehaviour
     public float maxStamina;
     public float currentStamina;
 
+    [Header("Combat Stats")]
+    public int baseAttackPower = 10;
+
     public bool isDead = false;
 }

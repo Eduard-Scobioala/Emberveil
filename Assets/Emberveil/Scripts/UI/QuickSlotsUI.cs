@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,12 +8,13 @@ public class QuickSlotsUI : MonoBehaviour
     [SerializeField] private Image rightWeaponIcon;
     // [SerializeField] Image leftWeaponIcon; // For shield later
 
-    private void OnEnable()
+    private void Awake()
     {
+        if (inventory == null) Debug.LogError("Inventory reference not set for Quick Slots UI");
         PlayerInventory.OnEquipmentUpdated += UpdateEquippedWeaponUI;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         PlayerInventory.OnEquipmentUpdated -= UpdateEquippedWeaponUI;
     }
