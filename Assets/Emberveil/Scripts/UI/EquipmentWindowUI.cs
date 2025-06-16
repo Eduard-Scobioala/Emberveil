@@ -78,17 +78,19 @@ public class EquipmentWindowUI : MonoBehaviour
         // --- Consumable Slots ---
         for (int i = 0; i < consumableSlots.Count; i++)
         {
-            if (i < playerInventory.consumableSlots.Length)
+            if (consumableSlots[i] != null) // Check the UI slot exists
             {
-                consumableSlots[i].UpdateSlot(playerInventory.consumableSlots[i]);
-            }
-            else
-            {
-                consumableSlots[i].UpdateSlot(null);
+                if (i < playerInventory.consumableQuickSlots.Count)
+                {
+                    InventorySlot inventorySlot = playerInventory.consumableQuickSlots[i];
+                    // Pass the item from the slot, which can be null if the slot is empty
+                    consumableSlots[i].UpdateSlot(inventorySlot?.item);
+                }
+                else
+                {
+                    consumableSlots[i].UpdateSlot(null);
+                }
             }
         }
-
-        // --- Left Hand Slot ---
-        // if(leftHandSlots.Count > 0) leftHandSlots[0].UpdateSlot(playerInventory.leftHandItem);
     }
 }

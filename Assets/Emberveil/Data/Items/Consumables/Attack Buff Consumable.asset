@@ -16,7 +16,7 @@ MonoBehaviour:
   itemName: Elixir of the Shattered Peak
   itemDescription: A murky brew distilled from the bones of mountain giants. Drinking
     it sets the blood ablaze, lending unnatural strength for a fleeting moment.
-  itemStatsText: +20 Attack Power for 40 seconds.
+  itemStatsText: +20 Attack Power for 40 s
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
     type: 3}

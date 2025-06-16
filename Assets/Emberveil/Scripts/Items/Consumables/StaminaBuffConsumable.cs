@@ -13,9 +13,7 @@ public class StaminaBuffConsumable : ConsumableItem
         PlayerStats playerStats = playerManager.GetComponent<PlayerStats>();
         if (playerStats != null)
         {
-            // PlayerStats will need a method to handle this
             playerStats.ApplyStaminaBuff(staminaRegenBonus, buffDuration, this);
-            playerManager.playerInventory.RemoveItem(this); // Consumed on use
         }
     }
 }

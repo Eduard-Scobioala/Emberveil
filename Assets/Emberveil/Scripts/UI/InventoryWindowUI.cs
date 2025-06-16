@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 
 public class InventoryWindowUI : MonoBehaviour
@@ -142,7 +144,7 @@ public class InventoryWindowUI : MonoBehaviour
         }
 
         // Populate based on current tab
-        IEnumerable<Item> itemsToPopulateWith = currentTabIndex switch
+        IEnumerable<InventorySlot> slotsToDisplay = currentTabIndex switch
         {
             0 => playerInventory.weaponsInventory,
             1 => playerInventory.armorInventory,
@@ -151,12 +153,18 @@ public class InventoryWindowUI : MonoBehaviour
             _ => null
         };
 
-        if (itemsToPopulateWith is List<ArmorItem> armorItems && isInSelectionMode)
+        if (currentTabIndex == 1 && isInSelectionMode)
         {
-            itemsToPopulateWith = armorItems.Where(item => item.armorType == SlotCategoryToArmorType(equipmentTypeFilter));
+            ArmorType typeToFilter = SlotCategoryToArmorType(selectionCategory);
+            slotsToDisplay = playerInventory.armorInventory.Where(slot => (slot.item as ArmorItem)?.armorType == typeToFilter).ToList();
         }
 
-        PopulateGrid(itemsToPopulateWith);
+        PopulateGrid(slotsToDisplay);
+    }
+
+    private Func<InventorySlot, bool> ItemIsOfArmorType(ArmorType armorType)
+    {
+        return slot => (slot.item as ArmorItem).armorType == armorType;
     }
 
     private ArmorType SlotCategoryToArmorType(EquipmentSlotCategory slotCategory)
@@ -171,18 +179,16 @@ public class InventoryWindowUI : MonoBehaviour
         };
     }
 
-    private void PopulateGrid(IEnumerable<Item> items)
+    private void PopulateGrid(IEnumerable<InventorySlot> slots)
     {
-        foreach (var item in items)
+        foreach (var slotData in slots)
         {
             GameObject slotGO = Instantiate(inventorySlotPrefab, itemGridParent);
             InventorySlotUI slotUI = slotGO.GetComponent<InventorySlotUI>();
             if (slotUI != null)
             {
-                slotUI.Initialize(item, this);
-
-                // Check if item is equipped and show the dot indicator
-                slotUI.SetEquipped(playerInventory.IsItemEquipped(item));
+                slotUI.Initialize(slotData, this); // Pass the whole InventorySlot
+                slotUI.SetEquipped(playerInventory.IsItemEquipped(slotData.item));
             }
         }
     }
@@ -220,7 +226,12 @@ public class InventoryWindowUI : MonoBehaviour
     {
         if (item != null)
         {
-            playerInventory.UseConsumable(item);
+            // Find the corresponding inventory slot to pass to UseConsumable
+            InventorySlot slotToUse = playerInventory.consumableInventory.FirstOrDefault(s => s.item == item);
+            if (slotToUse != null)
+            {
+                playerInventory.UseConsumable(slotToUse);
+            }
         }
     }
 

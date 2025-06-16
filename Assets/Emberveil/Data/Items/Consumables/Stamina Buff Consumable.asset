@@ -17,7 +17,7 @@ MonoBehaviour:
   itemDescription: A vial of iridescent liquid that hums like wind through canyon
     stones. Gulping it sharpens the breath, letting warriors fight longer without
     rest.
-  itemStatsText: +20 Stamina Regeneration for 40 seconds
+  itemStatsText: +20 Stamina Regen. for 40 s
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
     type: 3}

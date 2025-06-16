@@ -15,7 +15,6 @@ public class AttackBuffConsumable : ConsumableItem
         {
             // PlayerStats will need a method to handle this
             playerStats.ApplyAttackBuff(attackBonus, buffDuration, this);
-            playerManager.playerInventory.RemoveItem(this);
         }
     }
 }

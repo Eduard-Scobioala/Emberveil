@@ -14,11 +14,6 @@ public class HealthConsumable : ConsumableItem
         if (playerStats != null)
         {
             playerStats.Heal(healthRestoreAmount);
-            // If it's the main flask, PlayerInventory will handle decrementing its count
-            if (!isFlask)
-            {
-                playerManager.playerInventory.RemoveItem(this);
-            }
         }
     }
 }

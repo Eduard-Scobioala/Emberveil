@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -31,12 +32,16 @@ public class PlayerStats : CharacterStats
     [SerializeField] private float staminaRegenDelay = 1;
     [SerializeField] private int baseDefense = 5;
 
+    [Header("Currency")]
+    public int currentCurrency = 0;
+    public static event Action<int> OnCurrencyChanged;
+
     // Buffs
     public int CurrentAttackBuff { get; private set; } = 0;
     public float CurrentStaminaRegenBuff { get; private set; } = 0f;
 
     private Dictionary<string, Coroutine> activeBuffCoroutines = new ();
-    private List<ActiveBuffInfo> activeBuffsForUI = new ();
+    private readonly List<ActiveBuffInfo> activeBuffsForUI = new ();
 
     public float FinalStaminaRegen => staminaRegenAmount + CurrentStaminaRegenBuff;
     public int TotalAttackPower => CalculateAttackDamage(playerManager.playerInventory.EquippedRightWeapon, PlayerAttackType.LightAttack);
@@ -54,6 +59,7 @@ public class PlayerStats : CharacterStats
     private void Start()
     {
         RecalculateStats();
+        OnCurrencyChanged?.Invoke(currentCurrency);
     }
 
     private void Update()
@@ -297,9 +303,9 @@ public class PlayerStats : CharacterStats
         // If a buff of the same type is already active, stop the old one before starting the new one
         if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
         {
+            var duplicateBuff = activeBuffsForUI.Find(buff => buff.BuffName == sourceItem.itemName);
+            activeBuffsForUI.Remove(duplicateBuff);
             StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
-            // We need to manually remove the old buff's value before adding the new one
-            // This is complex. A simpler approach for now is just to stack or overwrite. Let's stack.
         }
         activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(AttackBuffCoroutine(attackBonus, duration, sourceItem));
     }
@@ -328,6 +334,8 @@ public class PlayerStats : CharacterStats
     {
         if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
         {
+            var duplicateBuff = activeBuffsForUI.Find(buff => buff.BuffName == sourceItem.itemName);
+            activeBuffsForUI.Remove(duplicateBuff);
             StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
         }
         activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(StaminaBuffCoroutine(regenBonus, duration, sourceItem));
@@ -355,5 +363,27 @@ public class PlayerStats : CharacterStats
     public List<ActiveBuffInfo> GetActiveBuffs()
     {
         return activeBuffsForUI;
+    }
+
+    public void AddCurrency(int amount)
+    {
+        if (amount <= 0) return;
+        currentCurrency += amount;
+        OnCurrencyChanged?.Invoke(currentCurrency);
+    }
+
+    public bool SpendCurrency(int amount)
+    {
+        if (amount <= 0) return false;
+
+        if (currentCurrency >= amount)
+        {
+            currentCurrency -= amount;
+            OnCurrencyChanged?.Invoke(currentCurrency);
+            return true;
+        }
+
+        Debug.Log("Not enough currency!");
+        return false;
     }
 }
