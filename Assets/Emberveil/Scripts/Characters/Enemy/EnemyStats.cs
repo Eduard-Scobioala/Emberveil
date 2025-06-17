@@ -40,17 +40,17 @@ public class EnemyStats : CharacterStats
     {
         int levelBasedGainedHealth = 0;
 
-        if (healthLevel < 20)
+        if (characterLevel < 20)
         {
-            levelBasedGainedHealth = 15 * healthLevel;
+            levelBasedGainedHealth = 15 * characterLevel;
         }
-        else if (healthLevel >= 20 && healthLevel <= 40)
+        else if (characterLevel >= 20 && characterLevel <= 40)
         {
-            levelBasedGainedHealth = 300 + 10 * (healthLevel - 19);
+            levelBasedGainedHealth = 300 + 10 * (characterLevel - 19);
         }
-        else if (healthLevel > 40)
+        else if (characterLevel > 40)
         {
-            levelBasedGainedHealth = 510 + 5 * (healthLevel - 40);
+            levelBasedGainedHealth = 510 + 5 * (characterLevel - 40);
         }
 
         return baseHealthAmount + levelBasedGainedHealth;

@@ -25,12 +25,16 @@ public class PlayerStats : CharacterStats
     [SerializeField] private string backHitAnimation = "Damage_Back_01";
     [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
 
+    [Header("Leveling Stats")]
+    public int currentHealthLevel;
+    public int currentStaminaLevel;
+    public static event Action OnStatsRecalculated;
+
     [Header("Stats Settings")]
-    [SerializeField] private int baseHealthAmout = 300;
-    [SerializeField] private int baseStaminaAmout = 100;
+    [SerializeField] private int baseHealthAmount = 300;
+    [SerializeField] private int baseStaminaAmount = 100;
     [SerializeField] private float staminaRegenAmount = 10;
     [SerializeField] private float staminaRegenDelay = 1;
-    [SerializeField] private int baseDefense = 5;
 
     [Header("Currency")]
     public int currentCurrency = 0;
@@ -79,79 +83,79 @@ public class PlayerStats : CharacterStats
 
     private void RecalculateStats()
     {
-        // Temporarily store current health/stamina percentages
         float healthPercent = (maxHealth > 0) ? (float)currentHealth / maxHealth : 1f;
         float staminaPercent = (maxStamina > 0) ? currentStamina / maxStamina : 1f;
 
-        // --- Calculate Max Health
-        maxHealth = GetMaxHealthBasedOnHealthLevel();
+        baseAttackPower = GetBaseAttackPowerForLevel(characterLevel);
+        baseDefense = GetBaseDefenseForLevel(characterLevel);
+        maxHealth = GetMaxHealthForLevel(characterLevel);
+        maxStamina = GetMaxStaminaForLevel(characterLevel);
 
-        // --- Calculate Max Stamina
-        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
+        currentHealthLevel = characterLevel;
+        currentStaminaLevel = characterLevel;
 
-        // Apply new max values while retaining percentage
+
+        // Apply talisman bonuses AFTER calculating base values
+        ApplyTalismanBonuses();
+
         currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
         currentStamina = maxStamina * staminaPercent;
 
-        // Update UI bars with new max values
         if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
         if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
-
-        // Update current values on UI
         if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
         if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
 
-        Debug.Log($"Stats recalculated. New MaxHP: {maxHealth}, New MaxStamina: {maxStamina}");
+        OnStatsRecalculated?.Invoke();
+        Debug.Log($"Stats recalculated for Level {characterLevel}. HP:{maxHealth}, Stamina:{maxStamina}, Atk:{base.baseAttackPower}, Def:{base.baseDefense}");
     }
 
-    private int GetMaxHealthBasedOnHealthLevel()
+    private void ApplyTalismanBonuses()
     {
-        int levelBasedHealth = 0;
-
-        if (healthLevel < 27)
-        {
-            levelBasedHealth = 20 * healthLevel;
-        }
-        else if (healthLevel >= 27 && healthLevel <= 49)
-        {
-            levelBasedHealth = 540 + 13 * (healthLevel - 26);
-        }
-        else if (healthLevel > 49)
-        {
-            levelBasedHealth = 858 + 5 * (healthLevel - 49);
-        }
-
-        int baseValue = baseHealthAmout + levelBasedHealth;
-
-        // Apply Talisman Bonuses
         float totalHealthMultiplier = 1.0f;
+        float totalStaminaMultiplier = 1.0f;
+
         foreach (TalismanItem talisman in playerInventory.talismanSlots)
         {
             if (talisman != null)
             {
                 totalHealthMultiplier += talisman.healthBonusMultiplier;
-            }
-        }
-
-        return Mathf.RoundToInt(baseValue * totalHealthMultiplier);
-    }
-
-    private float GetMaxStaminaBasedOnStaminaLevel()
-    {
-        float baseValue = baseStaminaAmout + staminaLevel * 5;
-
-        // Apply Talisman Bonuses ---
-        float totalStaminaMultiplier = 1.0f;
-        foreach (TalismanItem talisman in playerInventory.talismanSlots)
-        {
-            if (talisman != null)
-            {
                 totalStaminaMultiplier += talisman.staminaBonusMultiplier;
             }
         }
 
-        return baseValue * totalStaminaMultiplier;
+        maxHealth = Mathf.RoundToInt(maxHealth * totalHealthMultiplier);
+        maxStamina = Mathf.RoundToInt(maxStamina * totalStaminaMultiplier);
     }
+
+    #region Stat Calculation Formulas
+
+    public int GetMaxHealthForLevel(int level)
+    {
+        int levelBasedHealth = 0;
+        if (level < 27) levelBasedHealth = 20 * level;
+        else if (level >= 27 && level <= 49) levelBasedHealth = 540 + 13 * (level - 26);
+        else if (level > 49) levelBasedHealth = 858 + 5 * (level - 49);
+        return baseHealthAmount + levelBasedHealth;
+    }
+
+    public float GetMaxStaminaForLevel(int level)
+    {
+        return baseStaminaAmount + level * 5;
+    }
+
+    public int GetBaseAttackPowerForLevel(int level)
+    {
+        return baseAttackPower + ((level - 1) / 2);
+    }
+
+    public int GetBaseDefenseForLevel(int level)
+    {
+        // Adds +1 for every 2 levels (level 2, 4, 6...)
+        return baseDefense + (level - 1) / 2;
+    }
+
+    #endregion
 
     public int CalculateAttackDamage(WeaponItem weapon, PlayerAttackType attackType)
     {
@@ -182,6 +186,20 @@ public class PlayerStats : CharacterStats
 
         return Mathf.RoundToInt(preMultiplierDamage * totalDamageMultiplier);
     }
+
+    public void RestoreVitals()
+    {
+        currentHealth = maxHealth;
+        currentStamina = maxStamina;
+
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
+
+        playerInventory.RefillFlasks();
+
+        Debug.Log("Player vitals and flasks have been restored.");
+    }
+
 
     public void TakeDamange(int damage, Transform attackerTransform = null)
     {
@@ -386,4 +404,39 @@ public class PlayerStats : CharacterStats
         Debug.Log("Not enough currency!");
         return false;
     }
+
+    #region Leveling System Logic
+
+    public int GetLevelUpCost()
+    {
+        // A formula that increases the cost with each level.
+        return Mathf.RoundToInt(50 + (characterLevel * 100) + Mathf.Pow(characterLevel, 2) * 5);
+    }
+
+    public (int health, float stamina, int attack, int defense) GetStatPreviewForNextLevel()
+    {
+        int nextLevel = characterLevel + 1;
+        int nextHealth = GetMaxHealthForLevel(nextLevel);
+        float nextStamina = GetMaxStaminaForLevel(nextLevel);
+        int nextAttack = GetBaseAttackPowerForLevel(nextLevel);
+        int nextDefense = GetBaseDefenseForLevel(nextLevel);
+        return (nextHealth, nextStamina, nextAttack, nextDefense);
+    }
+
+    public void LevelUp()
+    {
+        int cost = GetLevelUpCost();
+        if (!SpendCurrency(cost))
+        {
+            Debug.Log("Not enough currency to level up!");
+            return;
+        }
+
+        characterLevel++;
+
+        RecalculateStats();
+        RestoreVitals();
+    }
+
+    #endregion
 }

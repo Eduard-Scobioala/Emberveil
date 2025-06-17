@@ -15,6 +15,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject itemInfoWindow;
     [SerializeField] private InventoryWindowUI inventoryWindowUI;
     [SerializeField] private GameObject statusWindow;
+    [SerializeField] private GameObject levelUpWindow;
 
     public bool IsMenuOpen { get; private set; }
 
@@ -59,6 +60,7 @@ public class UIManager : MonoBehaviour
         inventoryWindow.SetActive(false);
         optionsWindow.SetActive(false);
         statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
 
         //Time.timeScale = 0f; // Pause game
         inputHandler.EnableUIInput();
@@ -77,6 +79,7 @@ public class UIManager : MonoBehaviour
         optionsWindow.SetActive(false);
         itemInfoWindow.SetActive(false);
         statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
 
         inventoryWindowUI?.ExitSelectionMode();
 
@@ -88,8 +91,12 @@ public class UIManager : MonoBehaviour
 
     private void HandleCancel()
     {
-        // If any sub-menu is open (like filtered inventory), close it first.
-        // If only the main menu is open, then close everything.
+        if (levelUpWindow != null && levelUpWindow.activeSelf)
+        {
+            CloseAllMenus();
+            return;
+        }
+
         if (IsMenuOpen)
         {
             // Add more complex logic here if you have deeper menus
@@ -134,5 +141,22 @@ public class UIManager : MonoBehaviour
     {
         mainMenuWindow.SetActive(false);
         statusWindow.SetActive(true);
+    }
+
+    public void OpenLevelUpWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        hudWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
+
+        levelUpWindow.SetActive(true);
+
+        IsMenuOpen = true;
+        inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }
