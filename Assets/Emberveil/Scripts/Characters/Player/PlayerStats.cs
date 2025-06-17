@@ -11,7 +11,7 @@ public struct ActiveBuffInfo
     public float RemainingDuration;
 }
 
-public class PlayerStats : CharacterStats
+public class PlayerStats : CharacterStats, ISavable
 {
     [SerializeField] private StatUIBar healthBar;
     [SerializeField] private StatUIBar staminaBar;
@@ -199,7 +199,6 @@ public class PlayerStats : CharacterStats
 
         Debug.Log("Player vitals and flasks have been restored.");
     }
-
 
     public void TakeDamange(int damage, Transform attackerTransform = null)
     {
@@ -438,5 +437,58 @@ public class PlayerStats : CharacterStats
         RestoreVitals();
     }
 
+    #endregion
+
+    #region Saving and Loading
+
+    // A struct to hold all the data we want to save for the player.
+    [System.Serializable]
+    private struct PlayerSaveData
+    {
+        public int playerLevel;
+        public int currentCurrency;
+        public Vector3 position;
+        public Quaternion rotation;
+        // We don't save health/stamina, as they are restored on load/rest.
+    }
+
+    public string GetUniqueIdentifier()
+    {
+        // The player is unique, so we can use a simple, constant ID.
+        return "PlayerCharacter";
+    }
+
+    public object CaptureState()
+    {
+        return new PlayerSaveData
+        {
+            playerLevel = characterLevel,
+            currentCurrency = currentCurrency,
+            position = transform.position,
+            rotation = transform.rotation
+        };
+    }
+
+    public void RestoreState(object state)
+    {
+        if (state is PlayerSaveData saveData)
+        {
+            characterLevel = saveData.playerLevel;
+            currentCurrency = saveData.currentCurrency;
+
+            // We use the Rigidbody to move the character to avoid physics issues.
+            // Disable and re-enable the character controller/rigidbody if you have issues with teleporting.
+            playerManager.GetComponent<Rigidbody>().position = saveData.position;
+            transform.rotation = saveData.rotation;
+
+            // Recalculate all stats based on the loaded level
+            RecalculateStats();
+            // Fully restore vitals on load
+            RestoreVitals();
+
+            OnCurrencyChanged?.Invoke(currentCurrency); // Update UI
+            Debug.Log($"Player state restored. Level: {characterLevel}, Position: {saveData.position}");
+        }
+    }
     #endregion
 }

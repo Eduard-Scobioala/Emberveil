@@ -13,7 +13,14 @@ public class DeadState : IEnemyState
         manager.CurrentTarget = null; // No longer has a target
         manager.Senses.ForceLoseTarget(); // Ensure senses are cleared
         manager.Locomotion.DisableAgentAndPhysicsControl(); // Stop all movement, make kinematic
-        manager.GetComponent<Collider>().enabled = false; // Disable main collider
+
+        // Disable all colliders on this GameObject and its children
+        Collider[] colliders = manager.GetComponentsInChildren<Collider>();
+        foreach (Collider collider in colliders)
+        {
+            collider.enabled = false;
+        }
+
         if (manager.lockOnTransform != null) manager.lockOnTransform.gameObject.SetActive(false); // Disable lock-on point
 
         // Play death animation. Ensure it's not interrupted by isPerformingCriticalHit checks
@@ -32,7 +39,8 @@ public class DeadState : IEnemyState
         if (despawnTimer <= 0)
         {
             // TODO: Maybe pool instead of destroy
-            Object.Destroy(manager.gameObject);
+            //Object.Destroy(manager.gameObject);
+            manager.gameObject.SetActive(false);
         }
     }
 

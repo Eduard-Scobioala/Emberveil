@@ -222,16 +222,17 @@ public class PlayerManager : CharacterManager
                 {
                     isPickingUp = false;
 
-                    interactableUI.itemInfoText.text = closest.GetItemName();
-                    interactableUI.itemImage.sprite = closest.GetItemIcon();
-
                     closest.OnInteract(this);
-                    // TODO: Let OnInteract handle removal if necessary
-                    //nearbyInteractables.Remove(closest);
 
                     interactableUI.EnableInteractionPopUpGameObject(false);
-                    interactableUI.EnableItemPopUpGameObject(true);
                     pickedUpItem = true;
+
+                    if (closest.IsInteractablePickUp)
+                    {
+                        interactableUI.itemInfoText.text = closest.GetItemName();
+                        interactableUI.itemImage.sprite = closest.GetItemIcon();
+                        interactableUI.EnableItemPopUpGameObject(true);
+                    }
                 }
             }
             else // No closest, but list not empty (e.g. all became null)
@@ -259,7 +260,7 @@ public class PlayerManager : CharacterManager
         float minDistance = float.MaxValue;
         Vector3 playerPos = transform.position;
 
-        nearbyInteractables.RemoveAll(item => item == null);
+        nearbyInteractables.RemoveAll(item => item == null || !item.isActiveAndEnabled);
 
         foreach (var interactable in nearbyInteractables)
         {

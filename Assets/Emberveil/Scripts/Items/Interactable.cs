@@ -1,9 +1,9 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Interactable : MonoBehaviour
 {
     public string interactableInfoText;
+    public virtual bool IsInteractablePickUp => false;
 
     private void OnTriggerEnter(Collider other)
     {

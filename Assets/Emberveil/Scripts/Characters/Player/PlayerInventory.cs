@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class PlayerInventory : MonoBehaviour
+public class PlayerInventory : MonoBehaviour, ISavable
 {
     public static event Action OnInventoryUpdated; // Fire when any item is added/removed
     public static event Action OnEquipmentUpdated; // Fire when any equipped item changes
@@ -89,13 +89,6 @@ public class PlayerInventory : MonoBehaviour
         else
         {
             _healingFlaskSlot.quantity = maxFlaskCharges;
-        }
-
-        // Equip flask to the first empty quick slot, or slot 0 if it's empty
-        int firstEmptySlot = consumableQuickSlots.FindIndex(s => s == null);
-        if (firstEmptySlot != -1)
-        {
-            consumableQuickSlots[firstEmptySlot] = _healingFlaskSlot;
         }
     }
 
@@ -407,31 +400,6 @@ public class PlayerInventory : MonoBehaviour
         }
     }
 
-    public void AssignConsumableToQuickSlot(InventorySlot consumableSlot)
-    {
-        if (consumableSlot == null || consumableSlot.item as ConsumableItem == null) return;
-        if (!consumableQuickSlots.Contains(consumableSlot))
-        {
-            consumableQuickSlots.Add(consumableSlot);
-            OnEquipmentUpdated?.Invoke();
-        }
-    }
-
-    public void RemoveConsumableFromQuickSlot(InventorySlot consumableSlot)
-    {
-        if (consumableSlot == null) return;
-        if (consumableQuickSlots.Contains(consumableSlot))
-        {
-            consumableQuickSlots.Remove(consumableSlot);
-            // Adjust index if we removed the current or a previous slot
-            if (CurrentConsumableIndex >= consumableQuickSlots.Count && consumableQuickSlots.Count > 0)
-            {
-                CurrentConsumableIndex = consumableQuickSlots.Count - 1;
-            }
-            OnEquipmentUpdated?.Invoke();
-        }
-    }
-
     public void CycleNextConsumable()
     {
         if (playerManager.playerAnimator.IsInMidAction) return;
@@ -497,4 +465,115 @@ public class PlayerInventory : MonoBehaviour
         // Remove from inventory
         RemoveItem(item, 1);
     }
+
+    #region Saving and Loading
+
+    // A struct to hold all inventory data. We save item IDs, not the items themselves.
+    [System.Serializable]
+    private class InventorySaveData
+    {
+        public List<string> weaponItemIDs;
+        public List<string> armorItemIDs;
+        public List<string> talismanItemIDs;
+        public List<InventorySlotSaveData> consumableSlots;
+
+        public string[] equippedRightHandWeaponIDs;
+        public string equippedHeadArmorID;
+        public string equippedBodyArmorID;
+        public string equippedHandArmorID;
+        public string equippedLegArmorID;
+        public string[] equippedTalismanIDs;
+        public List<InventorySlotSaveData> equippedConsumableSlots;
+    }
+
+    [System.Serializable]
+    private class InventorySlotSaveData
+    {
+        public string itemID;
+        public int quantity;
+    }
+
+    public string GetUniqueIdentifier()
+    {
+        return "PlayerInventory";
+    }
+
+    public object CaptureState()
+    {
+        var saveData = new InventorySaveData
+        {
+            // --- Save Master Inventories ---
+            weaponItemIDs = weaponsInventory.Select(slot => slot.item.name).ToList(),
+            armorItemIDs = armorInventory.Select(slot => slot.item.name).ToList(),
+            talismanItemIDs = talismanInventory.Select(slot => slot.item.name).ToList(),
+            consumableSlots = consumableInventory.Select(slot => new InventorySlotSaveData { itemID = slot.item.name, quantity = slot.quantity }).ToList(),
+
+            // --- Save Equipped Items ---
+            equippedRightHandWeaponIDs = rightHandWeaponSlots.Select(item => item != null ? item.name : null).ToArray(),
+            equippedHeadArmorID = headArmor != null ? headArmor.name : null,
+            equippedBodyArmorID = bodyArmor != null ? bodyArmor.name : null,
+            equippedHandArmorID = handArmor != null ? handArmor.name : null,
+            equippedLegArmorID = legArmor != null ? legArmor.name : null,
+            equippedTalismanIDs = talismanSlots.Select(item => item != null ? item.name : null).ToArray(),
+            equippedConsumableSlots = consumableQuickSlots.Select(slot => slot != null ? new InventorySlotSaveData { itemID = slot.item?.name, quantity = slot.quantity } : null).ToList()
+        };
+        return saveData;
+    }
+
+    public void RestoreState(object state)
+    {
+        if (state is InventorySaveData saveData)
+        {
+            // To restore, we need a way to find an Item ScriptableObject from its ID (its name).
+            // A Resource Manager or similar is best, for now, we'll use Resources.LoadAll.
+            var allItems = Resources.LoadAll<Item>("Items"); // Item SOs are in "Resources/Items"
+
+            // --- Clear current inventory ---
+            weaponsInventory.Clear();
+            armorInventory.Clear();
+            talismanInventory.Clear();
+            consumableInventory.Clear();
+
+            // --- Restore Master Inventories ---
+            foreach (var id in saveData.weaponItemIDs) AddItem(FindItemByID(allItems, id));
+            foreach (var id in saveData.armorItemIDs) AddItem(FindItemByID(allItems, id));
+            foreach (var id in saveData.talismanItemIDs) AddItem(FindItemByID(allItems, id));
+            foreach (var slotData in saveData.consumableSlots) AddItem(FindItemByID(allItems, slotData.itemID), slotData.quantity);
+
+            // --- Restore Equipment ---
+            for (int i = 0; i < rightHandWeaponSlots.Length; i++) rightHandWeaponSlots[i] = FindItemByID(allItems, saveData.equippedRightHandWeaponIDs[i]) as WeaponItem;
+            headArmor = FindItemByID(allItems, saveData.equippedHeadArmorID) as ArmorItem;
+            bodyArmor = FindItemByID(allItems, saveData.equippedBodyArmorID) as ArmorItem;
+            handArmor = FindItemByID(allItems, saveData.equippedHandArmorID) as ArmorItem;
+            legArmor = FindItemByID(allItems, saveData.equippedLegArmorID) as ArmorItem;
+            for (int i = 0; i < talismanSlots.Length; i++) talismanSlots[i] = FindItemByID(allItems, saveData.equippedTalismanIDs[i]) as TalismanItem;
+
+            // --- Restore Consumable Quick Slots ---
+            for (int i = 0; i < consumableQuickSlots.Count; i++)
+            {
+                if (saveData.equippedConsumableSlots[i] != null)
+                {
+                    var item = FindItemByID(allItems, saveData.equippedConsumableSlots[i].itemID);
+                    consumableQuickSlots[i] = consumableInventory.FirstOrDefault(s => s.item == item);
+                }
+                else
+                {
+                    consumableQuickSlots[i] = null;
+                }
+            }
+
+            // --- Refresh the game state ---
+            EquipWeapon(CurrentRightWeaponIndex);
+            OnEquipmentUpdated?.Invoke();
+            Debug.Log("Player inventory restored.");
+        }
+    }
+
+    private Item FindItemByID(Item[] allItems, string id)
+    {
+        if (string.IsNullOrEmpty(id)) return null;
+        return allItems.FirstOrDefault(item => item.name == id);
+    }
+
+    #endregion
 }

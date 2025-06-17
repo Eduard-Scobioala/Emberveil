@@ -64,7 +64,6 @@ public class EnemyHealthBarUI : MonoBehaviour
     private void HandleDeath()
     {
         gameObject.SetActive(false);
-        Destroy(gameObject, 1f); // Destroy after a short delay to avoid errors
     }
 
     public void SetVisibility(bool isVisible)

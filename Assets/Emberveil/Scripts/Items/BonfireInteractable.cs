@@ -41,6 +41,7 @@ public class BonfireInteractable : Interactable
             Debug.LogError("BonfireInteractable: Enemy Layer is not set. The safety check will not work.", this);
         }
     }
+
     private void Start()
     {
         if (uiManager == null)
@@ -119,23 +120,37 @@ public class BonfireInteractable : Interactable
 
     public override void OnInteract(PlayerManager playerManager)
     {
-        // Safety check
-        if (!isSafe)
-        {
-            Debug.LogWarning("Tried to interact with an unsafe bonfire.");
-            return;
-        }
+        if (!isSafe) return;
 
+        // Restore Player Vitals
         if (playerStats != null)
         {
             playerStats.RestoreVitals();
         }
 
+        // Respawn All Enemies
+        RespawnAllEnemies();
+
+        // Save the Game State
+        SaveLoadManager.Instance.SaveGame();
+
+        // Open the Level Up Menu
         if (uiManager != null)
         {
-            Debug.Log("Interacting with bonfire. Vitals restored. Opening level up menu.");
+            Debug.Log("Interacting with bonfire. Vitals restored, enemies respawned, game saved. Opening menu.");
             uiManager.OpenLevelUpWindow();
         }
+    }
+
+    private void RespawnAllEnemies()
+    {
+        // Find all enemy managers in the scene and tell them to respawn.
+        var allEnemies = FindObjectsOfType<EnemyManager>(true);
+        foreach (var enemy in allEnemies)
+        {
+            enemy.RespawnEnemy();
+        }
+        Debug.Log("All enemies have been respawned.");
     }
 
     private void OnDrawGizmosSelected()

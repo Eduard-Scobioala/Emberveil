@@ -1,10 +1,24 @@
+using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
-public class ItemPickUp : Interactable
+[RequireComponent(typeof(SavableEntity))]
+public class ItemPickUp : Interactable, ISavable
 {
     [SerializeField] private Item itemToPickUp;
     [SerializeField] private string pickUpAnimation = "Pick_Up_Item";
+
+    [Header("Save/Load Settings")]
+    [SerializeField] private bool isOneTimePickup = false;
+
+    public override bool IsInteractablePickUp => true;
+
+    private bool hasBeenCollected = false;
+    private SavableEntity savableEntity;
+
+    private void Awake()
+    {
+        savableEntity = GetComponent<SavableEntity>();
+    }
 
     // Setting the item dynamically (for when dropping from inventory)
     public void SetItem(Item item)
@@ -32,6 +46,7 @@ public class ItemPickUp : Interactable
         playerManager.playerAnimator.PlayTargetAnimation(pickUpAnimation, true);
 
         playerManager.playerInventory.AddItem(itemToPickUp);
+        hasBeenCollected = true;
 
         // Update UI prompt
         var interactable = playerManager.interactableUI;
@@ -46,7 +61,13 @@ public class ItemPickUp : Interactable
         // Visually disable or hide the pickup model
         foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = false;
 
-        Destroy(gameObject, 2f);
+        StartCoroutine(DisableAfterDelay(2f));
+    }
+
+    IEnumerator DisableAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        gameObject.SetActive(false);
     }
 
     public override string GetItemName()
@@ -58,4 +79,37 @@ public class ItemPickUp : Interactable
     {
         return itemToPickUp != null ? itemToPickUp.itemIcon : null;
     }
+
+    #region Saving and Loading
+    public string GetUniqueIdentifier()
+    {
+        return savableEntity.GetUniqueIdentifier();
+    }
+
+    public object CaptureState()
+    {
+        // If it's a one-time pickup, we save whether it has been collected.
+        if (isOneTimePickup)
+        {
+            return hasBeenCollected;
+        }
+        return null; // Don't save state for respawning items.
+    }
+
+    public void RestoreState(object state)
+    {
+        if (!isOneTimePickup) return;
+
+        if (state is bool collected)
+        {
+            hasBeenCollected = collected;
+            if (hasBeenCollected)
+            {
+                // If the item was already collected, destroy this pickup immediately on load.
+                Debug.Log($"One-time pickup {itemToPickUp.name} ({GetUniqueIdentifier()}) was already collected. Destroying.");
+                gameObject.SetActive(false);
+            }
+        }
+    }
+    #endregion
 }

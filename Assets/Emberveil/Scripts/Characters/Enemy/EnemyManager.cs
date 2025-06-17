@@ -1,6 +1,7 @@
 using UnityEngine;
 
-public class EnemyManager : CharacterManager
+[RequireComponent(typeof(SavableEntity))]
+public class EnemyManager : CharacterManager, ISavable
 {
     // AI Core Components
     public EnemyStats Stats { get; private set; }
@@ -42,6 +43,8 @@ public class EnemyManager : CharacterManager
     [SerializeField] private Transform healthBarAttachPoint;
     private EnemyHealthBarUI healthBarUI;
 
+    private SavableEntity savableEntity;
+
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
 
@@ -51,6 +54,7 @@ public class EnemyManager : CharacterManager
     protected override void Awake()
     {
         base.Awake(); // From your CharacterManager
+        savableEntity = GetComponent<SavableEntity>();
 
         Stats = GetComponent<EnemyStats>();
         Locomotion = GetComponent<EnemyLocomotion>();
@@ -165,8 +169,6 @@ public class EnemyManager : CharacterManager
 
     public void SwitchState(IEnemyState newState)
     {
-        if (CurrentState == deadState && newState != deadState) return; // Cannot leave dead state except for cleanup
-
         CurrentState?.Exit();
         CurrentState = newState;
 
@@ -231,7 +233,35 @@ public class EnemyManager : CharacterManager
 
     private void HandleDeath()
     {
+        Stats.isDead = true;
         SwitchState(deadState);
+    }
+
+    public void RespawnEnemy()
+    {
+        if (Stats.isDead)
+        {
+            Stats.isDead = false;
+            gameObject.SetActive(true);
+            Stats.currentHealth = Stats.maxHealth;
+            transform.SetPositionAndRotation(initialPosition, initialRotation);
+
+            // Re-enable components disabled on death
+            GetComponent<Collider>().enabled = true;
+            if (lockOnTransform != null) lockOnTransform.gameObject.SetActive(true);
+
+            // Switch back to a starting state
+            if (patrolRoute != null && patrolRoute.patrolPoints.Count > 0)
+            {
+                SwitchState(patrolState);
+            }
+            else
+            {
+                SwitchState(idleState);
+            }
+
+            Debug.Log($"{name} has been respawned.");
+        }
     }
 
     // --- Critical Action Control Methods ---
@@ -293,4 +323,37 @@ public class EnemyManager : CharacterManager
         Debug.Log($"{name}: AttackActionConcluded reported by animation.");
         HasAttackActionConcluded = true;
     }
+
+    #region Saving and Loading
+
+    public string GetUniqueIdentifier()
+    {
+        return savableEntity.GetUniqueIdentifier();
+    }
+
+    [System.Serializable]
+    private struct EnemySaveData
+    {
+        public bool isDead;
+    }
+
+    public object CaptureState()
+    {
+        return new EnemySaveData { isDead = Stats.isDead };
+    }
+
+    public void RestoreState(object state)
+    {
+        if (state is EnemySaveData saveData)
+        {
+            Stats.isDead = saveData.isDead;
+            //if (Stats.isDead)
+            //{
+            //    // If the loaded state is "dead", immediately put the enemy into the dead state.
+            //    SwitchState(deadState);
+            //}
+            gameObject.SetActive(!saveData.isDead);
+        }
+    }
+    #endregion
 }

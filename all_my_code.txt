@@ -664,18 +664,19 @@ using UnityEngine;
 
 public class CharacterStats : MonoBehaviour
 {
+    public int characterLevel = 1;
+
     [Header("Health Stats")]
-    public int healthLevel = 10;
     public int maxHealth;
     public int currentHealth;
 
     [Header("Stamina Stats")]
-    public int staminaLevel = 10;
     public float maxStamina;
     public float currentStamina;
 
     [Header("Combat Stats")]
     public int baseAttackPower = 10;
+    public int baseDefense = 2;
 
     public bool isDead = false;
 }
@@ -1784,17 +1785,17 @@ public class EnemyStats : CharacterStats
     {
         int levelBasedGainedHealth = 0;
 
-        if (healthLevel < 20)
+        if (characterLevel < 20)
         {
-            levelBasedGainedHealth = 15 * healthLevel;
+            levelBasedGainedHealth = 15 * characterLevel;
         }
-        else if (healthLevel >= 20 && healthLevel <= 40)
+        else if (characterLevel >= 20 && characterLevel <= 40)
         {
-            levelBasedGainedHealth = 300 + 10 * (healthLevel - 19);
+            levelBasedGainedHealth = 300 + 10 * (characterLevel - 19);
         }
-        else if (healthLevel > 40)
+        else if (characterLevel > 40)
         {
-            levelBasedGainedHealth = 510 + 5 * (healthLevel - 40);
+            levelBasedGainedHealth = 510 + 5 * (characterLevel - 40);
         }
 
         return baseHealthAmount + levelBasedGainedHealth;
@@ -4387,12 +4388,16 @@ public class PlayerStats : CharacterStats
     [SerializeField] private string backHitAnimation = "Damage_Back_01";
     [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
 
+    [Header("Leveling Stats")]
+    public int currentHealthLevel;
+    public int currentStaminaLevel;
+    public static event Action OnStatsRecalculated;
+
     [Header("Stats Settings")]
-    [SerializeField] private int baseHealthAmout = 300;
-    [SerializeField] private int baseStaminaAmout = 100;
+    [SerializeField] private int baseHealthAmount = 300;
+    [SerializeField] private int baseStaminaAmount = 100;
     [SerializeField] private float staminaRegenAmount = 10;
     [SerializeField] private float staminaRegenDelay = 1;
-    [SerializeField] private int baseDefense = 5;
 
     [Header("Currency")]
     public int currentCurrency = 0;
@@ -4441,79 +4446,79 @@ public class PlayerStats : CharacterStats
 
     private void RecalculateStats()
     {
-        // Temporarily store current health/stamina percentages
         float healthPercent = (maxHealth > 0) ? (float)currentHealth / maxHealth : 1f;
         float staminaPercent = (maxStamina > 0) ? currentStamina / maxStamina : 1f;
 
-        // --- Calculate Max Health
-        maxHealth = GetMaxHealthBasedOnHealthLevel();
+        baseAttackPower = GetBaseAttackPowerForLevel(characterLevel);
+        baseDefense = GetBaseDefenseForLevel(characterLevel);
+        maxHealth = GetMaxHealthForLevel(characterLevel);
+        maxStamina = GetMaxStaminaForLevel(characterLevel);
 
-        // --- Calculate Max Stamina
-        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
+        currentHealthLevel = characterLevel;
+        currentStaminaLevel = characterLevel;
 
-        // Apply new max values while retaining percentage
+
+        // Apply talisman bonuses AFTER calculating base values
+        ApplyTalismanBonuses();
+
         currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
         currentStamina = maxStamina * staminaPercent;
 
-        // Update UI bars with new max values
         if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
         if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
-
-        // Update current values on UI
         if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
         if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
 
-        Debug.Log($"Stats recalculated. New MaxHP: {maxHealth}, New MaxStamina: {maxStamina}");
+        OnStatsRecalculated?.Invoke();
+        Debug.Log($"Stats recalculated for Level {characterLevel}. HP:{maxHealth}, Stamina:{maxStamina}, Atk:{base.baseAttackPower}, Def:{base.baseDefense}");
     }
 
-    private int GetMaxHealthBasedOnHealthLevel()
+    private void ApplyTalismanBonuses()
     {
-        int levelBasedHealth = 0;
-
-        if (healthLevel < 27)
-        {
-            levelBasedHealth = 20 * healthLevel;
-        }
-        else if (healthLevel >= 27 && healthLevel <= 49)
-        {
-            levelBasedHealth = 540 + 13 * (healthLevel - 26);
-        }
-        else if (healthLevel > 49)
-        {
-            levelBasedHealth = 858 + 5 * (healthLevel - 49);
-        }
-
-        int baseValue = baseHealthAmout + levelBasedHealth;
-
-        // Apply Talisman Bonuses
         float totalHealthMultiplier = 1.0f;
+        float totalStaminaMultiplier = 1.0f;
+
         foreach (TalismanItem talisman in playerInventory.talismanSlots)
         {
             if (talisman != null)
             {
                 totalHealthMultiplier += talisman.healthBonusMultiplier;
-            }
-        }
-
-        return Mathf.RoundToInt(baseValue * totalHealthMultiplier);
-    }
-
-    private float GetMaxStaminaBasedOnStaminaLevel()
-    {
-        float baseValue = baseStaminaAmout + staminaLevel * 5;
-
-        // Apply Talisman Bonuses ---
-        float totalStaminaMultiplier = 1.0f;
-        foreach (TalismanItem talisman in playerInventory.talismanSlots)
-        {
-            if (talisman != null)
-            {
                 totalStaminaMultiplier += talisman.staminaBonusMultiplier;
             }
         }
 
-        return baseValue * totalStaminaMultiplier;
+        maxHealth = Mathf.RoundToInt(maxHealth * totalHealthMultiplier);
+        maxStamina = Mathf.RoundToInt(maxStamina * totalStaminaMultiplier);
     }
+
+    #region Stat Calculation Formulas
+
+    public int GetMaxHealthForLevel(int level)
+    {
+        int levelBasedHealth = 0;
+        if (level < 27) levelBasedHealth = 20 * level;
+        else if (level >= 27 && level <= 49) levelBasedHealth = 540 + 13 * (level - 26);
+        else if (level > 49) levelBasedHealth = 858 + 5 * (level - 49);
+        return baseHealthAmount + levelBasedHealth;
+    }
+
+    public float GetMaxStaminaForLevel(int level)
+    {
+        return baseStaminaAmount + level * 5;
+    }
+
+    public int GetBaseAttackPowerForLevel(int level)
+    {
+        return baseAttackPower + ((level - 1) / 2);
+    }
+
+    public int GetBaseDefenseForLevel(int level)
+    {
+        // Adds +1 for every 2 levels (level 2, 4, 6...)
+        return baseDefense + (level - 1) / 2;
+    }
+
+    #endregion
 
     public int CalculateAttackDamage(WeaponItem weapon, PlayerAttackType attackType)
     {
@@ -4544,6 +4549,20 @@ public class PlayerStats : CharacterStats
 
         return Mathf.RoundToInt(preMultiplierDamage * totalDamageMultiplier);
     }
+
+    public void RestoreVitals()
+    {
+        currentHealth = maxHealth;
+        currentStamina = maxStamina;
+
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
+
+        playerInventory.RefillFlasks();
+
+        Debug.Log("Player vitals and flasks have been restored.");
+    }
+
 
     public void TakeDamange(int damage, Transform attackerTransform = null)
     {
@@ -4748,6 +4767,41 @@ public class PlayerStats : CharacterStats
         Debug.Log("Not enough currency!");
         return false;
     }
+
+    #region Leveling System Logic
+
+    public int GetLevelUpCost()
+    {
+        // A formula that increases the cost with each level.
+        return Mathf.RoundToInt(50 + (characterLevel * 100) + Mathf.Pow(characterLevel, 2) * 5);
+    }
+
+    public (int health, float stamina, int attack, int defense) GetStatPreviewForNextLevel()
+    {
+        int nextLevel = characterLevel + 1;
+        int nextHealth = GetMaxHealthForLevel(nextLevel);
+        float nextStamina = GetMaxStaminaForLevel(nextLevel);
+        int nextAttack = GetBaseAttackPowerForLevel(nextLevel);
+        int nextDefense = GetBaseDefenseForLevel(nextLevel);
+        return (nextHealth, nextStamina, nextAttack, nextDefense);
+    }
+
+    public void LevelUp()
+    {
+        int cost = GetLevelUpCost();
+        if (!SpendCurrency(cost))
+        {
+            Debug.Log("Not enough currency to level up!");
+            return;
+        }
+
+        characterLevel++;
+
+        RecalculateStats();
+        RestoreVitals();
+    }
+
+    #endregion
 }
 
 
@@ -4853,6 +4907,157 @@ public class ArmorItem : Item
 
 
 --- END FILE: Items\ArmorItem.cs ---
+
+--- START FILE: Items\BonfireInteractable.cs ---
+
+using UnityEngine;
+
+public class BonfireInteractable : Interactable
+{
+    [Header("Core References")]
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private PlayerStats playerStats;
+
+    [Header("Bonfire Settings")]
+    [SerializeField] private ParticleSystem fireParticles;
+    [SerializeField] private float enemyDetectionRadius = 15f;
+    [SerializeField] private float enemyCheckInterval = 1.0f; // Check for enemies every second
+    [SerializeField] private LayerMask enemyLayer;
+
+    
+    private Collider interactableCollider;
+
+    private float enemyCheckTimer;
+    private bool isSafe = true;
+
+    private void Awake()
+    {
+        interactableCollider = GetComponent<Collider>();
+        if (interactableCollider == null)
+        {
+            Debug.LogError("BonfireInteractable is missing a Collider component!", this);
+            enabled = false;
+            return;
+        }
+
+        if (fireParticles == null)
+        {
+            // Try to find it in children if not assigned
+            fireParticles = GetComponentInChildren<ParticleSystem>();
+            if (fireParticles == null)
+                Debug.LogWarning("BonfireInteractable: No fire particle system assigned or found in children.", this);
+        }
+
+        if (enemyLayer == 0) // If layer is not set in inspector
+        {
+            Debug.LogError("BonfireInteractable: Enemy Layer is not set. The safety check will not work.", this);
+        }
+    }
+    private void Start()
+    {
+        if (uiManager == null)
+        {
+            Debug.LogError("BonfireInteractable does not have a UIManager reference!");
+        }
+        if (playerStats == null)
+        {
+            Debug.LogError("BonfireInteractable does not have a PlayerStats reference!");
+        }
+
+        interactableInfoText = "Rest";
+        enemyCheckTimer = enemyCheckInterval;
+    }
+
+    private void Update()
+    {
+        enemyCheckTimer -= Time.deltaTime;
+        if (enemyCheckTimer <= 0f)
+        {
+            CheckForNearbyEnemies();
+            enemyCheckTimer = enemyCheckInterval;
+        }
+    }
+
+    private void CheckForNearbyEnemies()
+    {
+        bool enemyFound = Physics.CheckSphere(transform.position, enemyDetectionRadius, enemyLayer, QueryTriggerInteraction.Ignore);
+
+        if (enemyFound)
+        {
+            if (isSafe)
+            {
+                Debug.Log("Bonfire is now unsafe due to nearby enemies.");
+                SetSafeState(false);
+            }
+        }
+        else
+        {
+            if (!isSafe)
+            {
+                Debug.Log("Bonfire is safe again.");
+                SetSafeState(true);
+            }
+        }
+    }
+
+    private void SetSafeState(bool safe)
+    {
+        isSafe = safe;
+        interactableCollider.enabled = safe;
+
+        if (fireParticles != null)
+        {
+            if (safe)
+            {
+                fireParticles.Play();
+            }
+            else
+            {
+                fireParticles.Stop(true);
+            }
+        }
+
+        // If the bonfire becomes unsafe while the player is in the trigger zone,
+        // we need to manually remove the interaction prompt.
+        if (!safe)
+        {
+            PlayerManager player = FindObjectOfType<PlayerManager>();
+            if (player != null)
+            {
+                player.RemoveInteractable(this);
+            }
+        }
+    }
+
+    public override void OnInteract(PlayerManager playerManager)
+    {
+        // Safety check
+        if (!isSafe)
+        {
+            Debug.LogWarning("Tried to interact with an unsafe bonfire.");
+            return;
+        }
+
+        if (playerStats != null)
+        {
+            playerStats.RestoreVitals();
+        }
+
+        if (uiManager != null)
+        {
+            Debug.Log("Interacting with bonfire. Vitals restored. Opening level up menu.");
+            uiManager.OpenLevelUpWindow();
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, enemyDetectionRadius);
+    }
+}
+
+--- END FILE: Items\BonfireInteractable.cs ---
 
 --- START FILE: Items\ConsumableItem.cs ---
 
@@ -8671,6 +8876,95 @@ public class ItemInteractionFooterUI : MonoBehaviour
 
 --- END FILE: UI\ItemInteractionFooterUI.cs ---
 
+--- START FILE: UI\LevelUpWindowUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class LevelUpWindowUI : MonoBehaviour
+{
+    [Header("Core References")]
+    [SerializeField] private PlayerStats playerStats;
+
+    [Header("Header Info")]
+    [SerializeField] private TMP_Text playerLevelText;
+    [SerializeField] private TMP_Text currencyText;
+
+    [Header("Stat Rows")]
+    [SerializeField] private StatRowUI healthStatRow;
+    [SerializeField] private StatRowUI staminaStatRow;
+    [SerializeField] private StatRowUI attackStatRow;
+    [SerializeField] private StatRowUI defenseStatRow;
+
+    [Header("Footer Info")]
+    [SerializeField] private TMP_Text levelUpCostText;
+    [SerializeField] private Button confirmButton;
+
+    private void Awake()
+    {
+        if (playerStats == null)  Debug.LogError("Player Stats missing on LEVEL UP window.");
+        if (confirmButton != null)
+        {
+            confirmButton.onClick.AddListener(OnConfirmLevelUp);
+        }
+    }
+
+    private void OnEnable()
+    {
+        PlayerStats.OnStatsRecalculated += RefreshUI;
+        PlayerStats.OnCurrencyChanged += (newAmount) => RefreshUI();
+
+        // Refresh the UI as soon as the window is opened
+        RefreshUI();
+    }
+
+    private void OnDisable()
+    {
+        PlayerStats.OnStatsRecalculated -= RefreshUI;
+        PlayerStats.OnCurrencyChanged -= (newAmount) => RefreshUI();
+    }
+
+    private void RefreshUI()
+    {
+        if (playerStats == null) return;
+
+        // Update Header
+        playerLevelText.text = playerStats.characterLevel.ToString();
+        currencyText.text = playerStats.currentCurrency.ToString();
+
+        // Get stat increase preview
+        var (nextHealth, nextStamina, nextAttack, nextDefense) = playerStats.GetStatPreviewForNextLevel();
+
+        // Update Stat Rows
+        healthStatRow.UpdateRow(playerStats.maxHealth, nextHealth);
+        staminaStatRow.UpdateRow(playerStats.maxStamina, nextStamina);
+        attackStatRow.UpdateRow(playerStats.baseAttackPower, nextAttack);
+        defenseStatRow.UpdateRow(playerStats.baseDefense, nextDefense);
+
+        // Update Footer
+        int cost = playerStats.GetLevelUpCost();
+        levelUpCostText.text = cost.ToString();
+
+        // Enable or disable the confirm button based on whether the player can afford it
+        if (confirmButton != null)
+        {
+            confirmButton.interactable = playerStats.currentCurrency >= cost;
+        }
+    }
+
+    private void OnConfirmLevelUp()
+    {
+        if (playerStats != null)
+        {
+            playerStats.LevelUp();
+            // The UI will automatically refresh because LevelUp triggers OnStatsRecalculated
+        }
+    }
+}
+
+--- END FILE: UI\LevelUpWindowUI.cs ---
+
 --- START FILE: UI\QuickSlotsUI.cs ---
 
 using System;
@@ -8769,6 +9063,38 @@ public class QuickSlotsUI : MonoBehaviour
 
 
 --- END FILE: UI\QuickSlotsUI.cs ---
+
+--- START FILE: UI\StatRowUI.cs ---
+
+using UnityEngine;
+using TMPro;
+
+public class StatRowUI : MonoBehaviour
+{
+    [SerializeField] private TMP_Text statNameText;
+    [SerializeField] private TMP_Text currentValueText;
+    [SerializeField] private TMP_Text nextValueText;
+    [SerializeField] private GameObject rightArrowIcon;
+
+    public void UpdateRow(float currentValue, float nextValue)
+    {
+        currentValueText.text = currentValue.ToString();
+
+        if (nextValue > currentValue)
+        {
+            nextValueText.text = Mathf.RoundToInt(nextValue).ToString();
+            rightArrowIcon.SetActive(true);
+            nextValueText.gameObject.SetActive(true);
+        }
+        else
+        {
+            rightArrowIcon.SetActive(false);
+            nextValueText.gameObject.SetActive(false);
+        }
+    }
+}
+
+--- END FILE: UI\StatRowUI.cs ---
 
 --- START FILE: UI\StatUIBar.cs ---
 
@@ -8935,6 +9261,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject itemInfoWindow;
     [SerializeField] private InventoryWindowUI inventoryWindowUI;
     [SerializeField] private GameObject statusWindow;
+    [SerializeField] private GameObject levelUpWindow;
 
     public bool IsMenuOpen { get; private set; }
 
@@ -8979,6 +9306,7 @@ public class UIManager : MonoBehaviour
         inventoryWindow.SetActive(false);
         optionsWindow.SetActive(false);
         statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
 
         //Time.timeScale = 0f; // Pause game
         inputHandler.EnableUIInput();
@@ -8997,6 +9325,7 @@ public class UIManager : MonoBehaviour
         optionsWindow.SetActive(false);
         itemInfoWindow.SetActive(false);
         statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
 
         inventoryWindowUI?.ExitSelectionMode();
 
@@ -9008,8 +9337,12 @@ public class UIManager : MonoBehaviour
 
     private void HandleCancel()
     {
-        // If any sub-menu is open (like filtered inventory), close it first.
-        // If only the main menu is open, then close everything.
+        if (levelUpWindow != null && levelUpWindow.activeSelf)
+        {
+            CloseAllMenus();
+            return;
+        }
+
         if (IsMenuOpen)
         {
             // Add more complex logic here if you have deeper menus
@@ -9054,6 +9387,23 @@ public class UIManager : MonoBehaviour
     {
         mainMenuWindow.SetActive(false);
         statusWindow.SetActive(true);
+    }
+
+    public void OpenLevelUpWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        hudWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
+
+        levelUpWindow.SetActive(true);
+
+        IsMenuOpen = true;
+        inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }
 

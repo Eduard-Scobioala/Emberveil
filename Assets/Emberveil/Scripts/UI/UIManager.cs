@@ -152,11 +152,18 @@ public class UIManager : MonoBehaviour
         optionsWindow.SetActive(false);
         statusWindow.SetActive(false);
 
+        InputHandler.UICancelPressed += SaveGame;
         levelUpWindow.SetActive(true);
 
         IsMenuOpen = true;
         inputHandler.EnableUIInput();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+    }
+
+    private void SaveGame()
+    {
+        InputHandler.UICancelPressed -= SaveGame;
+        SaveLoadManager.Instance.SaveGame();
     }
 }
