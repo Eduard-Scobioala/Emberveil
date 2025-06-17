@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
@@ -27,8 +28,17 @@ public class InputHandler : MonoBehaviour
     // D-Pad for Quick Slots
     public static event Action DPadLeftButtonPressed;
     public static event Action DPadRightButtonPressed;
-    //public static event Action DPadUpButtonPressed;
-    //public static event Action DPadDownButtonPressed;
+    public static event Action DPadUpButtonPressed;
+    public static event Action DPadDownButtonPressed;
+
+    // UI Events
+    public static event Action<Vector2> UINavigatePerformed;
+    public static event Action UISubmitPressed;
+    public static event Action UICancelPressed;
+    public static event Action UIContextMenuPressed;
+    public static event Action UITabLeftPressed;
+    public static event Action UITabRightPressed;
+
 
     PlayerControls inputActions;
 
@@ -37,6 +47,9 @@ public class InputHandler : MonoBehaviour
         inputActions ??= new PlayerControls();
         inputActions.Enable();
         SubscribeInputEventsToHandlers();
+
+        // Start with gameplay map enabled by default
+        SwitchToActionMap(inputActions.PlayerActions);
     }
 
     private void OnDisable()
@@ -64,9 +77,50 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerActions.Crouch.performed += _ => CrouchButtonPressed?.Invoke();
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
 
-
         // Player Quick Slots
         inputActions.PlayerQuickSlots.DPadLeft.performed += _ => DPadLeftButtonPressed?.Invoke();
         inputActions.PlayerQuickSlots.DPadRight.performed += _ => DPadRightButtonPressed?.Invoke();
+        inputActions.PlayerQuickSlots.DPadUp.performed += _ => DPadUpButtonPressed?.Invoke();
+        inputActions.PlayerQuickSlots.DPadDown.performed += _ => DPadDownButtonPressed?.Invoke();
+
+        // UI Map
+        inputActions.UI.Navigate.performed += ctx => UINavigatePerformed?.Invoke(ctx.ReadValue<Vector2>());
+        inputActions.UI.Submit.performed += _ => UISubmitPressed?.Invoke();
+        inputActions.UI.Cancel.performed += _ => UICancelPressed?.Invoke();
+        inputActions.UI.ContextMenu.performed += _ => UIContextMenuPressed?.Invoke();
+        inputActions.UI.TabLeft.performed += _ => UITabLeftPressed?.Invoke();
+        inputActions.UI.TabRight.performed += _ => UITabRightPressed?.Invoke();
+    }
+
+    public void SwitchToActionMap(InputActionMap actionMap)
+    {
+        if (!actionMap.enabled)
+        {
+            inputActions.PlayerMovement.Disable();
+            inputActions.PlayerActions.Disable();
+            inputActions.PlayerQuickSlots.Disable();
+            inputActions.UI.Disable();
+
+            actionMap.Enable();
+            Debug.Log($"Switched to Action Map: {actionMap.name}");
+        }
+    }
+
+    // Public methods for UIManager to call
+    public void EnableGameplayInput()
+    {
+        inputActions.UI.Disable();
+        inputActions.PlayerMovement.Enable();
+        inputActions.PlayerActions.Enable();
+        inputActions.PlayerQuickSlots.Enable();
+    }
+
+    public void EnableUIInput()
+    {
+        CameraMovementPerformed?.Invoke(new Vector2()); // reset camera movement
+        inputActions.PlayerMovement.Disable();
+        inputActions.PlayerActions.Disable();
+        inputActions.PlayerQuickSlots.Disable();
+        inputActions.UI.Enable();
     }
 }

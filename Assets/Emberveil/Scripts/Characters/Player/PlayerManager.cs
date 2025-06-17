@@ -13,7 +13,7 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    private InteractableUI interactableUI;
+    public InteractableUI interactableUI;
     private PlayerStats playerStats;
 
     public PlayerAttacker playerAttacker;
@@ -279,7 +279,7 @@ public class PlayerManager : CharacterManager
     {
         if (currentBackstabTarget != null && playerAttacker != null)
         {
-            WeaponItem weaponItem = playerInventory.EquippedWeapon;
+            WeaponItem weaponItem = playerInventory.EquippedRightWeapon;
             int backstabDamage = weaponItem != null ? weaponItem.GetBackstabDmg() : 200;
             Debug.Log($"Player applying {backstabDamage} backstab damage to {currentBackstabTarget.name}");
 

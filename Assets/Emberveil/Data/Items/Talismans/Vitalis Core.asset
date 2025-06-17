@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ec28c9243d699443a9934ea823f8b09, type: 3}
+  m_Name: Vitalis Core
+  m_EditorClassIdentifier: 
+  itemIcon: {fileID: 21300000, guid: f62da19cbbc019f45911e23f00bc64fa, type: 3}
+  itemName: Vitalis Core
+  itemDescription: A pulsating heartstone harvested from the ribs of a fallen colossus.
+    Those who carry it feel their own heartbeat sync with its slow, tectonic rhythm.
+  itemStatsText: +25% Max Health
+  isDroppable: 1
+  itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
+    type: 3}
+  healthBonusMultiplier: 0.25
+  staminaBonusMultiplier: 0
+  totalDamageMultiplier: 1

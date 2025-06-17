@@ -12,45 +12,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72833b8d56fd78349819f86515ffc9b6, type: 3}
   m_Name: Sword
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: 21300000, guid: 596c9f7c81e935a48ba1e2d16178fbb2, type: 3}
-  itemText: Sword
-  modelPrefab: {fileID: 3206114117615877577, guid: c885210e495857142abf33a262e5d19b,
+  itemIcon: {fileID: 21300000, guid: 4f6a30a1d236a9c4ca3ad86c11ed9839, type: 3}
+  itemName: Straight Sword of the Iron Vanguard
+  itemDescription: A balanced and reliable weapon favored by disciplined knights
+    and wandering warriors alike. Its unadorned steel blade is honed to a razor's
+    edge, offering swift slashes and precise thrusts. Though lacking in flashy techniques,
+    its versatility makes it deadly in the hands of a skilled combatant.
+  itemStatsText: 'Atack Power: '
+  isDroppable: 1
+  itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
+    type: 3}
+  modelPrefab: {fileID: 3206114117615877577, guid: 57b7066b960d841428fb7e7472644660,
     type: 3}
   isUnarmed: 0
   Right_Arm_Idle: Right_Arm_Weapon_Idle
-  Left_Arm_Idle: Left_Arm_Weapon_Idle
   Two_Handed_Idle: Two_Handed_Idle
   OH_Light_Attack_01: OH_Light_Attack_01
   OH_Light_Attack_02: OH_Light_Attack_02
   TH_Light_Attack_01: TH_Light_Attack_01
   TH_Light_Attack_02: TH_Light_Attack_02
   OH_Roll_Attack_01: OH_Roll_Attack_01
-  TH_Roll_Attack_01: 
   OH_Backstep_Attack_01: 
-  TH_Backstep_Attack_01: 
   OH_Jump_Attack_Start: 
-  OH_Jump_Attack_Fall: 
-  OH_Jump_Attack_Land: 
-  TH_Jump_Attack_Start: 
-  TH_Jump_Attack_Fall: 
-  TH_Jump_Attack_Land: 
-  OH_Charge_Attack_ChargeUp: 
-  OH_Charge_Attack_Hold: 
-  OH_Charge_Attack_Release: 
-  TH_Charge_Attack_ChargeUp: 
-  TH_Charge_Attack_Hold: 
-  TH_Charge_Attack_Release: 
-  animationTimeToMaxCharge: 2
+  OH_Jump_Attack_Idle: 
+  OH_Jump_Attack_End: 
   baseStamina: 20
   lightAttackStaminaMultiplier: 1
   rollAttackStaminaMultiplier: 1.2
   backstepAttackStaminaMultiplier: 1
   jumpAttackStaminaMultiplier: 1.1
-  chargedAttackStaminaMultiplier: 2
   lightAttackDmg: 5
   rollAttackDmg: 20
   backstepAttackDmg: 18
   jumpAttackDmg: 25
-  chargedAttackMinDmg: 15
-  chargedAttackMaxDmg: 40
   critDmgMultiplier: 2

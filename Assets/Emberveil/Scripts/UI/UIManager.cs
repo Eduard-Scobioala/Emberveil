@@ -2,96 +2,161 @@ using UnityEngine;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("Core References")]
+    [SerializeField] private InputHandler inputHandler;
     [SerializeField] private PlayerInventory playerInventory;
-    [SerializeField] private EquipmentWindowUI equipmentWindow;
 
     [Header("UI Windows")]
-    [SerializeField] private GameObject HUDInterface;
+    [SerializeField] private GameObject hudWindow;
+    [SerializeField] private GameObject mainMenuWindow; // Loadout, Inventory, Options buttons
+    [SerializeField] private GameObject equipmentWindow;
+    [SerializeField] private GameObject inventoryWindow;
     [SerializeField] private GameObject optionsWindow;
-    [SerializeField] private GameObject weaponInventoryWindow;
-    [SerializeField] private GameObject equipementInventoryWindow;
+    [SerializeField] private GameObject itemInfoWindow;
+    [SerializeField] private InventoryWindowUI inventoryWindowUI;
+    [SerializeField] private GameObject statusWindow;
+    [SerializeField] private GameObject levelUpWindow;
 
-    [Header("Weapon Inventory")]
-    [SerializeField] private Transform weaponInventorySlotsParent;
-    [SerializeField] private GameObject weaponInventorySlotPrefab;
+    public bool IsMenuOpen { get; private set; }
 
-    private WeaponInventorySlot[] weaponInventorySlots;
-
-    //public EquipSlotType currentSelectedSlotType;
-
-    private void Start()
+    private void Awake()
     {
-        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-        equipmentWindow.LoadWeaponOnEquipementScreen(playerInventory);
+        if (inputHandler == null) inputHandler = FindObjectOfType<InputHandler>();
+        if (inventoryWindowUI == null) inventoryWindowUI = inventoryWindow.GetComponent<InventoryWindowUI>();
     }
 
     private void OnEnable()
     {
-        InputHandler.OptionsButtonPressed += HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed += ToggleMainMenu;
+        InputHandler.UICancelPressed += HandleCancel; // Listen for UI cancel to close menu
     }
 
     private void OnDisable()
     {
-        InputHandler.OptionsButtonPressed -= HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed -= ToggleMainMenu;
+        InputHandler.UICancelPressed -= HandleCancel;
     }
 
-    private void HandleOptionsButtonPressed()
+    public void ToggleMainMenu()
     {
-        bool isHUDActive = HUDInterface.activeSelf;
+        IsMenuOpen = !IsMenuOpen;
 
-        ToggleHUDInterface(!isHUDActive);
-        ToggleOptionsWindow(isHUDActive);
-
-        // ESQ pressed while HUD active - prepare the UI for the Inventory
-        if (isHUDActive)
+        if (IsMenuOpen)
         {
-            UpdateUI();
+            OpenMainMenu();
         }
-        // ESQ pressed while in inventory - close all windows
         else
         {
-            CloseAllInventoryWindows();
+            CloseAllMenus();
         }
     }
 
-    public void ToggleOptionsWindow(bool windowStatus)
+    private void OpenMainMenu()
     {
-        optionsWindow.SetActive(windowStatus);
+        hudWindow.SetActive(false);
+        mainMenuWindow.SetActive(true);
+
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
+
+        //Time.timeScale = 0f; // Pause game
+        inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None; // Re-lock cursor
+        Cursor.visible = true;
+        // TODO: Select the first button in mainMenuWindow for controller navigation
     }
 
-    public void ToggleHUDInterface(bool windowStatus)
+    public void CloseAllMenus()
     {
-        HUDInterface.SetActive(windowStatus);
+        IsMenuOpen = false;
+        hudWindow.SetActive(true);
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        itemInfoWindow.SetActive(false);
+        statusWindow.SetActive(false);
+        levelUpWindow.SetActive(false);
+
+        inventoryWindowUI?.ExitSelectionMode();
+
+        //Time.timeScale = 1f; // Resume game
+        inputHandler.EnableGameplayInput();
+        Cursor.lockState = CursorLockMode.Locked; // Re-lock cursor
+        Cursor.visible = false;
     }
 
-    private void UpdateUI()
+    private void HandleCancel()
     {
-        #region Weapon Inventory Slots
-        for (int i = 0; i < weaponInventorySlots.Length; i++)
+        if (levelUpWindow != null && levelUpWindow.activeSelf)
         {
-            //if (i < playerInventory.weaponsInventory.Count)
-            //{
-            //    if (weaponInventorySlots.Length < playerInventory.weaponsInventory.Count)
-            //    {
-            //        Instantiate(weaponInventorySlotPrefab, weaponInventorySlotsParent);
-            //        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-            //    }
-
-            //    weaponInventorySlots[i].AddItem(playerInventory.weaponsInventory[i]);
-            //}
-            //else
-            //{
-            //    weaponInventorySlots[i].ClearInventorySlot();
-            //}
+            CloseAllMenus();
+            return;
         }
-        #endregion
+
+        if (IsMenuOpen)
+        {
+            // Add more complex logic here if you have deeper menus
+            CloseAllMenus();
+        }
     }
 
-    private void CloseAllInventoryWindows()
+    public void ShowInventoryForSelection(EquipmentSlotUI clickedSlot)
     {
-        //currentSelectedSlotType = 0;
+        if (inventoryWindowUI == null) return;
 
-        weaponInventoryWindow.SetActive(false);
-        equipementInventoryWindow.SetActive(false);
+        // Hide other windows
+        equipmentWindow.SetActive(false);
+
+        // Tell the inventory window to open in selection mode
+        inventoryWindowUI.OpenInSelectionMode(clickedSlot.slotCategory, clickedSlot.slotIndex);
+
+        // Show the inventory window
+        inventoryWindow.SetActive(true);
+    }
+
+    // --- Methods to be called by main menu buttons ---
+    public void OpenEquipmentWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(true);
+    }
+
+    public void OpenInventoryWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        inventoryWindow.SetActive(true);
+    }
+
+    public void OpenOptionsWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        optionsWindow.SetActive(true);
+    }
+
+    public void OpenStatusWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        statusWindow.SetActive(true);
+    }
+
+    public void OpenLevelUpWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        hudWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
+
+        levelUpWindow.SetActive(true);
+
+        IsMenuOpen = true;
+        inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }

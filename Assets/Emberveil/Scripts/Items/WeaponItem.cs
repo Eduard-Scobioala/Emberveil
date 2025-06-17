@@ -40,4 +40,9 @@ public class WeaponItem : Item
     {
         return (lightAttackDmg > 0 ? lightAttackDmg : 5) * critDmgMultiplier;
     }
+
+    public override string GetItemStatsText()
+    {
+        return itemStatsText + lightAttackDmg.ToString();
+    }
 }

@@ -5,6 +5,7 @@ public class PlayerAttacker : MonoBehaviour
     private PlayerAnimator playerAnimator;
     private WeaponSlotManager weaponSlotManager;
     private PlayerManager playerManager;
+    private PlayerStats playerStats;
     private PlayerInventory playerInventory;
 
     [Header("Backstab Settings")]
@@ -22,6 +23,7 @@ public class PlayerAttacker : MonoBehaviour
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         playerManager = GetComponent<PlayerManager>();
+        playerStats = GetComponent<PlayerStats>();
         playerInventory = GetComponent<PlayerInventory>();
 
         if (backstabLayerMask == 0) // If not set in inspector
@@ -35,8 +37,7 @@ public class PlayerAttacker : MonoBehaviour
         if (playerAnimator.IsInMidAction && !playerAnimator.CanDoCombo)
             return;
 
-        WeaponItem currentWeapon = playerInventory.EquippedWeapon;
-        if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeaponData;
+        WeaponItem currentWeapon = playerInventory.EquippedRightWeapon ?? playerInventory.unarmedWeaponData;
 
         weaponSlotManager.attackingWeapon = currentWeapon;
 
@@ -81,30 +82,7 @@ public class PlayerAttacker : MonoBehaviour
             return;
         }
 
-        int damageToDeal = 0;
-        DamageType damageTypeToDeal = DamageType.Standard;
-
-        switch (currentAttackTypePerforming)
-        {
-            case PlayerAttackType.LightAttack:
-                damageToDeal = attackingWeaponUsed.lightAttackDmg;
-                break;
-            case PlayerAttackType.RollAttack:
-                damageToDeal = attackingWeaponUsed.rollAttackDmg;
-                break;
-            case PlayerAttackType.BackstepAttack:
-                damageToDeal = attackingWeaponUsed.backstepAttackDmg;
-                break;
-            case PlayerAttackType.JumpAttack:
-                damageToDeal = attackingWeaponUsed.jumpAttackDmg;
-                break;
-            case PlayerAttackType.None:
-                break;
-            default:
-                damageToDeal = attackingWeaponUsed.lightAttackDmg > 0 ? attackingWeaponUsed.lightAttackDmg : 5;
-                break;
-        }
-        if (attackingWeaponUsed.isUnarmed && damageToDeal <= 0) damageToDeal = 5; // Ensure unarmed does some damage
+        int finalDamage = playerStats.CalculateAttackDamage(attackingWeaponUsed, currentAttackTypePerforming);
 
         // Apply to Enemy
         if (victimCollider.CompareTag("Enemy"))
@@ -112,13 +90,12 @@ public class PlayerAttacker : MonoBehaviour
             EnemyStats enemyStats = victimCollider.GetComponent<EnemyStats>();
             if (enemyStats != null && !enemyStats.isDead)
             {
-                Debug.Log($"Player's [{currentAttackTypePerforming}] with [{attackingWeaponUsed.name}] hit Enemy [{victimCollider.name}] for {damageToDeal} damage.");
-                enemyStats.TakeDamage(damageToDeal, damageTypeToDeal, playerManager.transform);
+                Debug.Log($"Player's [{currentAttackTypePerforming}] with [{attackingWeaponUsed.name}] hit Enemy [{victimCollider.name}] for {finalDamage} damage.");
+                enemyStats.TakeDamage(finalDamage, DamageType.Standard, playerManager.transform);
             }
         }
         // TODO: add logic for hitting other damageable objects if they have different tags/components
     }
-
 
     private bool TryPerformBackstab()
     {

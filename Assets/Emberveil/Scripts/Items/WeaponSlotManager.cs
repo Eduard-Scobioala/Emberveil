@@ -58,48 +58,6 @@ public class WeaponSlotManager : MonoBehaviour
         //UpdateAnimatorOverrides(attackingWeapon); // Use the potentially unarmed weapon data
     }
 
-    private void UpdateAnimatorOverrides(WeaponItem weaponItem)
-    {
-        // This is a more advanced setup. For now, let's assume the main animator state machine
-        // handles different attack animations based on parameters or weapon type checks.
-        // If you use Animator Override Controllers:
-        // AnimatorOverrideController overrideController = playerManager.playerAnimator.anim.runtimeAnimatorController as AnimatorOverrideController;
-        // if (overrideController == null && playerManager.playerAnimator.anim.runtimeAnimatorController is AnimatorController)
-        // {
-        //     overrideController = new AnimatorOverrideController(playerManager.playerAnimator.anim.runtimeAnimatorController);
-        //     playerManager.playerAnimator.anim.runtimeAnimatorController = overrideController;
-        // }
-        //
-        // if (overrideController != null && weaponItem != null)
-        // {
-        //     overrideController["Default_RH_Idle"] = Resources.Load<AnimationClip>(weaponItem.Right_Arm_Idle_Override); // Example
-        //     // Override other animations based on weaponItem.XXX_Override fields
-        // }
-        // else if (overrideController != null && weaponItem == playerInventory.unarmedWeaponData)
-        // {
-        //     // Revert to default unarmed animations
-        // }
-
-        // Simpler: rely on animator parameters like "WeaponType" or booleans like "IsUnarmed"
-        // And have your state machine branch accordingly.
-        // PlayerAnimator.IsTwoHanding is an example of this.
-        // You might add playerAnimator.SetInteger("WeaponClass", weaponItem.classID) if weapons have classes.
-        playerManager.playerAnimator.anim.SetBool("IsUnarmed", weaponItem == null || weaponItem.isUnarmed);
-
-        // CrossFade to appropriate idle based on current weapon
-        string idleAnimToPlay = "Humanoid_Idle"; // A generic default
-        if (weaponItem != null && !weaponItem.isUnarmed && !string.IsNullOrEmpty(weaponItem.Right_Arm_Idle))
-        {
-            idleAnimToPlay = weaponItem.Right_Arm_Idle;
-        }
-        else if (weaponItem != null && weaponItem.isUnarmed && !string.IsNullOrEmpty(playerInventory.unarmedWeaponData.Right_Arm_Idle))
-        {
-            idleAnimToPlay = playerInventory.unarmedWeaponData.Right_Arm_Idle;
-        }
-        // Debug.Log($"Fading to idle: {idleAnimToPlay}");
-        if (animator != null) animator.CrossFade(idleAnimToPlay, 0.2f);
-    }
-
     private void LoadRightWeaponDamageCollider()
     {
         DamageCollider newCollider;

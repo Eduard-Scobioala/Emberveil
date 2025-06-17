@@ -21,7 +21,7 @@ public class WeaponHolderSlot : MonoBehaviour
     {
         UnloadWeaponAndDestroy();
 
-        if (weaponItem == null || weaponItem.isUnarmed || weaponItem.modelPrefab == null)
+        if (weaponItem == null || weaponItem.modelPrefab == null)
         {
             return; // Nothing to load for unarmed or if no prefab
         }
@@ -31,11 +31,6 @@ public class WeaponHolderSlot : MonoBehaviour
         {
             Transform actualParent = parentOverride != null ? parentOverride : transform;
             currentWeaponModel.transform.SetParent(actualParent, false); // Set parent and reset local transform
-
-            // If your weapon prefabs are not zeroed out, you might need this:
-            // currentWeaponModel.transform.localPosition = Vector3.zero;
-            // currentWeaponModel.transform.localRotation = Quaternion.identity;
-            // currentWeaponModel.transform.localScale = Vector3.one;
         }
     }
 }

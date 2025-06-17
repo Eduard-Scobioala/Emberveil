@@ -674,6 +674,9 @@ public class CharacterStats : MonoBehaviour
     public float maxStamina;
     public float currentStamina;
 
+    [Header("Combat Stats")]
+    public int baseAttackPower = 10;
+
     public bool isDead = false;
 }
 
@@ -684,6 +687,7 @@ public class CharacterStats : MonoBehaviour
 
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.XR;
 
 public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
 {
@@ -756,24 +760,26 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
         // Only apply root motion if the locomotion system is prepared for it
         // (e.g., RB is non-kinematic, NavAgent is off or overridden by current state)
         // Or if in a critical action where animation fully dictates movement
-        if ((!enemyLocomotion.GetComponent<NavMeshAgent>().enabled && !enemyLocomotion.GetComponent<Rigidbody>().isKinematic) ||
+        if ((AgentIsNull() || !enemyLocomotion.GetComponent<NavMeshAgent>().enabled && !enemyLocomotion.GetComponent<Rigidbody>().isKinematic) ||
             enemyManager.IsPerformingCriticalAction || enemyManager.IsReceivingCriticalHit)
         {
             enemyLocomotion.ApplyRootMotion(anim.deltaPosition, anim.deltaRotation);
         }
     }
 
+    private bool AgentIsNull() => enemyLocomotion.GetComponent<NavMeshAgent>() == null;
+
     // --- Animation Event Handlers ---
     // These are called by name from Animation Events in animation clips
 
     public void AnimEvent_EnableDamageCollider()
     {
-        enemyCombat?.EnableWeaponCollider(WeaponHand.Right); // Assuming right hand for now
+        enemyManager.EnemyWeaponSlotManager?.OpenDamageCollider(WeaponHand.Right);
     }
 
     public void AnimEvent_DisableDamageCollider()
     {
-        enemyCombat?.DisableWeaponCollider(WeaponHand.Right);
+        enemyManager.EnemyWeaponSlotManager?.CloseDamageCollider(WeaponHand.Right);
     }
 
     public void AnimEvent_AttackLanded()
@@ -822,6 +828,16 @@ public class EnemyAnimator : AnimatorManager // Assuming AnimatorManager exists
     {
         // TODO: Play footstep sound
     }
+
+    public void AnimEvent_AttackActionConcluded() // NEW Animation Event Handler
+    {
+        enemyManager?.Notify_AttackActionConcluded();
+    }
+
+    public void AnimEvent_FinishAction()
+    {
+        IsInMidAction = false;
+    }
 }
 
 
@@ -836,8 +852,6 @@ using UnityEngine;
 public class EnemyCombat : MonoBehaviour
 {
     private EnemyManager enemyManager;
-    private EnemyAnimator enemyAnimator;
-    private EnemyLocomotion enemyLocomotion;
 
     [Header("Actions")]
     public List<EnemyAttackActionSO> attackActions = new List<EnemyAttackActionSO>();
@@ -858,16 +872,9 @@ public class EnemyCombat : MonoBehaviour
 
     public CharacterManager CurrentBackstabVictim { get; private set; }
 
-    // TODO: Weapon handling - for now, assume a default damage collider
-    [SerializeField] private DamageCollider rightHandDamageCollider; // Assign in inspector
-
     public void Initialize(EnemyManager manager)
     {
         enemyManager = manager;
-        enemyAnimator = manager.EnemyAnimator;
-        enemyLocomotion = manager.Locomotion;
-        // TODO: Find/Setup DamageCollider, possibly from a weapon script
-        if (rightHandDamageCollider == null) Debug.LogWarning("RightHandDamageCollider not set on EnemyCombat");
     }
 
     public void TickCombat()
@@ -1009,24 +1016,23 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
-    public void EnableWeaponCollider(WeaponHand hand)
+    public void ProcessHit(Collider victimCollider, WeaponItem attackingWeapon)
     {
-        // TODO: Handle left/right hand
-        if (rightHandDamageCollider != null)
+        if (victimCollider.CompareTag("Player"))
         {
-            // Pass damage from current attack action
-            // rightHandDamageCollider.SetDamage(currentAttackAction.damage);
-            rightHandDamageCollider.EnableDamageCollider();
-            Debug.Log($"{enemyManager.name} enabled damage collider.");
-        }
-    }
-
-    public void DisableWeaponCollider(WeaponHand hand)
-    {
-        if (rightHandDamageCollider != null)
-        {
-            rightHandDamageCollider.DisableDamageCollider();
-            Debug.Log($"{enemyManager.name} disabled damage collider.");
+            PlayerStats playerStats = victimCollider.GetComponent<PlayerStats>();
+            if (playerStats != null && !playerStats.isDead)
+            {
+                EnemyAttackActionSO currentAction = enemyManager.attackingState.GetCurrentAttackAction();
+                if (currentAction != null)
+                {
+                    playerStats.TakeDamange(currentAction.damage, enemyManager.transform);
+                }
+                else if (attackingWeapon != null)
+                {
+                    playerStats.TakeDamange(attackingWeapon.lightAttackDmg, enemyManager.transform);
+                }
+            }
         }
     }
 
@@ -1139,7 +1145,7 @@ public class EnemyLocomotion : MonoBehaviour
             agent.ResetPath();
             agent.velocity = Vector3.zero; // Explicitly stop
         }
-        rb.velocity = Vector3.zero; // Stop Rigidbody too if it was moving
+        //rb.velocity = Vector3.zero; // Stop Rigidbody too if it was moving
     }
 
     public void RotateTowards(Vector3 targetPosition, float customRotationSpeed = -1f)
@@ -1239,14 +1245,14 @@ using UnityEngine;
 
 public class EnemyManager : CharacterManager
 {
-    //"AI Core Components"
+    // AI Core Components
     public EnemyStats Stats { get; private set; }
     public EnemyLocomotion Locomotion { get; private set; }
     public EnemyAnimator EnemyAnimator { get; private set; }
     public EnemyCombat Combat { get; private set; }
     public EnemySenses Senses { get; private set; }
 
-    //"State Machine"
+    // State Machine
     public IEnemyState CurrentState { get; private set; }
     public IdleState idleState;
     public PatrolState patrolState;
@@ -1257,19 +1263,33 @@ public class EnemyManager : CharacterManager
     public BeingBackstabbedState beingBackstabbedState;   // Victim
     public HitReactionState hitReactionState;
     public ReturnToPostState returnToPostState;
+    public RepositionState repositionState;
     public DeadState deadState;
     // TODO: Add more states: InvestigateState, PoiseBreakState
 
-    //"AI Behavior"
+    public EnemyWeaponSlotManager EnemyWeaponSlotManager { get; private set; }
+
     public CharacterManager CurrentTarget { get; set; } // Who the AI is focused on
     public PatrolRoute patrolRoute;
-    public float defaultStoppingDistance = 1.5f;
     [HideInInspector] public Vector3 initialPosition;
     [HideInInspector] public Quaternion initialRotation;
 
+    [Header("AI Behavior Settings")]
+    public bool canRepositionWhileOnCooldown = true;
+    public float defaultStoppingDistance = 1.5f;
+    public bool isInvincibleDuringStun = false;
+    public float hitStunDuration = 0.1f;
+
+    [Header("UI")]
+    [SerializeField] private GameObject healthBarPrefab;
+    [SerializeField] private Transform healthBarAttachPoint;
+    private EnemyHealthBarUI healthBarUI;
+
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
-    public bool isPerformingNonCriticalAction; // For regular attacks
+
+    public bool HasAttackActionConcluded { get; set; }
+
 
     protected override void Awake()
     {
@@ -1287,6 +1307,9 @@ public class EnemyManager : CharacterManager
         if (Combat == null) Debug.LogError("EnemyCombat not found!", this);
         if (Senses == null) Debug.LogError("EnemySenses not found!", this);
 
+        EnemyWeaponSlotManager = GetComponentInChildren<EnemyWeaponSlotManager>();
+        if (EnemyWeaponSlotManager == null) Debug.LogWarning($"{name} is missing an EnemyWeaponSlotManager component in children.");
+
         // Initialize components
         //Stats.Initialize(this);
         Locomotion.Initialize(this);
@@ -1302,8 +1325,9 @@ public class EnemyManager : CharacterManager
         attackingState = new AttackingState();
         performingBackstabState = new PerformingBackstabState();
         beingBackstabbedState = new BeingBackstabbedState();
-        hitReactionState = new HitReactionState();
+        hitReactionState = new HitReactionState(isInvincibleDuringStun, hitStunDuration);
         returnToPostState = new ReturnToPostState();
+        repositionState = new RepositionState();
         deadState = new DeadState();
     }
 
@@ -1312,6 +1336,15 @@ public class EnemyManager : CharacterManager
         // Capture initial position and rotation
         initialPosition = transform.position;
         initialRotation = transform.rotation;
+
+        if (healthBarPrefab != null)
+        {
+            GameObject healthBarInstance = Instantiate(healthBarPrefab, healthBarAttachPoint);
+            healthBarUI = healthBarInstance.GetComponent<EnemyHealthBarUI>();
+            // Initialize the UI with the stats component, passing the reference
+            healthBarUI.Initialize(Stats);
+        }
+        else Debug.LogWarning($"Enemy {name} is missing a Health Bar Prefab.");
 
         // Subscribe to events
         Stats.OnDamagedEvent += HandleDamageTaken;
@@ -1358,12 +1391,38 @@ public class EnemyManager : CharacterManager
         }
     }
 
+    private void FindAndAssignAttachPoint()
+    {
+        healthBarAttachPoint = transform.Find("HealthBarAttachPoint");
+        if (healthBarAttachPoint == null)
+        {
+            // Create one dynamically if it doesn't exist
+            GameObject attachPointGO = new GameObject("HealthBarAttachPoint");
+            attachPointGO.transform.SetParent(transform);
+            // Position it above the character's head.
+            float height = GetComponent<CapsuleCollider>()?.height ?? 2.0f;
+            attachPointGO.transform.localPosition = new Vector3(0, height + 0.5f, 0);
+            healthBarAttachPoint = attachPointGO.transform;
+        }
+    }
+
     public void SwitchState(IEnemyState newState)
     {
         if (CurrentState == deadState && newState != deadState) return; // Cannot leave dead state except for cleanup
 
         CurrentState?.Exit();
         CurrentState = newState;
+
+        HasAttackActionConcluded = false;
+
+        if (healthBarUI != null)
+        {
+            // Show health bar if in combat-related states, hide otherwise
+            bool shouldBeVisible = (newState is ChaseState || newState is CombatStanceState ||
+                                    newState is AttackingState || newState is RepositionState);
+            healthBarUI.SetVisibility(shouldBeVisible);
+        }
+
         Debug.Log($"{name} transitioning to {newState.GetType().Name}");
         CurrentState.Enter(this);
     }
@@ -1470,6 +1529,12 @@ public class EnemyManager : CharacterManager
         {
             SwitchState(deadState);
         }
+    }
+
+    public void Notify_AttackActionConcluded()
+    {
+        Debug.Log($"{name}: AttackActionConcluded reported by animation.");
+        HasAttackActionConcluded = true;
     }
 }
 
@@ -1684,8 +1749,10 @@ public class EnemyStats : CharacterStats
 {
     public event Action<int, DamageType, Transform> OnDamagedEvent;
     public event Action OnDeathEvent;
+    public event Action<int, int> OnHealthChanged; // First int: currentHealth, Second int: maxHealth
 
     private EnemyManager enemyManager;
+    private EnemyHealthBarUI healthBarUI;
 
     [Header("Enemy Specific Stats")]
     [SerializeField] private int baseHealthAmount = 100;
@@ -1706,6 +1773,9 @@ public class EnemyStats : CharacterStats
     {
         maxHealth = CalculateMaxHealth();
         currentHealth = maxHealth;
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
         currentPoise = poise;
         isDead = false;
     }
@@ -1743,6 +1813,7 @@ public class EnemyStats : CharacterStats
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}/{maxHealth}");
 
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnDamagedEvent?.Invoke(damage, damageType, attacker); // Notify EnemyManager
 
         if (currentHealth <= 0)
@@ -1751,6 +1822,7 @@ public class EnemyStats : CharacterStats
             if (!isDead) // Ensure OnDeathEvent is invoked only once
             {
                 isDead = true;
+                if (healthBarUI != null) healthBarUI.gameObject.SetActive(false);
                 OnDeathEvent?.Invoke(); // Notify EnemyManager
             }
         }
@@ -1766,8 +1838,8 @@ public class EnemyStats : CharacterStats
     {
         if (isDead) return;
 
-        currentHealth += amount;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 }
 
@@ -1780,84 +1852,82 @@ using UnityEngine;
 
 public class EnemyWeaponSlotManager : MonoBehaviour
 {
+    public EnemyManager enemyManager;
     public WeaponItem rightHandWeapon;
-    public WeaponItem leftHandWeapon;
 
-    WeaponHolderSlot rightHandSlot;
-    WeaponHolderSlot leftHandSlot;
-
-    DamageCollider leftHandDamageCollider;
-    DamageCollider rightHandDamageCollider;
-
-    private void Start()
-    {
-        LoadWeaponOnBothHands();
-    }
+    private WeaponHolderSlot rightHandSlot;
+    private DamageCollider rightHandDamageCollider;
 
     private void Awake()
     {
-        WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
-        foreach (WeaponHolderSlot weaponSlot in weaponHolderSlots)
+        if (enemyManager == null)
+            enemyManager = GetComponentInParent<EnemyManager>();
+        if (enemyManager == null)
+            Debug.LogError("EnemyWeaponSlotManager: EnemyManager reference not set!", this);
+
+        rightHandSlot = GetComponentInChildren<WeaponHolderSlot>();
+        if (rightHandSlot == null)
+            Debug.LogError("EnemyWeaponSlotManager: No WeaponHolderSlot found in children!", this);
+    }
+
+    private void Start()
+    {
+        if (rightHandWeapon != null && rightHandSlot != null)
         {
-            if (weaponSlot.isLeftHandSlot)
-            {
-                leftHandSlot = weaponSlot;
-            }
-            else if (weaponSlot.isRightHandSlot)
-            {
-                rightHandSlot = weaponSlot;
-            }
+            LoadWeaponOnSlot(rightHandWeapon, WeaponHand.Right);
         }
     }
 
-    public void LoadWeaponOnBothHands()
+    public void LoadWeaponOnSlot(WeaponItem weapon, WeaponHand hand)
     {
-        if (rightHandWeapon != null)
+        if (hand == WeaponHand.Right && rightHandSlot != null)
         {
-            LoadWeaponOnSlot(rightHandWeapon, false);
-        }
-        if (leftHandWeapon != null)
-        {
-            LoadWeaponOnSlot(rightHandWeapon, true);
-        }
-    }
+            if (rightHandDamageCollider != null)
+            {
+                rightHandDamageCollider.OnDamageableHit -= HandleRightHandHit;
+            }
 
-    public void LoadWeaponOnSlot(WeaponItem weapon, bool isLeft)
-    {
-        if (isLeft)
-        {
-            leftHandSlot.currentWeapon = weapon;
-            leftHandSlot.LoadWeaponModel(weapon);
-            LoadWeaponsDamageCollider(true);
-        }
-        else
-        {
-            rightHandSlot.currentWeapon = weapon;
             rightHandSlot.LoadWeaponModel(weapon);
-            LoadWeaponsDamageCollider(false);
+            rightHandDamageCollider = null;
+
+            if (rightHandSlot.currentWeaponModel != null)
+            {
+                rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+                if (rightHandDamageCollider != null)
+                {
+                    rightHandDamageCollider.Wielder = enemyManager; // Set wielder
+                    rightHandDamageCollider.OnDamageableHit += HandleRightHandHit; // Subscribe
+                }
+            }
+            else if (weapon != null && weapon.isUnarmed) // Handle unarmed "fist" collider for enemy
+            {
+
+            }
         }
     }
 
-    public void LoadWeaponsDamageCollider(bool isLeft)
+    private void HandleRightHandHit(Collider victimCollider)
     {
-        if (isLeft)
+        if (enemyManager != null && enemyManager.Combat != null)
         {
-            leftHandDamageCollider = leftHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+            enemyManager.Combat.ProcessHit(victimCollider, rightHandWeapon); 
         }
-        else
+    }
+
+    public void OpenDamageCollider(WeaponHand hand)
+    {
+        if (hand == WeaponHand.Right && rightHandDamageCollider != null)
         {
-            rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+            rightHandDamageCollider.EnableDamageCollider();
         }
     }
 
-    public void OpenDamageCollider()
+    public void CloseDamageCollider(WeaponHand hand)
     {
-        rightHandDamageCollider.EnableDamageCollider();
-    }
-
-    public void CloseDamageCollider()
-    {
-        rightHandDamageCollider.DisableDamageCollider();
+        if (hand == WeaponHand.Right && rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.DisableDamageCollider();
+        }
     }
 
     #region Handle Weapon's Stamina Consumption
@@ -1920,6 +1990,222 @@ public class PatrolRoute : MonoBehaviour
 
 --- END FILE: Characters\Enemy\PatrolRoute.cs ---
 
+--- START FILE: Characters\Enemy\RepositionState.cs ---
+
+using UnityEngine;
+using UnityEngine.AI;
+
+public class RepositionState : IEnemyState
+{
+    private EnemyManager manager;
+    private NavMeshAgent agent;
+
+    private float repositionTimer;
+    private Vector3 chosenRepositionDestination;
+    private bool isStrafing;
+
+    // --- State Configuration (Consider moving to EnemyManager or a ScriptableObject for per-enemy tuning) ---
+    private const float MinRepositionDuration = 1.5f;
+    private const float MaxRepositionDuration = 3.0f;
+    private const float StrafeDistance = 2.0f; // How far to strafe sideways
+    private const float IdealMinDistanceFromTarget = 2f; // Try to stay at least this far
+    private const float IdealMaxDistanceFromTarget = 4f; // Try to stay within this distance
+    private const float RepositionSpeedMultiplier = 0.8f; // Speed during reposition vs base speed
+    private const float FacePlayerRotationSpeed = 10f;
+
+    public void Enter(EnemyManager manager)
+    {
+        this.manager = manager;
+        agent = manager.Locomotion.GetComponent<NavMeshAgent>();
+
+        Debug.Log($"{manager.name} entered RepositionState.");
+
+        manager.Locomotion.EnableAgentNavigation();
+        agent.speed = manager.Locomotion.baseSpeed * RepositionSpeedMultiplier;
+        agent.stoppingDistance = 0.5f; // Allow getting closer to the chosen reposition point
+        agent.updateRotation = true; // Let agent handle rotation towards path initially, but we might override to face player
+
+        repositionTimer = Random.Range(MinRepositionDuration, MaxRepositionDuration);
+        ChooseAndSetRepositionManeuver();
+    }
+
+    private void ChooseAndSetRepositionManeuver()
+    {
+        if (manager.CurrentTarget == null)
+        {
+            // Should not happen if called correctly, but as a safeguard
+            chosenRepositionDestination = manager.transform.position;
+            isStrafing = false;
+            manager.Locomotion.StopMovement();
+            repositionTimer = 0.1f;
+            return;
+        }
+
+        Vector3 enemyPos = manager.transform.position;
+        Vector3 targetPos = manager.CurrentTarget.transform.position;
+        float distanceToTarget = Vector3.Distance(enemyPos, targetPos);
+        Vector3 directionToTarget = (targetPos - enemyPos).normalized;
+        Vector3 directionAwayFromTarget = -directionToTarget;
+
+        isStrafing = false; // Default
+
+        // Strategy:
+        // 1. If too close, try to back away.
+        // 2. If too far (but still in reasonable combat range), try to move diagonally closer.
+        // 3. Otherwise, strafe left or right.
+
+        if (distanceToTarget < IdealMinDistanceFromTarget)
+        {
+            // Try to move backward or diagonally backward
+            Vector3 perpendicular = Vector3.Cross(Vector3.up, directionToTarget).normalized;
+            chosenRepositionDestination = enemyPos + directionAwayFromTarget * StrafeDistance * 0.75f +
+                                         (Random.value > 0.5f ? perpendicular : -perpendicular) * StrafeDistance * 0.5f;
+            Debug.Log($"{manager.name} reposition: Too close, moving back/diagonally.");
+        }
+        else if (distanceToTarget > IdealMaxDistanceFromTarget && distanceToTarget < manager.Senses.sightRadius * 0.9f)
+        {
+            // Try to move diagonally forward
+            Vector3 perpendicular = Vector3.Cross(Vector3.up, directionToTarget).normalized;
+            chosenRepositionDestination = enemyPos + directionToTarget * StrafeDistance * 0.5f +
+                                         (Random.value > 0.5f ? perpendicular : -perpendicular) * StrafeDistance * 0.75f;
+            Debug.Log($"{manager.name} reposition: Bit far, moving diagonally closer.");
+        }
+        else
+        {
+            // Strafe: Pick a point to the side of the target, maintaining similar distance
+            isStrafing = true;
+            Vector3 perpendicular = Vector3.Cross(Vector3.up, directionToTarget).normalized;
+            Vector3 strafeDir = Random.value > 0.5f ? perpendicular : -perpendicular;
+
+            // Project current position onto line perpendicular to target, then move along it
+            Vector3 pointOnStrafeLine = enemyPos + strafeDir * StrafeDistance;
+            chosenRepositionDestination = pointOnStrafeLine;
+            Debug.Log($"{manager.name} reposition: Strafing.");
+        }
+
+        // Validate destination on NavMesh
+        if (NavMesh.SamplePosition(chosenRepositionDestination, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
+        {
+            chosenRepositionDestination = hit.position;
+            manager.Locomotion.MoveToPoint(chosenRepositionDestination);
+        }
+        else
+        {
+            // Fallback: could not find valid point, maybe just stay put or try simpler strafe
+            Debug.LogWarning($"{manager.name} reposition: Could not find valid NavMesh point for maneuver. Staying put for now.");
+            manager.Locomotion.StopMovement();
+            repositionTimer = 0.2f; // Quickly exit state if stuck
+        }
+    }
+
+    public void Tick()
+    {
+        manager.Senses.TickSenses();
+        repositionTimer -= Time.deltaTime;
+
+        if (manager.CurrentTarget != null)
+        {
+            // --- DYNAMIC ROTATION CONTROL ---
+            bool shouldManuallyFacePlayer = false;
+
+            if (agent.enabled && agent.isOnNavMesh)
+            {
+                // If we are performing a strafing maneuver OR if we are very close to our NavMesh destination,
+                // prioritize facing the player.
+                if (isStrafing || (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f))
+                {
+                    shouldManuallyFacePlayer = true;
+                }
+            }
+            else
+            {
+                // If agent is somehow disabled but we have a target, try to face them.
+                shouldManuallyFacePlayer = true;
+            }
+
+
+            if (shouldManuallyFacePlayer)
+            {
+                if (agent.enabled) agent.updateRotation = false; // Disable agent's auto-rotation
+                manager.Locomotion.RotateTowards(manager.CurrentTarget.transform.position, FacePlayerRotationSpeed);
+            }
+            else
+            {
+                if (agent.enabled) agent.updateRotation = true; // Let agent control rotation towards its path
+            }
+        }
+        else // No target
+        {
+            if (agent.enabled) agent.updateRotation = true; // Let agent control rotation if no target (e.g., returning to post)
+        }
+    }
+
+    public void FixedTick()
+    {
+        // Movement is handled by NavMeshAgent.SetDestination in ChooseAndSetRepositionManeuver
+        // and updated by EnemyLocomotion.UpdateAnimatorMovementParameters() via EnemyManager.Update()
+    }
+
+    public IEnemyState Transition()
+    {
+        if (manager.CurrentTarget == null)
+        {
+            return manager.returnToPostState;
+        }
+
+        if (!manager.Combat.IsAttackOnCooldown)
+        {
+            // Debug.Log($"{manager.name} RepositionState: Attack cooldown ended. To CombatStance.");
+            return manager.combatStanceState;
+        }
+
+        // Check if maneuver is complete (timer or reached destination)
+        bool maneuverComplete = repositionTimer <= 0;
+        if (agent.enabled && agent.isOnNavMesh && !agent.pathPending)
+        {
+            if (agent.remainingDistance <= agent.stoppingDistance)
+            {
+                maneuverComplete = true;
+            }
+        }
+        else if (!agent.enabled || !agent.isOnNavMesh)
+        { // If agent gets disabled or off mesh, consider maneuver "done" to avoid getting stuck
+            maneuverComplete = true;
+        }
+
+
+        if (maneuverComplete)
+        {
+            // Debug.Log($"{manager.name} RepositionState: Maneuver/timer complete. To CombatStance (still on cooldown).");
+            return manager.combatStanceState;
+        }
+
+        float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
+        if (distanceToTarget > manager.Senses.sightRadius * manager.Senses.loseSightDistanceMultiplier * 0.9f)
+        {
+            // Debug.Log($"{manager.name} RepositionState: Target too far. To ChaseState.");
+            return manager.chaseState;
+        }
+
+        return null;
+    }
+
+    public void Exit()
+    {
+        // Restore default agent settings
+        if (agent.enabled && agent.isOnNavMesh)
+        {
+            agent.stoppingDistance = manager.defaultStoppingDistance;
+            agent.updateRotation = true;
+        }
+        // manager.Locomotion.StopMovement(); // Let the next state decide to stop or continue
+        Debug.Log($"{manager.name} exited RepositionState.");
+    }
+}
+
+
+--- END FILE: Characters\Enemy\RepositionState.cs ---
+
 --- START FILE: Characters\Enemy\States\AttackingState.cs ---
 
 using UnityEngine;
@@ -1928,7 +2214,7 @@ public class AttackingState : IEnemyState
 {
     private EnemyManager manager;
     private EnemyAttackActionSO currentAttack;
-    private float animationTimer;
+    //private float animationTimer;
 
     public void SetAttackAction(EnemyAttackActionSO attack)
     {
@@ -1941,68 +2227,66 @@ public class AttackingState : IEnemyState
         if (currentAttack == null)
         {
             Debug.LogError("AttackingState entered without an attack action set!");
-            // Force transition back to combat stance to re-evaluate
-            // This is a failsafe, should ideally not happen.
             manager.SwitchState(manager.combatStanceState);
             return;
         }
 
-        Debug.Log($"{manager.name} entered AttackingState with {currentAttack.actionName}.");
-        manager.isPerformingNonCriticalAction = true;
+        // Debug.Log($"{manager.name} entered AttackingState with {currentAttack.actionName}.");
+        manager.EnemyAnimator.IsInMidAction = true; // Animation starts, enemy is busy
+        manager.HasAttackActionConcluded = false;   // Reset for this new attack
+
         manager.Locomotion.StopMovement();
-        manager.Locomotion.DisableAgentNavigation(true); // Non-kinematic for root motion
+        manager.Locomotion.DisableAgentNavigation(true);
         if (manager.CurrentTarget != null) manager.Locomotion.FaceTargetInstantly(manager.CurrentTarget.transform);
 
-        manager.Combat.NotifyAttackActionStarted(currentAttack);
+        manager.Combat.NotifyAttackActionStarted(currentAttack); // This sets the gameplay cooldown
         manager.EnemyAnimator.PlayTargetAnimation(currentAttack.animationName, true);
-        animationTimer = 0f; // Timer to track animation progress for manual collider control if needed
-
-        // Set cooldown now, so even if interrupted, it's on cooldown
-        manager.Combat.SetGeneralAttackCooldown(currentAttack.recoveryTime);
+        // Animation should have AnimEvent_AttackActionConcluded and AnimEvent_FinishAction
     }
 
-    public void Tick()
-    {
-        animationTimer += Time.deltaTime;
-
-        // The state finishes when isPerformingNonCriticalAction is false,
-        // which should be set by an animation event or after recoveryTime.
-        // For now, we'll use a simple timer based on recovery time as a fallback.
-        // Ideally, an animation event "AnimEvent_FinishAction" would set isPerformingNonCriticalAction to false.
-        if (animationTimer >= currentAttack.recoveryTime) // Fallback if no anim event
-        {
-            manager.isPerformingNonCriticalAction = false;
-        }
-    }
+    public void Tick() { } // Transitions driven by IsInMidAction and hasAttackActionConcluded
 
     public void FixedTick() { }
 
     public IEnemyState Transition()
     {
-        if (!manager.isPerformingNonCriticalAction) // Action is considered finished
+        if (manager.HasAttackActionConcluded)
         {
-            if (manager.CurrentTarget == null) return manager.idleState;
+            if (manager.canRepositionWhileOnCooldown && manager.Combat.IsAttackOnCooldown && manager.CurrentTarget != null)
+            {
+                return manager.repositionState;
+            }
+        }
 
-            // Check distance to decide next state
-            float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-            if (distanceToTarget <= manager.defaultStoppingDistance * 1.1f) // Close enough for another attack/stance
+        if (!manager.EnemyAnimator.IsInMidAction) // Entire animation sequence is complete
+        {
+            if (manager.CurrentTarget == null)
             {
-                return manager.combatStanceState;
+                return manager.idleState;
             }
-            else // Target moved away
-            {
-                return manager.chaseState;
-            }
+            return manager.combatStanceState; // Default back to combat stance to re-evaluate
         }
         return null;
     }
 
     public void Exit()
     {
-        manager.isPerformingNonCriticalAction = false;
-        // Ensure collider is closed if it wasn't by timer/event
-        // if (damageColliderOpened && !damageColliderClosed) manager.Combat.DisableWeaponCollider(WeaponHand.Right);
-        currentAttack = null; // Clear the attack
+        // Ensure IsInMidAction is false if exiting for any reason other than normal animation end.
+        // If AnimEvent_FinishAction fired, IsInMidAction is already false.
+        // If transitioning to RepositionState while IsInMidAction is still true (visual recovery),
+        // then RepositionState.Enter doesn't mess with IsInMidAction, and AttackingState.Exit doesn't need to force it false.
+        // The enemy is still "in an action sequence" until the original attack animation's FinishAction.
+        // However, for safety if interrupted:
+        if(manager.EnemyAnimator.IsInMidAction) manager.EnemyAnimator.IsInMidAction = false; // Or let the new state manage.
+
+        manager.HasAttackActionConcluded = false; // Reset for next time
+        currentAttack = null;
+        Debug.Log($"{manager.name} exited AttackingState.");
+    }
+
+    public EnemyAttackActionSO GetCurrentAttackAction()
+    {
+        return currentAttack;
     }
 }
 
@@ -2108,7 +2392,6 @@ public class ChaseState : IEnemyState
         manager.Locomotion.EnableAgentNavigation();
         manager.Locomotion.SetAgentSpeed(manager.Locomotion.chaseSpeed);
         Debug.Log($"{manager.name} entered ChaseState, chasing {manager.CurrentTarget?.name}.");
-        manager.isPerformingNonCriticalAction = false;
     }
 
     public void Tick()
@@ -2133,7 +2416,7 @@ public class ChaseState : IEnemyState
         }
 
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-        Debug.Log("Distance towards player: " + distanceToTarget);
+        //Debug.Log("Distance towards player: " + distanceToTarget);
         if (distanceToTarget <= manager.defaultStoppingDistance)
         {
             return manager.combatStanceState;
@@ -2157,8 +2440,8 @@ using UnityEngine;
 public class CombatStanceState : IEnemyState
 {
     private EnemyManager manager;
-    private float maxRepositionTime = .1f; // Time to try repositioning before re-evaluating
-    private float repositionTimer;
+    private float _timeSpentInStance = 0f;
+    private const float MaxWaitTimeInStanceOnCooldown = 2.0f;
 
     // Internal flags to store decisions made in Tick()
     private bool _wantsToBackstab = false;
@@ -2172,11 +2455,10 @@ public class CombatStanceState : IEnemyState
         manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = false; // Manual rotation
         manager.Locomotion.SetAgentSpeed(manager.Locomotion.baseSpeed * 0.5f);
 
-        repositionTimer = maxRepositionTime;
-
         // Reset decision flags
         _wantsToBackstab = false;
         _selectedAttackAction = null;
+        _timeSpentInStance = 0f;
 
         Debug.Log($"{manager.name} entered CombatStanceState against {manager.CurrentTarget?.name}.");
     }
@@ -2184,21 +2466,20 @@ public class CombatStanceState : IEnemyState
     public void Tick()
     {
         manager.Senses.TickSenses();
-        if (manager.CurrentTarget == null)
-        {
-            _wantsToBackstab = false;
-            _selectedAttackAction = null;
-            return;
-        }
+        if (manager.CurrentTarget == null) return;
 
         manager.Locomotion.RotateTowards(manager.CurrentTarget.transform.position);
 
-        // Reset decisions each tick before re-evaluating
+        _selectedAttackAction = null; // Reset decision each tick
         _wantsToBackstab = false;
-        _selectedAttackAction = null;
 
-        if (!manager.Combat.IsAttackOnCooldown) // Only consider actions if not on general cooldown
+        if (manager.Combat.IsAttackOnCooldown)
         {
+            _timeSpentInStance += Time.deltaTime;
+        }
+        else // Not on cooldown, try to select an action
+        {
+            _timeSpentInStance = 0f;
             // Priority 1: Backstab
             if (manager.CurrentTarget is PlayerManager playerTarget &&
                 manager.Combat.CanAttemptBackstab(playerTarget) &&
@@ -2208,94 +2489,61 @@ public class CombatStanceState : IEnemyState
             }
 
             // Priority 2: Regular Attack
-            if (!_wantsToBackstab) // Ensure we don't select a normal attack if backstab was chosen
+            if (!_wantsToBackstab)
             {
                 _selectedAttackAction = manager.Combat.GetAvailableAttack(manager.CurrentTarget);
-                if (_selectedAttackAction != null)
-                {
-                    // Decision made to attack. Transition() will see _selectedAttackAction.
-                }
             }
-        }
-
-        // If no action was decided and we're not on cooldown, tick down reposition timer
-        if (!_wantsToBackstab && _selectedAttackAction == null && !manager.Combat.IsAttackOnCooldown)
-        {
-            repositionTimer -= Time.deltaTime;
-        }
-        else if (_wantsToBackstab || _selectedAttackAction != null)
-        {
-            // If an action is chosen, reset reposition timer so we don't immediately
-            // reposition if the action leads back to CombatStanceState quickly.
-            repositionTimer = maxRepositionTime;
         }
     }
 
     public void FixedTick()
     {
-        // If agent is enabled and we're not actively trying to move for an attack,
-        // ensure it's not sliding due to residual velocity.
-        if (manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled)
-        {
-            manager.Locomotion.StopMovement(); // Or implement actual strafing/repositioning logic here
-        }
+        // If NavMeshAgent is enabled for minor adjustments, ensure it's not causing unwanted sliding.
+        // manager.Locomotion.StopMovement(); // Or implement slight strafing logic here if desired for stance
     }
 
     public IEnemyState Transition()
     {
-        // Target lost
         if (manager.CurrentTarget == null)
         {
             return manager.returnToPostState;
         }
 
-        // Target moved too far away
         float distanceToTarget = Vector3.Distance(manager.transform.position, manager.CurrentTarget.transform.position);
-        if (distanceToTarget > manager.defaultStoppingDistance * 1.2f) // Check a slightly larger range than stopping distance
+        if (distanceToTarget > manager.defaultStoppingDistance * 1.2f) // Target moved too far
         {
             return manager.chaseState;
         }
 
-        // Wants to Backstab
-        if (_wantsToBackstab)
-        {
-            // Ensure CurrentTarget is still valid and a PlayerManager before committing
-            if (manager.CurrentTarget is PlayerManager playerForBackstab)
-            {
-                manager.Combat.InitiateBackstabSequence(playerForBackstab);
-                _wantsToBackstab = false; // Consume the intention
-                return manager.performingBackstabState;
-            }
-            else
-            {
-                _wantsToBackstab = false; // Target changed or invalid, clear intention
-            }
-        }
-
-        // Selected a Regular Attack
+        // If an attack action was chosen (and not on cooldown)
         if (_selectedAttackAction != null)
         {
             manager.attackingState.SetAttackAction(_selectedAttackAction);
-            _selectedAttackAction = null; // Consume the intention
             return manager.attackingState;
         }
-
-        // Reposition timer expired, and no action was chosen
-        if (repositionTimer <= 0)
+        if (_wantsToBackstab && manager.CurrentTarget is PlayerManager playerForBackstab)
         {
-            return manager.chaseState;
+            manager.Combat.InitiateBackstabSequence(playerForBackstab);
+            return manager.performingBackstabState;
         }
 
-        // No transition conditions met, remain in CombatStanceState
-        return null;
+        // If attack is on cooldown AND repositioning is enabled AND waited long enough in stance
+        if (manager.Combat.IsAttackOnCooldown && manager.canRepositionWhileOnCooldown && _timeSpentInStance >= MaxWaitTimeInStanceOnCooldown)
+        {
+            return manager.repositionState;
+        }
+
+        return null; // Stay in CombatStanceState
     }
 
     public void Exit()
     {
-        if (manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
+        var agent = manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null && agent.enabled)
         {
-            manager.Locomotion.GetComponent<UnityEngine.AI.NavMeshAgent>().updateRotation = true;
+            agent.updateRotation = true; // Restore agent rotation control
         }
+        Debug.Log($"{manager.name} exited CombatStanceState.");
     }
 }
 
@@ -2366,7 +2614,14 @@ public class HitReactionState : IEnemyState
 {
     private EnemyManager manager;
     private Transform attacker;
-    private float hitStunDuration = 0.5f; // Or get from attack data / animation length
+    private bool isInvincibleDuringStun;
+    private float hitStunDuration; // Or get from attack data / animation length
+
+    public HitReactionState(bool isInvincibleDuringStun = false, float hitStunDuration = 0.1f)
+    {
+        this.isInvincibleDuringStun = isInvincibleDuringStun;
+        this.hitStunDuration = hitStunDuration;
+    }
 
     public void SetAttacker(Transform attackerTransform)
     {
@@ -2376,10 +2631,10 @@ public class HitReactionState : IEnemyState
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
-        manager.isPerformingNonCriticalAction = true; // Busy during hit react
-        manager.EnemyAnimator.IsInvulnerable = true; // Brief invulnerability during hit stun
         manager.Locomotion.StopMovement();
         manager.Locomotion.DisableAgentNavigation(true); // Allow root motion or physics pushes
+
+        if (isInvincibleDuringStun) manager.EnemyAnimator.IsInvulnerable = true;
 
         if (attacker != null) manager.Locomotion.FaceTargetInstantly(attacker);
 
@@ -2393,7 +2648,7 @@ public class HitReactionState : IEnemyState
 
     public void Tick()
     {
-        hitStunDuration -= Time.deltaTime;
+        hitStunDuration = isInvincibleDuringStun ? (hitStunDuration - Time.deltaTime) : 0;
     }
 
     public void FixedTick() { }
@@ -2420,8 +2675,7 @@ public class HitReactionState : IEnemyState
 
     public void Exit()
     {
-        manager.isPerformingNonCriticalAction = false;
-        manager.EnemyAnimator.IsInvulnerable = false;
+        if (isInvincibleDuringStun) manager.EnemyAnimator.IsInvulnerable = false;
     }
 }
 
@@ -2447,7 +2701,6 @@ public class IdleState : IEnemyState
         manager.EnemyAnimator.SetMovementValues(0, 0);
         //manager.EnemyAnimator.PlayTargetAnimation("Idle", false);
         idleTimer = Random.Range(minIdleTime, maxIdleTime);
-        manager.isPerformingNonCriticalAction = false;
         Debug.Log($"{manager.name} entered IdleState.");
     }
 
@@ -2504,13 +2757,9 @@ public class PatrolState : IEnemyState
     private float waitTimer;
     private bool isWaitingAtPoint = false;
 
-    [Header("Patrol Settings (Example - better to get from manager/patrolPath)")]
-    private float patrolWaitTime = 3f; // Time to wait at each patrol point
-
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
-        manager.isPerformingNonCriticalAction = false;
 
         if (manager.patrolRoute == null || manager.patrolRoute.patrolPoints.Count == 0)
         {
@@ -2739,7 +2988,6 @@ public class ReturnToPostState : IEnemyState
         this.manager = manager;
         Debug.Log($"{manager.name} entered ReturnToPostState, returning to {manager.initialPosition}.");
 
-        manager.isPerformingNonCriticalAction = false;
         manager.CurrentTarget = null; // Ensure no target is being tracked
         manager.Senses.ForceLoseTarget(); // Explicitly clear senses
 
@@ -2834,6 +3082,7 @@ public class PlayerAnimator : AnimatorManager
     private PlayerLocomotion playerLocomotion;
     private PlayerManager playerManager;
     private CameraController cameraController;
+    private WeaponSlotManager weaponSlotManager;
 
     public bool CanRotate { get; set; } = true;
 
@@ -2872,12 +3121,6 @@ public class PlayerAnimator : AnimatorManager
         get => GetAnimatorBool();
         set => SetAnimatorBool(value);
     }
-    
-    public bool IsCharging
-    {
-        get => GetAnimatorBool();
-        set => SetAnimatorBool(value);
-    }
 
     public int RollDirection
     {
@@ -2891,10 +3134,12 @@ public class PlayerAnimator : AnimatorManager
         playerLocomotion = GetComponentInParent<PlayerLocomotion>();
         playerManager = GetComponentInParent<PlayerManager>();
         cameraController = FindObjectOfType<CameraController>();
+        weaponSlotManager = GetComponentInParent<WeaponSlotManager>();
 
-        if (playerManager == null) Debug.LogError("PlayerManager not found in parent for AnimatorHandler", this);
-        if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent for AnimatorHandler", this);
-        if (cameraController == null) Debug.LogError("CameraController not found in scene for AnimatorHandler", this);
+        if (playerManager == null) Debug.LogError("PlayerManager not found in parent", this);
+        if (playerLocomotion == null) Debug.LogError("PlayerLocomotion not found in parent", this);
+        if (cameraController == null) Debug.LogError("CameraController not found in scene", this);
+        if (weaponSlotManager == null) Debug.LogError("WeaponSlotManager not found in scene", this);
     }
 
     public void OnAnimatorMove()
@@ -2929,7 +3174,6 @@ public class PlayerAnimator : AnimatorManager
         }
     }
 
-    
 
     public void UpdateAnimatorValues(float verticalInput, float horizontalInput, bool isSprinting, bool isCrouching, bool isLockedOn)
     {
@@ -3065,6 +3309,37 @@ public class PlayerAnimator : AnimatorManager
             playerLocomotion.FinishJumpAction();
         }
     }
+
+    public void AnimEvent_OpenDamageCollider_RH()
+    {
+        weaponSlotManager?.OpenRightHandDamageCollider();
+    }
+
+    public void AnimEvent_CloseDamageCollider_RH()
+    {
+        weaponSlotManager?.CloseRightHandDamageCollider();
+    }
+
+    public void AnimEvent_DrainLightAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.LightAttack);
+    }
+    public void AnimEvent_DrainRollAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.RollAttack);
+    }
+    public void AnimEvent_DrainBackstepAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.BackstepAttack);
+    }
+    public void AnimEvent_DrainJumpAttackStamina()
+    {
+        if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
+            weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.JumpAttack);
+    }
 }
 
 
@@ -3079,8 +3354,8 @@ public class PlayerAttacker : MonoBehaviour
     private PlayerAnimator playerAnimator;
     private WeaponSlotManager weaponSlotManager;
     private PlayerManager playerManager;
-    private PlayerInventory playerInventory;
     private PlayerStats playerStats;
+    private PlayerInventory playerInventory;
 
     [Header("Backstab Settings")]
     [SerializeField] private float backstabRaycastDistance = 1.5f;
@@ -3088,15 +3363,17 @@ public class PlayerAttacker : MonoBehaviour
     [SerializeField] private float backstabMaxAngle = 45f;
     [SerializeField] private LayerMask backstabLayerMask;
     [SerializeField] private string playerBackstabAnimation = "Backstab_Main_01";
-    [SerializeField] private float playerSnapSpeed = 15f;
+    //[SerializeField] private float playerSnapSpeed = 15f;
+
+    private PlayerAttackType currentAttackTypePerforming = PlayerAttackType.None;
 
     private void Awake()
     {
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
         weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
         playerManager = GetComponent<PlayerManager>();
-        playerInventory = GetComponent<PlayerInventory>();
         playerStats = GetComponent<PlayerStats>();
+        playerInventory = GetComponent<PlayerInventory>();
 
         if (backstabLayerMask == 0) // If not set in inspector
         {
@@ -3109,30 +3386,64 @@ public class PlayerAttacker : MonoBehaviour
         if (playerAnimator.IsInMidAction && !playerAnimator.CanDoCombo)
             return;
 
-        WeaponItem currentWeapon = playerInventory.RightHandWeapon;
-        if (currentWeapon == null) currentWeapon = playerInventory.unarmedWeapon;
+        WeaponItem currentWeapon = playerInventory.EquippedRightWeapon ?? playerInventory.unarmedWeaponData;
 
-        weaponSlotManager.attackingWeapon = currentWeapon; // For stamina/damage later
+        weaponSlotManager.attackingWeapon = currentWeapon;
 
-        // Check for Backstab (highest priority)
         if (!playerAnimator.IsInMidAction && playerAnimator.IsGrounded && TryPerformBackstab())
         {
             playerAnimator.IsCrouching = false; // Stand up for backstab
             return;
         }
 
-        // Attack / Combo
         PerformAttack(currentWeapon);
     }
 
     public void PerformAttack(WeaponItem weapon)
     {
         if (weapon == null) return;
-        // playerStats.ConsumeStamina(Mathf.RoundToInt(weapon.baseStamina * weapon.lightAttackStaminaMultiplier)); // Stamina handled by Anim Event
 
         playerAnimator.IsInMidAction = true;
         playerAnimator.ApplyRootMotion(true);
+
+        if (playerManager.playerAnimator.IsInAir)
+        {
+            currentAttackTypePerforming = PlayerAttackType.JumpAttack;
+        }
+        else if (playerManager.playerAnimator.IsDodging)
+        {
+            currentAttackTypePerforming = playerManager.playerAnimator.RollDirection == -1 ?
+                PlayerAttackType.BackstepAttack : PlayerAttackType.RollAttack;
+        }
+        else
+        {
+            currentAttackTypePerforming = PlayerAttackType.LightAttack;
+        }
+
         playerAnimator.TriggerAttack();
+    }
+
+    public void ProcessHit(Collider victimCollider, WeaponItem attackingWeaponUsed)
+    {
+        if (attackingWeaponUsed == null)
+        {
+            Debug.LogWarning("PlayerAttacker.ProcessHit: attackingWeaponUsed is null.");
+            return;
+        }
+
+        int finalDamage = playerStats.CalculateAttackDamage(attackingWeaponUsed, currentAttackTypePerforming);
+
+        // Apply to Enemy
+        if (victimCollider.CompareTag("Enemy"))
+        {
+            EnemyStats enemyStats = victimCollider.GetComponent<EnemyStats>();
+            if (enemyStats != null && !enemyStats.isDead)
+            {
+                Debug.Log($"Player's [{currentAttackTypePerforming}] with [{attackingWeaponUsed.name}] hit Enemy [{victimCollider.name}] for {finalDamage} damage.");
+                enemyStats.TakeDamage(finalDamage, DamageType.Standard, playerManager.transform);
+            }
+        }
+        // TODO: add logic for hitting other damageable objects if they have different tags/components
     }
 
     private bool TryPerformBackstab()
@@ -3231,163 +3542,506 @@ public class PlayerAttacker : MonoBehaviour
 
 --- START FILE: Characters\Player\PlayerInventory.cs ---
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-
-public enum EquipSlotType
-{
-    RightHandSlot01,
-    RightHandSlot02,
-    RightHandSlot03,
-    RightHandSlot04,
-    LeftHandSlot01,
-    LeftHandSlot02,
-    LeftHandSlot03,
-    LeftHandSlot04,
-}
 
 public class PlayerInventory : MonoBehaviour
 {
-    WeaponSlotManager weaponSlotManager;
+    public static event Action OnInventoryUpdated; // Fire when any item is added/removed
+    public static event Action OnEquipmentUpdated; // Fire when any equipped item changes
 
-    public WeaponItem RightHandWeapon { get; private set; }
-    public WeaponItem LeftHandWeapon { get; private set; }
+    [Header("Core References")]
+    [SerializeField] private WeaponSlotManager weaponSlotManager;
+    [SerializeField] public WeaponItem unarmedWeaponData;
 
-    public WeaponItem unarmedWeapon;
+    // --- Equipped Items ---
+    [Header("Current Loadout")]
+    public WeaponItem[] rightHandWeaponSlots = new WeaponItem[4];
+    public Item leftHandItem; // Could be a shield or other item later
+    public ArmorItem headArmor, bodyArmor, handArmor, legArmor;
+    public TalismanItem[] talismanSlots = new TalismanItem[4];
 
-    public WeaponItem[] weaponsInRightHandSlots = new WeaponItem[1];
-    public WeaponItem[] weaponsInLeftHandSlots = new WeaponItem[1];
+    [Tooltip("The list of consumables available for quick cycling.")]
+    public List<InventorySlot> consumableQuickSlots = new ();
+    [SerializeField] private int maxConsumableQuickSlots = 8;
 
-    private int currentRightWeaponIndex = 0;
-    private int currentLeftWeaponIndex = 0;
+    public int CurrentRightWeaponIndex { get; private set; } = 0;
+    public int CurrentConsumableIndex { get; private set; } = 0;
 
-    public List<WeaponItem> weaponsInventory;
+    public WeaponItem EquippedRightWeapon => (CurrentRightWeaponIndex >= 0 && CurrentRightWeaponIndex < rightHandWeaponSlots.Length) ? rightHandWeaponSlots[CurrentRightWeaponIndex] : null;
+    public InventorySlot CurrentConsumableSlot => GetSlotAtIndex(CurrentConsumableIndex);
+    public InventorySlot NextConsumableSlot => GetNextValidSlot(CurrentConsumableIndex);
+
+    // --- Master Item Lists ---
+    [Header("Collected Items")]
+    public List<InventorySlot> weaponsInventory = new();
+    public List<InventorySlot> armorInventory = new();
+    public List<InventorySlot> talismanInventory = new();
+    public List<InventorySlot> consumableInventory = new();
+
+    [Header("Flasks")]
+    public HealthConsumable healingFlaskSO;
+    public int maxFlaskCharges = 3;
+    private InventorySlot _healingFlaskSlot;
+
+    private PlayerManager playerManager;
 
     private void Awake()
     {
-        weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
-        if (weaponSlotManager == null)
+        if (weaponSlotManager == null) weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
+        if (unarmedWeaponData == null) Debug.LogError("PlayerInventory: Unarmed Weapon Data not assigned!");
+
+        playerManager = GetComponent<PlayerManager>();
+
+        for (int i = 0; i < maxConsumableQuickSlots; i++)
         {
-            Debug.LogError("WeaponSlotManager not found in children.");
+            consumableQuickSlots.Add(null);
         }
     }
 
     private void Start()
     {
-        EquipWeapon(TryGetWeapon(weaponsInRightHandSlots), false);
-        EquipWeapon(TryGetWeapon(weaponsInLeftHandSlots), true);
+        InitializeFlasks();
+        EquipWeapon(CurrentRightWeaponIndex);
+        OnEquipmentUpdated?.Invoke();
     }
 
     private void OnEnable()
     {
-        InputHandler.DPadLeftButtonPressed += HandleDPadLeftButtonPressed;
-        InputHandler.DPadRightButtonPressed += HandleDPadRightButtonPressed;
+        InputHandler.DPadRightButtonPressed += CycleNextWeapon;
+        InputHandler.DPadUpButtonPressed += UseCurrentConsumable;
+        InputHandler.DPadDownButtonPressed += CycleNextConsumable;
     }
 
     private void OnDisable()
     {
-        InputHandler.DPadLeftButtonPressed -= HandleDPadLeftButtonPressed;
-        InputHandler.DPadRightButtonPressed -= HandleDPadRightButtonPressed;
+        InputHandler.DPadRightButtonPressed -= CycleNextWeapon;
+        InputHandler.DPadUpButtonPressed -= UseCurrentConsumable;
+        InputHandler.DPadDownButtonPressed -= CycleNextConsumable;
     }
 
-    private void HandleDPadLeftButtonPressed()
+    private void InitializeFlasks()
     {
-        ChangeLeftWeapon();
-    }
-
-    private void HandleDPadRightButtonPressed()
-    {
-        ChangeRightWeapon();
-    }
-
-    private WeaponItem TryGetWeapon(WeaponItem[] weaponItems)
-    {
-        if (weaponItems !=  null && weaponItems.Length > 0)
+        _healingFlaskSlot = consumableInventory.FirstOrDefault(slot => slot?.item == healingFlaskSO);
+        if (_healingFlaskSlot == null)
         {
-            return weaponItems[0];
+            _healingFlaskSlot = new InventorySlot(healingFlaskSO, maxFlaskCharges);
+            consumableInventory.Add(_healingFlaskSlot);
         }
         else
         {
-            return unarmedWeapon;
+            _healingFlaskSlot.quantity = maxFlaskCharges;
+        }
+
+        // Equip flask to the first empty quick slot, or slot 0 if it's empty
+        int firstEmptySlot = consumableQuickSlots.FindIndex(s => s == null);
+        if (firstEmptySlot != -1)
+        {
+            consumableQuickSlots[firstEmptySlot] = _healingFlaskSlot;
         }
     }
 
-    public void ChangeLeftWeapon()
+    public void RefillFlasks()
     {
-        ChangeWeapon(ref currentLeftWeaponIndex, weaponsInLeftHandSlots, true);
-    }
-
-    public void ChangeRightWeapon()
-    {
-        ChangeWeapon(ref currentRightWeaponIndex, weaponsInRightHandSlots, false);
-    }
-
-    private void ChangeWeapon(ref int currentWeaponIndex, WeaponItem[] weaponSlots, bool isLeftHand)
-    {
-        currentWeaponIndex++;
-
-        if (currentWeaponIndex > weaponSlots.Length - 1 || weaponSlots[currentWeaponIndex] == null)
+        if (_healingFlaskSlot != null)
         {
-            currentWeaponIndex = -1;
-            EquipWeapon(unarmedWeapon, isLeftHand);
-        }
-        else
-        {
-            EquipWeapon(weaponSlots[currentWeaponIndex], isLeftHand);
+            _healingFlaskSlot.quantity = maxFlaskCharges;
+            OnInventoryUpdated?.Invoke(); // Notify UI to update flask count
         }
     }
 
-    private void EquipWeapon(WeaponItem weapon, bool isLeftHand)
+    public void AddItem(Item item, int quantity = 1)
     {
-        if (weaponSlotManager == null) return;
+        if (item == null || quantity <= 0) return;
 
-        if (isLeftHand)
+        List<InventorySlot> targetInventory = GetInventoryListForItemType(item);
+        if (targetInventory == null) return;
+
+        // Find if the item already exists in the inventory
+        InventorySlot existingSlot = targetInventory.FirstOrDefault(slot => slot.item == item);
+
+        if (existingSlot != null)
         {
-            LeftHandWeapon = weapon;
+            // Add to existing stack
+            existingSlot.AddQuantity(quantity);
         }
         else
         {
-            RightHandWeapon = weapon;
+            // Create a new stack
+            targetInventory.Add(new InventorySlot(item, quantity));
         }
 
-        weaponSlotManager.LoadWeaponOnSlot(weapon, isLeftHand);
+        OnInventoryUpdated?.Invoke();
     }
 
-    public Item GetItemFromEquipSlot(EquipSlotType slotType)
+    public void RemoveItem(Item item, int quantity = 1)
     {
-        return slotType switch
+        if (item == null || quantity <= 0) return;
+
+        List<InventorySlot> targetInventory = GetInventoryListForItemType(item);
+        if (targetInventory == null) return;
+
+        InventorySlot existingSlot = targetInventory.FirstOrDefault(slot => slot.item == item);
+        if (existingSlot != null)
         {
-            EquipSlotType.RightHandSlot01 => weaponsInRightHandSlots[0],
-            EquipSlotType.RightHandSlot02 => weaponsInRightHandSlots[1],
-            EquipSlotType.RightHandSlot03 => weaponsInRightHandSlots[2],
-            EquipSlotType.RightHandSlot04 => weaponsInRightHandSlots[3],
+            existingSlot.RemoveQuantity(quantity);
+            if (existingSlot.quantity <= 0)
+            {
+                // Also check if this item is in any quick slots and clear them
+                for (int i = 0; i < consumableQuickSlots.Count; i++)
+                {
+                    if (consumableQuickSlots[i]?.item == item)
+                    {
+                        consumableQuickSlots[i] = null;
+                    }
+                }
+                targetInventory.Remove(existingSlot);
+                OnEquipmentUpdated?.Invoke(); // Fire this too, in case it was a quick-slotted item
+            }
+        }
 
-            EquipSlotType.LeftHandSlot01 => weaponsInLeftHandSlots[0],
-            EquipSlotType.LeftHandSlot02 => weaponsInLeftHandSlots[1],
-            EquipSlotType.LeftHandSlot03 => weaponsInLeftHandSlots[2],
-            EquipSlotType.LeftHandSlot04 => weaponsInLeftHandSlots[3],
+        OnInventoryUpdated?.Invoke();
+    }
 
-            _ => throw new System.NotImplementedException(),
+    private List<InventorySlot> GetInventoryListForItemType(Item item)
+    {
+        return item switch
+        {
+            WeaponItem => weaponsInventory,
+            ArmorItem => armorInventory,
+            TalismanItem => talismanInventory,
+            ConsumableItem => consumableInventory,
+            _ => null
         };
     }
 
-    public void SetItemFromEquipSlot(EquipSlotType slotType, WeaponItem item)
-    {
-        switch (slotType)
-        {
-            case >= EquipSlotType.RightHandSlot01 and <= EquipSlotType.RightHandSlot04:
-                weaponsInRightHandSlots[(int)slotType - (int)EquipSlotType.RightHandSlot01] = item;
-                RightHandWeapon = item;
-                break;
+    // --- Equipment Management ---
 
-            case >= EquipSlotType.LeftHandSlot01 and <= EquipSlotType.LeftHandSlot04:
-                weaponsInLeftHandSlots[(int)slotType - (int)EquipSlotType.LeftHandSlot01] = item;
-                LeftHandWeapon = item;
-                break;
+    public void EquipWeapon(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= rightHandWeaponSlots.Length) return;
+
+        CurrentRightWeaponIndex = slotIndex;
+        WeaponItem weaponToEquip = rightHandWeaponSlots[CurrentRightWeaponIndex] ?? unarmedWeaponData;
+        weaponSlotManager.LoadWeaponOnSlot(weaponToEquip, true);
+        OnEquipmentUpdated?.Invoke();
+    }
+
+    public void EquipArmor(ArmorItem armor)
+    {
+        if (armor == null) return;
+        switch (armor.armorType)
+        {
+            case ArmorType.Head: headArmor = armor; break;
+            case ArmorType.Body: bodyArmor = armor; break;
+            case ArmorType.Hands: handArmor = armor; break;
+            case ArmorType.Legs: legArmor = armor; break;
+        }
+        // TODO: Logic to visually change player model
+        OnEquipmentUpdated?.Invoke();
+    }
+
+    // Similar EquipTalisman, EquipConsumable methods...
+
+    public Item GetItemInSlot(EquipmentSlotCategory category, int slotIndex)
+    {
+        switch (category)
+        {
+            case EquipmentSlotCategory.RightHand:
+                return slotIndex >= 0 && slotIndex < rightHandWeaponSlots.Length ? rightHandWeaponSlots[slotIndex] : null;
+            case EquipmentSlotCategory.Head: return headArmor;
+            case EquipmentSlotCategory.Body: return bodyArmor;
+            case EquipmentSlotCategory.Hands: return handArmor;
+            case EquipmentSlotCategory.Legs: return legArmor;
+            case EquipmentSlotCategory.Talisman:
+                return slotIndex >= 0 && slotIndex < talismanSlots.Length ? talismanSlots[slotIndex] : null;
+
+            case EquipmentSlotCategory.Consumable:
+                return slotIndex >= 0 && slotIndex < consumableQuickSlots.Count && consumableQuickSlots[slotIndex] != null
+                    ? consumableQuickSlots[slotIndex].item
+                    : null;
+
+            default:
+                return null;
         }
     }
-}
 
+    // --- Action Handlers ---
+
+    private void CycleNextWeapon()
+    {
+        if (playerManager.playerAnimator.IsInMidAction) return;
+
+        ChangeWeapon(1);
+    }
+
+    private void ChangeWeapon(int direction)
+    {
+        if (playerManager.playerAnimator.IsInMidAction) return;
+        if (rightHandWeaponSlots.All(slot => slot == null)) { EquipWeapon(CurrentRightWeaponIndex); return; }
+
+        int nextIndex = CurrentRightWeaponIndex;
+        for (int i = 0; i < rightHandWeaponSlots.Length; i++)
+        {
+            nextIndex = (nextIndex + direction + rightHandWeaponSlots.Length) % rightHandWeaponSlots.Length;
+            if (rightHandWeaponSlots[nextIndex] != null)
+            {
+                EquipWeapon(nextIndex);
+                return;
+            }
+        }
+    }
+
+    public void UseConsumable(InventorySlot consumableSlot)
+    {
+        if (consumableSlot?.item == null || consumableSlot.quantity <= 0 || playerManager.playerAnimator.IsInMidAction) return;
+        var consumable = consumableSlot.item as ConsumableItem;
+        if (consumable == null) return;
+
+        consumable.Use(playerManager);
+
+        if (consumableSlot.item != healingFlaskSO) RemoveItem(consumableSlot.item, 1);
+        else _healingFlaskSlot.RemoveQuantity(1);
+
+        OnInventoryUpdated?.Invoke();
+    }
+
+    public bool IsItemEquipped(Item item)
+    {
+        if (item == null) return false;
+
+        // Check weapon slots
+        if (item is WeaponItem)
+        {
+            if (rightHandWeaponSlots.Contains(item as WeaponItem)) return true;
+        }
+        // Check armor slots
+        if (item is ArmorItem armor)
+        {
+            if (headArmor == armor || bodyArmor == armor || handArmor == armor || legArmor == armor) return true;
+        }
+        // Check talisman slots
+        if (item is TalismanItem)
+        {
+            if (talismanSlots.Contains(item as TalismanItem)) return true;
+        }
+        // Check consumable slots
+        if (item is ConsumableItem)
+        {
+            if (consumableQuickSlots.Select(slot => slot?.item).Contains(item)) return true;
+        }
+        // Check left hand item
+        if (leftHandItem == item) return true;
+
+        return false;
+    }
+
+    public void EquipItem(Item item, EquipmentSlotCategory category, int slotIndex)
+    {
+        UnequipItem(item);
+        switch (category)
+        {
+            case EquipmentSlotCategory.RightHand:
+                if (item is WeaponItem weapon && slotIndex < rightHandWeaponSlots.Length)
+                {
+                    rightHandWeaponSlots[slotIndex] = weapon;
+                    if (CurrentRightWeaponIndex == slotIndex) EquipWeapon(slotIndex);
+                }
+                break;
+            case EquipmentSlotCategory.Head: if (item is ArmorItem h) headArmor = h; break;
+            case EquipmentSlotCategory.Body: if (item is ArmorItem b) bodyArmor = b; break;
+            case EquipmentSlotCategory.Hands: if (item is ArmorItem ha) handArmor = ha; break;
+            case EquipmentSlotCategory.Legs: if (item is ArmorItem l) legArmor = l; break;
+            case EquipmentSlotCategory.Talisman:
+                if (item is TalismanItem t && slotIndex < talismanSlots.Length) talismanSlots[slotIndex] = t;
+                break;
+            case EquipmentSlotCategory.Consumable:
+                if (item is ConsumableItem c && slotIndex < consumableQuickSlots.Count)
+                {
+                    InventorySlot sourceSlot = consumableInventory.FirstOrDefault(s => s?.item == c);
+                    consumableQuickSlots[slotIndex] = sourceSlot;
+                }
+                break;
+        }
+        OnEquipmentUpdated?.Invoke();
+    }
+
+    public void UnequipItem(Item item)
+    {
+        if (item == null) return;
+
+        // Check weapon slots
+        for (int i = 0; i < rightHandWeaponSlots.Length; i++)
+        {
+            if (rightHandWeaponSlots[i] == item)
+            {
+                rightHandWeaponSlots[i] = null;
+                // If it was the active weapon, re-equip to trigger unarmed state
+                if (CurrentRightWeaponIndex == i) EquipWeapon(i);
+            }
+        }
+
+        // Check armor slots
+        if (headArmor == item) headArmor = null;
+        if (bodyArmor == item) bodyArmor = null;
+        if (handArmor == item) handArmor = null;
+        if (legArmor == item) legArmor = null;
+
+        // Check talisman slots
+        for (int i = 0; i < talismanSlots.Length; i++)
+        {
+            if (talismanSlots[i] == item) talismanSlots[i] = null;
+        }
+
+        // Check consumable quick slots
+        for (int i = 0; i < consumableQuickSlots.Count; i++)
+        {
+            if (consumableQuickSlots[i]?.item == item)
+            {
+                consumableQuickSlots[i] = null;
+            }
+        }
+    }
+
+    public void UnequipItemFromSlot(EquipmentSlotCategory category, int slotIndex)
+    {
+        bool changed = false;
+        switch (category)
+        {
+            case EquipmentSlotCategory.RightHand:
+                if (slotIndex < rightHandWeaponSlots.Length && rightHandWeaponSlots[slotIndex] != null)
+                {
+                    rightHandWeaponSlots[slotIndex] = null;
+                    if (CurrentRightWeaponIndex == slotIndex) // If we unequipped the active weapon
+                    {
+                        EquipWeapon(slotIndex); // This will re-evaluate and load unarmed
+                    }
+                    changed = true;
+                }
+                break;
+            case EquipmentSlotCategory.Armor:
+                Debug.LogWarning("UnequipItemFromSlot called with generic 'Armor' category. Please specify Head, Body, etc.");
+                break;
+            case EquipmentSlotCategory.Head: if (headArmor != null) { headArmor = null; changed = true; } break;
+            case EquipmentSlotCategory.Body: if (bodyArmor != null) { bodyArmor = null; changed = true; } break;
+            case EquipmentSlotCategory.Hands: if (handArmor != null) { handArmor = null; changed = true; } break;
+            case EquipmentSlotCategory.Legs: if (legArmor != null) { legArmor = null; changed = true; } break;
+
+            case EquipmentSlotCategory.Talisman:
+                if (slotIndex >= 0 && slotIndex < talismanSlots.Length && talismanSlots[slotIndex] != null)
+                {
+                    talismanSlots[slotIndex] = null;
+                    changed = true;
+                }
+                break;
+            case EquipmentSlotCategory.Consumable:
+                if (slotIndex < consumableQuickSlots.Count && consumableQuickSlots[slotIndex] != null)
+                {
+                    consumableQuickSlots[slotIndex] = null;
+                    changed = true;
+                }
+                break;
+        }
+
+        if (changed)
+        {
+            OnEquipmentUpdated?.Invoke();
+        }
+    }
+
+    public void AssignConsumableToQuickSlot(InventorySlot consumableSlot)
+    {
+        if (consumableSlot == null || consumableSlot.item as ConsumableItem == null) return;
+        if (!consumableQuickSlots.Contains(consumableSlot))
+        {
+            consumableQuickSlots.Add(consumableSlot);
+            OnEquipmentUpdated?.Invoke();
+        }
+    }
+
+    public void RemoveConsumableFromQuickSlot(InventorySlot consumableSlot)
+    {
+        if (consumableSlot == null) return;
+        if (consumableQuickSlots.Contains(consumableSlot))
+        {
+            consumableQuickSlots.Remove(consumableSlot);
+            // Adjust index if we removed the current or a previous slot
+            if (CurrentConsumableIndex >= consumableQuickSlots.Count && consumableQuickSlots.Count > 0)
+            {
+                CurrentConsumableIndex = consumableQuickSlots.Count - 1;
+            }
+            OnEquipmentUpdated?.Invoke();
+        }
+    }
+
+    public void CycleNextConsumable()
+    {
+        if (playerManager.playerAnimator.IsInMidAction) return;
+        int nextValidIndex = FindNextValidConsumableSlot(1);
+        if (nextValidIndex != -1)
+        {
+            CurrentConsumableIndex = nextValidIndex;
+            OnEquipmentUpdated?.Invoke();
+        }
+    }
+
+    private int FindNextValidConsumableSlot(int direction)
+    {
+        if (consumableQuickSlots.All(slot => slot == null)) return -1;
+        int nextIndex = CurrentConsumableIndex;
+        for (int i = 0; i < consumableQuickSlots.Count; i++)
+        {
+            nextIndex = (nextIndex + direction + consumableQuickSlots.Count) % consumableQuickSlots.Count;
+            if (consumableQuickSlots[nextIndex] != null) return nextIndex;
+        }
+        return CurrentConsumableIndex; // Fallback to current if it's the only one
+    }
+
+    private void UseCurrentConsumable()
+    {
+        InventorySlot slotToUse = CurrentConsumableSlot;
+        if (slotToUse == null) return;
+        UseConsumable(slotToUse);
+    }
+
+    private InventorySlot GetSlotAtIndex(int index)
+    {
+        if (consumableQuickSlots == null || consumableQuickSlots.Count == 0 || index < 0 || index >= consumableQuickSlots.Count) return null;
+        return consumableQuickSlots[index];
+    }
+
+    private InventorySlot GetNextValidSlot(int startIndex)
+    {
+        if (consumableQuickSlots.Count(s => s != null) <= 1) return null; // No "next" if 0 or 1 items
+        int nextValidIndex = FindNextValidConsumableSlot(1);
+        return consumableQuickSlots[nextValidIndex];
+    }
+
+    public void DropItem(Item item)
+    {
+        if (item == null || !item.isDroppable || item.itemPickupPrefab == null)
+        {
+            Debug.LogWarning($"Cannot drop item: {item?.itemName ?? "NULL"}");
+            return;
+        }
+
+        // Instantiate the pickup prefab in front of the player
+        Vector3 dropPosition = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
+        GameObject droppedItemGO = Instantiate(item.itemPickupPrefab, dropPosition, Quaternion.identity);
+
+        // Ensure the pickup script on the prefab knows which item it contains
+        ItemPickUp pickupScript = droppedItemGO.GetComponent<ItemPickUp>();
+        if (pickupScript != null)
+        {
+            pickupScript.SetItem(item);
+        }
+
+        // Remove from inventory
+        RemoveItem(item, 1);
+    }
+}
 
 --- END FILE: Characters\Player\PlayerInventory.cs ---
 
@@ -3408,10 +4062,10 @@ public struct Commands
 
 public class PlayerManager : CharacterManager
 {
-    private InteractableUI interactableUI;
-    private PlayerAttacker playerAttacker;
+    public InteractableUI interactableUI;
     private PlayerStats playerStats;
 
+    public PlayerAttacker playerAttacker;
     public PlayerLocomotion playerLocomotion;
     public PlayerInventory playerInventory;
     public PlayerAnimator playerAnimator;
@@ -3505,19 +4159,22 @@ public class PlayerManager : CharacterManager
         commands = new Commands
         {
             AttackCommand = new RelayCommand(
-                () => (!playerAnimator.IsInMidAction || playerAnimator.CanDoCombo),
+                () => playerStats.CanPerformStaminaConsumingAction() &&
+                    (!playerAnimator.IsInMidAction || playerAnimator.CanDoCombo),
                 playerAttacker.HandleAttackButton),
 
             JumpCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
+                () => playerStats.CanPerformStaminaConsumingAction() &&
+                    !playerAnimator.IsInMidAction && playerAnimator.IsGrounded,
                 playerLocomotion.HandleJumpButtonPressed),
 
             DodgeCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction,
+                () => playerStats.CanPerformStaminaConsumingAction() && !playerAnimator.IsInMidAction,
                 playerLocomotion.HandleDodgeTapped),
 
             SprintHoldCommand = new RelayCommand(
-                () => !playerAnimator.IsInMidAction && !playerAnimator.IsCrouching,
+                () => playerStats.CanPerformStaminaConsumingAction() && 
+                    !playerAnimator.IsInMidAction && !playerAnimator.IsCrouching && playerAnimator.IsGrounded,
                 playerLocomotion.HandleSprintHolding),
 
             SprintReleaseCommand = new RelayCommand(
@@ -3621,6 +4278,7 @@ public class PlayerManager : CharacterManager
                     // TODO: Let OnInteract handle removal if necessary
                     //nearbyInteractables.Remove(closest);
 
+                    interactableUI.EnableInteractionPopUpGameObject(false);
                     interactableUI.EnableItemPopUpGameObject(true);
                     pickedUpItem = true;
                 }
@@ -3670,7 +4328,7 @@ public class PlayerManager : CharacterManager
     {
         if (currentBackstabTarget != null && playerAttacker != null)
         {
-            WeaponItem weaponItem = playerInventory.RightHandWeapon;
+            WeaponItem weaponItem = playerInventory.EquippedRightWeapon;
             int backstabDamage = weaponItem != null ? weaponItem.GetBackstabDmg() : 200;
             Debug.Log($"Player applying {backstabDamage} backstab damage to {currentBackstabTarget.name}");
 
@@ -3702,39 +4360,68 @@ public class PlayerManager : CharacterManager
 
 --- START FILE: Characters\Player\PlayerStats.cs ---
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+
+// Struct to hold information about an active buff for the UI
+public struct ActiveBuffInfo
+{
+    public string BuffName;
+    public Sprite BuffIcon;
+    public float RemainingDuration;
+}
 
 public class PlayerStats : CharacterStats
 {
     [SerializeField] private StatUIBar healthBar;
     [SerializeField] private StatUIBar staminaBar;
 
-    private PlayerAnimator animatorHandler;
+    private PlayerAnimator playerAnimator;
     private PlayerManager playerManager;
+    private PlayerInventory playerInventory;
+
+    [Header("Hit Animation Names")]
+    [SerializeField] private string frontHitAnimation = "Damage_Front_01";
+    [SerializeField] private string backHitAnimation = "Damage_Back_01";
+    [SerializeField] private string genericHitAnimation = "Damage_01"; // Fallback if direction is ambiguous or not needed
 
     [Header("Stats Settings")]
     [SerializeField] private int baseHealthAmout = 300;
     [SerializeField] private int baseStaminaAmout = 100;
     [SerializeField] private float staminaRegenAmount = 10;
     [SerializeField] private float staminaRegenDelay = 1;
+    [SerializeField] private int baseDefense = 5;
+
+    [Header("Currency")]
+    public int currentCurrency = 0;
+    public static event Action<int> OnCurrencyChanged;
+
+    // Buffs
+    public int CurrentAttackBuff { get; private set; } = 0;
+    public float CurrentStaminaRegenBuff { get; private set; } = 0f;
+
+    private Dictionary<string, Coroutine> activeBuffCoroutines = new ();
+    private readonly List<ActiveBuffInfo> activeBuffsForUI = new ();
+
+    public float FinalStaminaRegen => staminaRegenAmount + CurrentStaminaRegenBuff;
+    public int TotalAttackPower => CalculateAttackDamage(playerManager.playerInventory.EquippedRightWeapon, PlayerAttackType.LightAttack);
+    public int TotalDefense => baseDefense; // Later this will be: baseDefense + armorDefense;
 
     private float staminaRegenTimer = 0;
 
     private void Awake()
     {
-        animatorHandler = GetComponentInChildren<PlayerAnimator>();
+        playerAnimator = GetComponentInChildren<PlayerAnimator>();
         playerManager = GetComponent<PlayerManager>();
+        playerInventory = GetComponent<PlayerInventory>();
     }
 
     private void Start()
     {
-        maxHealth = GetMaxHealthBasedOnHealthLevel();
-        currentHealth = maxHealth;
-        healthBar.SetMaxSliderValue(maxHealth);
-
-        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
-        currentStamina = maxStamina;
-        staminaBar.SetMaxSliderValue(maxStamina);
+        RecalculateStats();
+        OnCurrencyChanged?.Invoke(currentCurrency);
     }
 
     private void Update()
@@ -3742,51 +4429,167 @@ public class PlayerStats : CharacterStats
         RegenerateStamina();
     }
 
+    private void OnEnable()
+    {
+        PlayerInventory.OnEquipmentUpdated += RecalculateStats;
+    }
+
+    private void OnDisable()
+    {
+        PlayerInventory.OnEquipmentUpdated -= RecalculateStats;
+    }
+
+    private void RecalculateStats()
+    {
+        // Temporarily store current health/stamina percentages
+        float healthPercent = (maxHealth > 0) ? (float)currentHealth / maxHealth : 1f;
+        float staminaPercent = (maxStamina > 0) ? currentStamina / maxStamina : 1f;
+
+        // --- Calculate Max Health
+        maxHealth = GetMaxHealthBasedOnHealthLevel();
+
+        // --- Calculate Max Stamina
+        maxStamina = GetMaxStaminaBasedOnStaminaLevel();
+
+        // Apply new max values while retaining percentage
+        currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
+        currentStamina = maxStamina * staminaPercent;
+
+        // Update UI bars with new max values
+        if (healthBar != null) healthBar.SetMaxSliderValue(maxHealth);
+        if (staminaBar != null) staminaBar.SetMaxSliderValue(maxStamina);
+
+        // Update current values on UI
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
+
+        Debug.Log($"Stats recalculated. New MaxHP: {maxHealth}, New MaxStamina: {maxStamina}");
+    }
+
     private int GetMaxHealthBasedOnHealthLevel()
     {
-        int levelBasedGainedHealth = 0;
+        int levelBasedHealth = 0;
 
         if (healthLevel < 27)
         {
-            levelBasedGainedHealth = 20 * healthLevel;
+            levelBasedHealth = 20 * healthLevel;
         }
         else if (healthLevel >= 27 && healthLevel <= 49)
         {
-            levelBasedGainedHealth = 540 + 13 * (healthLevel - 26);
+            levelBasedHealth = 540 + 13 * (healthLevel - 26);
         }
         else if (healthLevel > 49)
         {
-            levelBasedGainedHealth = 858 + 5 * (healthLevel - 49);
+            levelBasedHealth = 858 + 5 * (healthLevel - 49);
         }
-        
-        return baseHealthAmout + levelBasedGainedHealth;
+
+        int baseValue = baseHealthAmout + levelBasedHealth;
+
+        // Apply Talisman Bonuses
+        float totalHealthMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalHealthMultiplier += talisman.healthBonusMultiplier;
+            }
+        }
+
+        return Mathf.RoundToInt(baseValue * totalHealthMultiplier);
     }
 
     private float GetMaxStaminaBasedOnStaminaLevel()
     {
-        return baseStaminaAmout + staminaLevel * 5;
+        float baseValue = baseStaminaAmout + staminaLevel * 5;
+
+        // Apply Talisman Bonuses ---
+        float totalStaminaMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalStaminaMultiplier += talisman.staminaBonusMultiplier;
+            }
+        }
+
+        return baseValue * totalStaminaMultiplier;
     }
 
-    public void TakeDamange(int damange)
+    public int CalculateAttackDamage(WeaponItem weapon, PlayerAttackType attackType)
+    {
+        if (weapon == null) weapon = playerInventory.unarmedWeaponData; // Ensure we have data
+
+        int baseWeaponDamage = 0;
+        switch (attackType)
+        {
+            case PlayerAttackType.LightAttack: baseWeaponDamage = weapon.lightAttackDmg; break;
+            case PlayerAttackType.RollAttack: baseWeaponDamage = weapon.rollAttackDmg; break;
+            case PlayerAttackType.BackstepAttack: baseWeaponDamage = weapon.backstepAttackDmg; break;
+            case PlayerAttackType.JumpAttack: baseWeaponDamage = weapon.jumpAttackDmg; break;
+            default: baseWeaponDamage = weapon.lightAttackDmg; break;
+        }
+
+        // Combine base stats and weapon damage
+        int preMultiplierDamage = baseAttackPower + baseWeaponDamage + CurrentAttackBuff;
+
+        // Apply Talisman Damage Multiplier
+        float totalDamageMultiplier = 1.0f;
+        foreach (TalismanItem talisman in playerInventory.talismanSlots)
+        {
+            if (talisman != null)
+            {
+                totalDamageMultiplier *= talisman.totalDamageMultiplier; // Multipliers should multiply each other
+            }
+        }
+
+        return Mathf.RoundToInt(preMultiplierDamage * totalDamageMultiplier);
+    }
+
+    public void TakeDamange(int damage, Transform attackerTransform = null)
     {
         if (isDead)
             return;
 
-        if (animatorHandler.IsInvulnerable)
+        if (playerAnimator.IsInvulnerable)
             return;
 
-        currentHealth -= damange;
+        int damageAfterDefense = Mathf.Max(1, damage - TotalDefense);
+
+        currentHealth -= damageAfterDefense;
         healthBar.SetCurrentStatValue(currentHealth);
 
-        // Play damage animation ONLY if not in a critical hit sequence (like being backstabbed)
-        // and if damage is not lethal (lethal damage will trigger backstab death or regular death anim)
         if (!playerManager.isBeingCriticallyHit && currentHealth > 0)
         {
-            animatorHandler.PlayTargetAnimation("Damage_01", true);
-        }
-        else
-        {
-            animatorHandler.PlayTargetAnimation("Backstab_Main_Victim_01", true);
+            string hitAnimToPlay = genericHitAnimation;
+
+            if (attackerTransform != null)
+            {
+                Vector3 directionFromAttacker = (playerManager.transform.position - attackerTransform.position).normalized;
+                directionFromAttacker.y = 0; // Ignore vertical difference for front/back determination
+
+                float dotProduct = Vector3.Dot(playerManager.transform.forward, directionFromAttacker);
+
+                if (dotProduct < -0.3f)
+                {
+                    hitAnimToPlay = frontHitAnimation;
+                }
+                else if (dotProduct > 0.3f)
+                {
+                    hitAnimToPlay = backHitAnimation;
+                }
+                // else, if dotProduct is close to 0, it's a side hit.
+            }
+
+            if (string.IsNullOrEmpty(hitAnimToPlay) || (hitAnimToPlay == frontHitAnimation && string.IsNullOrEmpty(frontHitAnimation)) || (hitAnimToPlay == backHitAnimation && string.IsNullOrEmpty(backHitAnimation)))
+            {
+                hitAnimToPlay = genericHitAnimation;
+            }
+
+            // Reset bools that may conflict because were interuped by taking dmg
+            playerAnimator.IsDodging = false;
+            playerAnimator.IsCrouching = false;
+
+            playerAnimator.PlayTargetAnimation(hitAnimToPlay, false, rootMotion: true);
         }
 
         if (currentHealth <= 0 && !isDead)
@@ -3794,54 +4597,202 @@ public class PlayerStats : CharacterStats
             currentHealth = 0;
             isDead = true;
 
-            animatorHandler.anim.SetBool("isDead", true);
+            playerAnimator.anim.SetBool("isDead", true);
 
             // If not already in a critical hit (backstab), play normal death.
             // If being critically hit, the backstab victim animation sequence will handle death.
             if (!playerManager.isBeingCriticallyHit)
             {
-                animatorHandler.PlayTargetAnimation("Death_01", true);
+                playerAnimator.PlayTargetAnimation("Death_01", true);
             }
             
             //playerManager.RaiseDeath();
         }
     }
 
-    public void ConsumeStamina(int stamina)
+    public bool CanPerformStaminaConsumingAction()
     {
-        currentStamina -= stamina;
+        return currentStamina > 0;
+    }
+    
+    public void ConsumeStamina(float staminaToConsume)
+    {
+        if (staminaToConsume <= 0) return;
 
-        if (currentStamina <= 0) currentStamina = 0;
+        currentStamina -= staminaToConsume;
+        if (currentStamina < 0)
+        {
+            currentStamina = 0;
+        }
 
-        staminaBar.SetCurrentStatValue(currentStamina);
+        if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
 
-        // Reset regen timer after consuming stamina
         staminaRegenTimer = 0;
+    }
+
+    public void Heal(int amount)
+    {
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        if (healthBar != null) healthBar.SetCurrentStatValue(currentHealth);
     }
 
     public void RegenerateStamina()
     {
-        if (playerManager.charAnimManager.IsInMidAction)
+        if (currentStamina >= maxStamina)
             return;
+
+        if (playerManager.playerAnimator.IsInMidAction && !playerManager.playerAnimator.IsInAir) // while falling stamina is regenerating
+        {
+            staminaRegenTimer = 0;
+            return;
+        }
 
         staminaRegenTimer += Time.deltaTime;
 
-        if (currentStamina < maxStamina && staminaRegenTimer > staminaRegenDelay)
+        if (staminaRegenTimer > staminaRegenDelay)
         {
-            currentStamina += staminaRegenAmount * Time.deltaTime;
+            float finalRegenAmount = staminaRegenAmount + CurrentStaminaRegenBuff;
 
-            if (currentStamina > maxStamina)
-            {
-                currentStamina = maxStamina;
-            }
-            
-            staminaBar.SetCurrentStatValue(currentStamina);
+            currentStamina += finalRegenAmount * Time.deltaTime;
+            if (currentStamina > maxStamina) currentStamina = maxStamina;
+            if (staminaBar != null) staminaBar.SetCurrentStatValue(currentStamina);
         }
+    }
+
+    // --- Buff Application Methods ---
+    public void ApplyAttackBuff(int attackBonus, float duration, ConsumableItem sourceItem)
+    {
+        // If a buff of the same type is already active, stop the old one before starting the new one
+        if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
+        {
+            var duplicateBuff = activeBuffsForUI.Find(buff => buff.BuffName == sourceItem.itemName);
+            activeBuffsForUI.Remove(duplicateBuff);
+            StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
+        }
+        activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(AttackBuffCoroutine(attackBonus, duration, sourceItem));
+    }
+
+    private IEnumerator AttackBuffCoroutine(int attackBonus, float duration, ConsumableItem sourceItem)
+    {
+        CurrentAttackBuff += attackBonus;
+        var buffInfo = new ActiveBuffInfo { BuffName = sourceItem.itemName, BuffIcon = sourceItem.itemIcon, RemainingDuration = duration };
+        activeBuffsForUI.Add(buffInfo);
+
+        while (buffInfo.RemainingDuration > 0)
+        {
+            buffInfo.RemainingDuration -= Time.deltaTime;
+            // Update the entry in the list
+            int index = activeBuffsForUI.FindIndex(b => b.BuffName == sourceItem.itemName);
+            if (index != -1) activeBuffsForUI[index] = buffInfo;
+            yield return null;
+        }
+
+        CurrentAttackBuff -= attackBonus;
+        activeBuffCoroutines.Remove(sourceItem.itemName);
+        activeBuffsForUI.RemoveAll(b => b.BuffName == sourceItem.itemName);
+    }
+
+    public void ApplyStaminaBuff(float regenBonus, float duration, ConsumableItem sourceItem)
+    {
+        if (activeBuffCoroutines.ContainsKey(sourceItem.itemName))
+        {
+            var duplicateBuff = activeBuffsForUI.Find(buff => buff.BuffName == sourceItem.itemName);
+            activeBuffsForUI.Remove(duplicateBuff);
+            StopCoroutine(activeBuffCoroutines[sourceItem.itemName]);
+        }
+        activeBuffCoroutines[sourceItem.itemName] = StartCoroutine(StaminaBuffCoroutine(regenBonus, duration, sourceItem));
+    }
+
+    private IEnumerator StaminaBuffCoroutine(float regenBonus, float duration, ConsumableItem sourceItem)
+    {
+        CurrentStaminaRegenBuff += regenBonus;
+        var buffInfo = new ActiveBuffInfo { BuffName = sourceItem.itemName, BuffIcon = sourceItem.itemIcon, RemainingDuration = duration };
+        activeBuffsForUI.Add(buffInfo);
+
+        while (buffInfo.RemainingDuration > 0)
+        {
+            buffInfo.RemainingDuration -= Time.deltaTime;
+            int index = activeBuffsForUI.FindIndex(b => b.BuffName == sourceItem.itemName);
+            if (index != -1) activeBuffsForUI[index] = buffInfo;
+            yield return null;
+        }
+
+        CurrentStaminaRegenBuff -= regenBonus;
+        activeBuffCoroutines.Remove(sourceItem.itemName);
+        activeBuffsForUI.RemoveAll(b => b.BuffName == sourceItem.itemName);
+    }
+
+    public List<ActiveBuffInfo> GetActiveBuffs()
+    {
+        return activeBuffsForUI;
+    }
+
+    public void AddCurrency(int amount)
+    {
+        if (amount <= 0) return;
+        currentCurrency += amount;
+        OnCurrencyChanged?.Invoke(currentCurrency);
+    }
+
+    public bool SpendCurrency(int amount)
+    {
+        if (amount <= 0) return false;
+
+        if (currentCurrency >= amount)
+        {
+            currentCurrency -= amount;
+            OnCurrencyChanged?.Invoke(currentCurrency);
+            return true;
+        }
+
+        Debug.Log("Not enough currency!");
+        return false;
     }
 }
 
 
 --- END FILE: Characters\Player\PlayerStats.cs ---
+
+--- START FILE: Data\InventorySlot.cs ---
+
+using System;
+
+[Serializable]
+public class InventorySlot
+{
+    public Item item;
+    public int quantity;
+
+    public InventorySlot(Item item, int quantity)
+    {
+        this.item = item;
+        this.quantity = quantity;
+    }
+
+    public void AddQuantity(int amount)
+    {
+        quantity += amount;
+    }
+
+    public void RemoveQuantity(int amount)
+    {
+        quantity -= amount;
+    }
+}
+
+--- END FILE: Data\InventorySlot.cs ---
+
+--- START FILE: Enums\ArmorType.cs ---
+
+public enum ArmorType
+{ 
+    Head,
+    Body,
+    Hands,
+    Legs
+}
+
+--- END FILE: Enums\ArmorType.cs ---
 
 --- START FILE: Enums\DamageType.cs ---
 
@@ -3858,6 +4809,21 @@ public enum DamageType
 
 --- END FILE: Enums\DamageType.cs ---
 
+--- START FILE: Enums\PlayerAttackType.cs ---
+
+public enum PlayerAttackType
+{
+    None,
+    LightAttack,
+    RollAttack,
+    BackstepAttack,
+    JumpAttack
+    // More...
+}
+
+
+--- END FILE: Enums\PlayerAttackType.cs ---
+
 --- START FILE: Enums\WeaponHand.cs ---
 
 public enum WeaponHand
@@ -3869,56 +4835,116 @@ public enum WeaponHand
 
 --- END FILE: Enums\WeaponHand.cs ---
 
+--- START FILE: Items\ArmorItem.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Armor Item")]
+public class ArmorItem : Item
+{
+    public GameObject modelPrefab;
+    public ArmorType armorType;
+
+    [Header("Defense Stats")]
+    public float physicalDefense;
+    public float magicDefense;
+    // TODO: Add other resistances...
+}
+
+
+--- END FILE: Items\ArmorItem.cs ---
+
+--- START FILE: Items\ConsumableItem.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Consumable Item")]
+public abstract class ConsumableItem : Item
+{
+    [Header("Consumable Details")]
+    public string useAnimation;
+
+    public abstract void Use(PlayerManager playerManager);
+}
+
+
+--- END FILE: Items\ConsumableItem.cs ---
+
 --- START FILE: Items\DamageCollider.cs ---
 
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class DamageCollider : MonoBehaviour
 {
-    [SerializeField] private int colliderDamage = 25;
+    public event Action<Collider> OnDamageableHit;
 
-    private Collider damageCollider;
+    private Collider _collider;
+    private readonly List<Collider> _collidedTargetsThisSwing = new();
+
+    [Header("Debug")]
+    [SerializeField] private bool logHits = false;
+
+    // Set by WeaponSlotManager when the weapon is equipped.
+    public CharacterManager Wielder { get; set; }
+
 
     private void Awake()
     {
-        damageCollider = GetComponent<Collider>();
-        damageCollider.gameObject.SetActive(true);
-        damageCollider.isTrigger = true;
-        damageCollider.enabled = false;
+        _collider = GetComponent<Collider>();
+        if (_collider == null)
+        {
+            Debug.LogError($"DamageCollider on {gameObject.name} is missing its Collider component!", this);
+            enabled = false;
+            return;
+        }
+        _collider.gameObject.SetActive(true);
+        _collider.isTrigger = true;
+        _collider.enabled = false; // Start disabled
     }
 
     public void EnableDamageCollider()
     {
-        damageCollider.enabled = true;
+        if (Wielder == null)
+        {
+            Debug.LogWarning($"DamageCollider on {gameObject.name} enabled without a Wielder assigned. It might not function correctly for player/enemy distinctions.");
+        }
+        _collidedTargetsThisSwing.Clear();
+        _collider.enabled = true;
+        if (logHits) Debug.Log($"{Wielder?.name ?? "Unknown Wielder"}'s DamageCollider Enabled.");
     }
 
     public void DisableDamageCollider()
     {
-        damageCollider.enabled = false;
+        _collider.enabled = false;
+        if (logHits) Debug.Log($"{Wielder?.name ?? "Unknown Wielder"}'s DamageCollider Disabled.");
     }
 
-    private void OnTriggerEnter(Collider collision)
+    private void OnTriggerStay(Collider other)
     {
-        if (collision.tag == "Player")
-        {
-            PlayerStats playerStats = collision.GetComponent<PlayerStats>();
+        if (!_collider.enabled || Wielder == null) return;
 
-            if (playerStats != null)
-            {
-                playerStats.TakeDamange(colliderDamage);
-            }
+        // Prevent hitting self
+        if (other.transform.root == Wielder.transform.root)
+        {
+            return;
         }
 
-        if (collision.tag == "Enemy")
+        if (_collidedTargetsThisSwing.Contains(other))
         {
-            EnemyStats enemyStats = collision.GetComponent<EnemyStats>();
-
-            if (enemyStats != null)
-            {
-                enemyStats.TakeDamage(colliderDamage, DamageType.Standard, transform);
-            }
+            return; // Already hit this target in this swing
         }
+
+        _collidedTargetsThisSwing.Add(other);
+
+        // Notify the owner that a damageable target was hit
+        OnDamageableHit?.Invoke(other);
+
+        if (logHits) Debug.Log($"{Wielder.name}'s DamageCollider hit {other.name}. Event invoked.");
     }
+
+    private float MaxComponent(Vector3 v) => Mathf.Max(Mathf.Max(v.x, v.y), v.z);
 }
 
 
@@ -3984,11 +5010,120 @@ public class Item : ScriptableObject
 {
     [Header("Item Information")]
     public Sprite itemIcon;
-    public string itemText;
+    public string itemName;
+    [TextArea(4, 8)]
+    public string itemDescription;
+    public string itemStatsText;
+
+    [Header("Item Properties")]
+    public bool isDroppable = true;
+    public GameObject itemPickupPrefab;
+
+    public virtual string GetItemStatsText()
+    {
+        return itemStatsText;
+    }
 }
 
 
 --- END FILE: Items\Item.cs ---
+
+--- START FILE: Items\ItemPickUp.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ItemPickUp : Interactable
+{
+    [SerializeField] private Item itemToPickUp;
+    [SerializeField] private string pickUpAnimation = "Pick_Up_Item";
+
+    // Setting the item dynamically (for when dropping from inventory)
+    public void SetItem(Item item)
+    {
+        interactableInfoText = item.itemName;
+        itemToPickUp = item;
+    }
+
+    public override void OnInteract(PlayerManager playerManager)
+    {
+        if (itemToPickUp == null)
+        {
+            Debug.LogError("WeaponPickUp: weaponToPickUp is not assigned!", this);
+            return;
+        }
+        PickUpItem(playerManager);
+    }
+
+    private void PickUpItem(PlayerManager playerManager)
+    {
+        if (playerManager.playerAnimator.IsInMidAction) return; // Don't pickup if busy
+
+        playerManager.playerAnimator.IsInMidAction = true;
+        playerManager.playerLocomotion.rigidbody.velocity = Vector3.zero;
+        playerManager.playerAnimator.PlayTargetAnimation(pickUpAnimation, true);
+
+        playerManager.playerInventory.AddItem(itemToPickUp);
+
+        // Update UI prompt
+        var interactable = playerManager.interactableUI;
+        interactable.itemInfoText.text = GetItemName();
+        interactable.itemImage.sprite = GetItemIcon();
+        interactable.EnableInteractionPopUpGameObject(false);
+        interactable.EnableItemPopUpGameObject(true);
+
+        // Disable interactable immediately
+        GetComponent<Collider>().enabled = false;
+
+        // Visually disable or hide the pickup model
+        foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+
+        Destroy(gameObject, 2f);
+    }
+
+    public override string GetItemName()
+    {
+        return itemToPickUp != null ? itemToPickUp.itemName : "Unknown Weapon";
+    }
+
+    public override Sprite GetItemIcon()
+    {
+        return itemToPickUp != null ? itemToPickUp.itemIcon : null;
+    }
+}
+
+
+--- END FILE: Items\ItemPickUp.cs ---
+
+--- START FILE: Items\TalismanItem.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Talisman Item")]
+public class TalismanItem : Item
+{
+    [Header("Talisman Effects")]
+    [Tooltip("Percentage bonus to max health. 0.1 = 10% bonus.")]
+    public float healthBonusMultiplier;
+
+    [Tooltip("Percentage bonus to max stamina. 0.05 = 5% bonus.")]
+    public float staminaBonusMultiplier;
+
+    [Tooltip("Multiplier for ALL outgoing damage. 1.0 = no change, 1.1 = 10% bonus damage.")]
+    public float totalDamageMultiplier = 1.0f;
+
+    public override string GetItemStatsText()
+    {
+        return $"{itemStatsText}";//: {GetStatValue(healthBonusMultiplier)}{GetStatValue(staminaBonusMultiplier)}{GetStatValue(totalDamageMultiplier)}";
+    }
+
+    private string GetStatValue(float value)
+    {
+        return value != 0 ? value.ToString() : "";
+    }
+}
+
+--- END FILE: Items\TalismanItem.cs ---
 
 --- START FILE: Items\WeaponHolderSlot.cs ---
 
@@ -3997,26 +5132,17 @@ using UnityEngine;
 public class WeaponHolderSlot : MonoBehaviour
 {
     public Transform parentOverride;
-    public WeaponItem currentWeapon;
-    public bool isLeftHandSlot;
-    public bool isRightHandSlot;
-    public bool isBackSlot;
+    public GameObject currentWeaponModel { get; private set; }
 
-    public GameObject currentWeaponModel;
-
-    public void UnloadWeapon()
-    {
-        if (currentWeaponModel != null)
-        {
-            currentWeaponModel.SetActive(false);
-        }
-    }
+    // Shield specific logic might be added later if this slot is also for shields
+    // public bool isShieldSlot;
 
     public void UnloadWeaponAndDestroy()
     {
-        if(currentWeaponModel != null)
+        if (currentWeaponModel != null)
         {
             Destroy(currentWeaponModel);
+            currentWeaponModel = null;
         }
     }
 
@@ -4024,29 +5150,17 @@ public class WeaponHolderSlot : MonoBehaviour
     {
         UnloadWeaponAndDestroy();
 
-        if (weaponItem == null)
+        if (weaponItem == null || weaponItem.modelPrefab == null)
         {
-            UnloadWeapon();
-            return;
+            return; // Nothing to load for unarmed or if no prefab
         }
 
-        GameObject model = Instantiate(weaponItem.modelPrefab) as GameObject;
-        if (model != null)
+        currentWeaponModel = Instantiate(weaponItem.modelPrefab);
+        if (currentWeaponModel != null)
         {
-            if (parentOverride != null)
-            {
-                model.transform.parent = parentOverride;
-            }
-            else
-            {
-                model.transform.parent = transform;
-            }
-
-            model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-            model.transform.localScale = Vector3.one;
+            Transform actualParent = parentOverride != null ? parentOverride : transform;
+            currentWeaponModel.transform.SetParent(actualParent, false); // Set parent and reset local transform
         }
-
-        currentWeaponModel = model;
     }
 }
 
@@ -4065,7 +5179,6 @@ public class WeaponItem : Item
 
     [Header("Idle Animations")]
     public string Right_Arm_Idle;
-    public string Left_Arm_Idle;
     public string Two_Handed_Idle;
 
     [Header("Attack Animations")]
@@ -4073,6 +5186,12 @@ public class WeaponItem : Item
     public string OH_Light_Attack_02;
     public string TH_Light_Attack_01;
     public string TH_Light_Attack_02;
+
+    public string OH_Roll_Attack_01;
+    public string OH_Backstep_Attack_01;
+    public string OH_Jump_Attack_Start;
+    public string OH_Jump_Attack_Idle;
+    public string OH_Jump_Attack_End;
 
     [Header("Stamina Costs")]
     public int baseStamina;
@@ -4082,70 +5201,25 @@ public class WeaponItem : Item
     public float jumpAttackStaminaMultiplier = 1.1f;
 
     [Header("Damage Stats")]
-    public int lightAttackDmg = 15;
-    public int rollAttackDmg = 20;
-    public int backstepAttackDmg = 18;
-    public int jumpAttackDmg = 25;
+    public int lightAttackDmg = 10;
+    public int rollAttackDmg = 12;
+    public int backstepAttackDmg = 10;
+    public int jumpAttackDmg = 15;
     public int critDmgMultiplier = 2;
 
     public int GetBackstabDmg()
     {
-        return lightAttackDmg * critDmgMultiplier;
+        return (lightAttackDmg > 0 ? lightAttackDmg : 5) * critDmgMultiplier;
+    }
+
+    public override string GetItemStatsText()
+    {
+        return itemStatsText + lightAttackDmg.ToString();
     }
 }
 
 
 --- END FILE: Items\WeaponItem.cs ---
-
---- START FILE: Items\WeaponPickUp.cs ---
-
-using UnityEngine;
-using UnityEngine.UI;
-
-public class WeaponPickUp : Interactable
-{
-    [SerializeField] private WeaponItem weapon;
-    [SerializeField] private string pickUpAnimation = "Pick_Up_Item";
-    [SerializeField] private float pickUpTime = 1f;
-
-    public override void OnInteract(PlayerManager playerManager)
-    {
-        base.OnInteract(playerManager);
-
-        PickUpItem(playerManager);
-    }
-
-    private void PickUpItem(PlayerManager playerManager)
-    {
-        PlayerInventory playerInventory = playerManager.GetComponent<PlayerInventory>();
-        PlayerLocomotion playerLocomotion = playerManager.GetComponent<PlayerLocomotion>();
-        PlayerAnimator animatorHandler = playerManager.GetComponentInChildren<PlayerAnimator>();
-
-        playerLocomotion.rigidbody.velocity = Vector3.zero;
-        animatorHandler.PlayTargetAnimation(pickUpAnimation, true);
-        playerInventory.weaponsInventory.Add(weapon);
-
-        Invoke(nameof(DestroyGameObject), pickUpTime);
-    }
-
-    private void DestroyGameObject()
-    {
-        Destroy(gameObject);
-    }
-
-    public override string GetItemName()
-    {
-        return weapon.name;
-    }
-
-    public override Sprite GetItemIcon()
-    {
-        return weapon.itemIcon;
-    }
-}
-
-
---- END FILE: Items\WeaponPickUp.cs ---
 
 --- START FILE: Items\WeaponSlotManager.cs ---
 
@@ -4153,180 +5227,245 @@ using UnityEngine;
 
 public class WeaponSlotManager : MonoBehaviour
 {
-    PlayerManager playerManager;
-    private WeaponHolderSlot leftHandSlot;
-    private WeaponHolderSlot rightHandSlot;
-    private WeaponHolderSlot backSlot;
-
-    private DamageCollider leftHandDamageCollider;
-    private DamageCollider rightHandDamageCollider;
-
-    private Animator animator;
-    private QuickSlotsUI quickSlotsUI;
-    private PlayerStats playerStats;
-
+    [Header("References")]
+    [SerializeField] private PlayerManager playerManager;
     [SerializeField] private PlayerInventory playerInventory;
+    [SerializeField] private PlayerStats playerStats;
+    [SerializeField] private Animator animator;
 
-    public WeaponItem attackingWeapon = null;
+    [Header("Weapon Slots")]
+    [SerializeField] private WeaponHolderSlot rightHandSlot;
+    // [SerializeField] private WeaponHolderSlot leftHandSlot; // For shield later
+    // [SerializeField] private WeaponHolderSlot backSlot; // If you have visible sheathing
 
-    public bool isTwoHanding = false;
-    
+    private DamageCollider rightHandDamageCollider;
+    // private DamageCollider leftHandDamageCollider; // For shield bash later
+
+    public WeaponItem attackingWeapon { get; set; } // Set by PlayerAttacker
+
+    // isTwoHanding concept might be simplified or removed if only one weapon
+    // public bool isTwoHanding = false;
+
     private void Awake()
     {
-        WeaponHolderSlot[] weaponHolderSlots = GetComponentsInChildren<WeaponHolderSlot>();
-        foreach (WeaponHolderSlot weaponSlot in weaponHolderSlots)
-        {
-            if (weaponSlot.isLeftHandSlot)
-            {
-                leftHandSlot = weaponSlot;
-            }
-            else if (weaponSlot.isRightHandSlot)
-            {
-                rightHandSlot = weaponSlot;
-            }
-            else if (weaponSlot.isBackSlot)
-            {
-                backSlot = weaponSlot;
-            }
-        }
+        if (playerManager == null) playerManager = GetComponentInParent<PlayerManager>();
+        if (playerInventory == null) playerInventory = GetComponentInParent<PlayerInventory>();
+        if (playerStats == null) playerStats = GetComponentInParent<PlayerManager>().GetComponent<PlayerStats>();
+        if (animator == null && playerManager != null) animator = playerManager.GetComponentInChildren<Animator>(); // Get player animator
 
-        playerManager = GetComponentInParent<PlayerManager>();
-        animator = GetComponent<Animator>();
-        quickSlotsUI = FindObjectOfType<QuickSlotsUI>();
-        playerStats = GetComponentInParent<PlayerStats>();
+        if (rightHandSlot == null) Debug.LogError("WeaponSlotManager: Right Hand Slot not assigned!");
     }
 
-    private void OnEnable()
-    {
-        InputHandler.TwoHandingButtonPressed += HandleTwoHandingButtonPressed;
-    }
+    // No longer needs OnEnable/OnDisable for TwoHandingButtonPressed
+    // Two-handing logic would need to be re-evaluated if you want to keep it.
+    // For now, assuming single right-hand weapon focus.
 
-    private void OnDisable()
+    public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isRightHand)
     {
-        InputHandler.TwoHandingButtonPressed -= HandleTwoHandingButtonPressed;
-    }
-
-    public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isLeft)
-    {
-        if (isLeft)
+        if (!isRightHand)
         {
-            leftHandSlot.currentWeapon = weaponItem;
-            leftHandSlot.LoadWeaponModel(weaponItem);
-            LoadLeftWeaponDamageCollider();
-            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, true);
-            #region Handle Left Weapon Idle Animations
-            if (weaponItem !=  null)
-            {
-                animator.CrossFade(weaponItem.Left_Arm_Idle, 0.2f);
-            }
-            else
-            {
-                animator.CrossFade("Left Arm Empty", 0.2f);
-            }
-            #endregion
+            // Handle left hand (shield) later
+            return;
         }
-        else
+
+        if (rightHandSlot == null) return;
+
+        // Unsubscribe from old collider's event if it exists
+        if (rightHandDamageCollider != null)
         {
-            if (isTwoHanding)
-            {
-                backSlot.LoadWeaponModel(leftHandSlot.currentWeapon);
-                leftHandSlot.UnloadWeaponAndDestroy();
-                animator.CrossFade(weaponItem.Two_Handed_Idle, 0.2f);
-            }
-            else
-            {
-                #region Handle Right Weapon Idle Animations
-
-                animator.CrossFade("Both Arms Empty", .2f);
-
-                backSlot.UnloadWeaponAndDestroy();
-
-                if (weaponItem != null)
-                {
-                    animator.CrossFade(weaponItem.Right_Arm_Idle, 0.2f);
-                }
-                else
-                {
-                    animator.CrossFade("Right Arm Empty", 0.2f);
-                }
-                #endregion
-            }
-
-            rightHandSlot.currentWeapon = weaponItem;
-            rightHandSlot.LoadWeaponModel(weaponItem);
-            LoadRightWeaponDamageCollider();
-            quickSlotsUI.UpdateWeaponQuickSlotsUI(weaponItem, false);
+            rightHandDamageCollider.OnDamageableHit -= HandleRightHandHit;
         }
-    }
 
-    private void HandleTwoHandingButtonPressed()
-    {
-        isTwoHanding = !isTwoHanding;
-        playerManager.playerAnimator.IsTwoHanding = isTwoHanding;
+        rightHandSlot.LoadWeaponModel(weaponItem);
+        attackingWeapon = weaponItem ?? playerInventory.unarmedWeaponData;
 
-        if (isTwoHanding)
-        {
-            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-        }
-        else
-        {
-            LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-            LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
-        }
-    }
-
-    #region Handle Weapon's Damage Collider
-
-    private void LoadLeftWeaponDamageCollider()
-    {
-        leftHandDamageCollider = leftHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+        LoadRightWeaponDamageCollider(); // This finds/initializes the new collider
+        //UpdateAnimatorOverrides(attackingWeapon); // Use the potentially unarmed weapon data
     }
 
     private void LoadRightWeaponDamageCollider()
     {
-        rightHandDamageCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
-    }
-
-    public void OpenDamageCollider()
-    {
-        //if (playerManager.isUsingRightHand)
-        //{
-            rightHandDamageCollider.EnableDamageCollider();
-        //}
-        //else if (playerManager.isUsingLeftHand)
-        //{ 
-            leftHandDamageCollider.EnableDamageCollider();
-        //}
-        
-    }
-
-    public void CloseDamageCollider()
-    {
-        //if (playerManager.isUsingRightHand)
-        //{
-            rightHandDamageCollider.DisableDamageCollider();
-        //}
-        //else if (playerManager.isUsingLeftHand)
-        //{
-            leftHandDamageCollider.DisableDamageCollider();
-        //}
-    }
-
-    #endregion
-
-    #region Handle Weapon's Stamina Consumption
-    public void DrainStaminaLightAttack()
-    {
-        if (attackingWeapon != null)
+        DamageCollider newCollider;
+        if (rightHandSlot.currentWeaponModel != null)
         {
-            playerStats.ConsumeStamina(Mathf.RoundToInt(attackingWeapon.baseStamina * attackingWeapon.lightAttackStaminaMultiplier));
+            newCollider = rightHandSlot.currentWeaponModel.GetComponentInChildren<DamageCollider>();
+        }
+        else // Unarmed: Try to find a persistent DamageCollider on the player's hand model
+        {
+            newCollider = playerManager.GetComponentInChildren<DamageCollider>(true); // Find inactive ones too
+            if (newCollider != null && newCollider.transform.parent != rightHandSlot.transform) // Ensure it's not a weapon's collider
+            {
+                // This is likely the fist collider.
+            }
+            else
+            {
+                newCollider = null; // Didn't find a dedicated fist collider
+            }
+        }
+
+        rightHandDamageCollider = newCollider;
+
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.Wielder = playerManager; // Set the wielder
+            rightHandDamageCollider.OnDamageableHit += HandleRightHandHit; // Subscribe to the event
+        }
+        else
+        {
+            Debug.LogWarning("No DamageCollider found for right hand/unarmed.");
         }
     }
-    #endregion
+
+    private void HandleRightHandHit(Collider victimCollider)
+    {
+        playerManager.playerAttacker.ProcessHit(victimCollider, attackingWeapon);
+    }
+
+    // Left hand would be similar if/when shields are added
+    // private void LoadLeftWeaponDamageCollider() { ... }
+
+    public void OpenRightHandDamageCollider()
+    {
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.EnableDamageCollider();
+        }
+        else
+        {
+            Debug.LogWarning("Attempted to open Right Hand Damage Collider, but it's null.");
+        }
+    }
+
+    public void CloseRightHandDamageCollider()
+    {
+        if (rightHandDamageCollider != null)
+        {
+            rightHandDamageCollider.DisableDamageCollider();
+        }
+    }
+
+    // Open/CloseLeftHandDamageCollider for shields later
+
+    // Stamina consumption will be triggered by Animation Events on PlayerAnimator
+    public void DrainStaminaForAttack(PlayerAttackType attackType)
+    {
+        if (attackingWeapon == null || playerStats == null) return;
+
+        float multiplier = attackType switch
+        {
+            PlayerAttackType.LightAttack => attackingWeapon.lightAttackStaminaMultiplier,
+            PlayerAttackType.RollAttack => attackingWeapon.rollAttackStaminaMultiplier,
+            PlayerAttackType.BackstepAttack => attackingWeapon.backstepAttackStaminaMultiplier,
+            PlayerAttackType.JumpAttack => attackingWeapon.jumpAttackStaminaMultiplier,
+            _ => 1f
+        };
+
+        playerStats.ConsumeStamina(attackingWeapon.baseStamina * multiplier);
+    }
 }
 
 
 --- END FILE: Items\WeaponSlotManager.cs ---
+
+--- START FILE: Items\Consumables\AttackBuffConsumable.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Consumables/Attack Buff")]
+public class AttackBuffConsumable : ConsumableItem
+{
+    [Header("Buff Effects")]
+    public int attackBonus = 20;    // Flat damage bonus
+    public float buffDuration = 30f;
+
+    public override void Use(PlayerManager playerManager)
+    {
+        Debug.Log($"Using {itemName}. Applying attack buff for {buffDuration}s.");
+        PlayerStats playerStats = playerManager.GetComponent<PlayerStats>();
+        if (playerStats != null)
+        {
+            // PlayerStats will need a method to handle this
+            playerStats.ApplyAttackBuff(attackBonus, buffDuration, this);
+        }
+    }
+}
+
+
+--- END FILE: Items\Consumables\AttackBuffConsumable.cs ---
+
+--- START FILE: Items\Consumables\CurrencyConsumable.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Consumables/Currency Item")]
+public class CurrencyConsumable : ConsumableItem
+{
+    [Header("Currency Effect")]
+    public int currencyAmount = 100;
+
+    public override void Use(PlayerManager playerManager)
+    {
+        PlayerStats playerStats = playerManager.GetComponent<PlayerStats>();
+        if (playerStats != null)
+        {
+            Debug.Log($"Using {itemName}. Gained {currencyAmount} currency.");
+            playerStats.AddCurrency(currencyAmount);
+        }
+    }
+}
+
+
+--- END FILE: Items\Consumables\CurrencyConsumable.cs ---
+
+--- START FILE: Items\Consumables\HealthConsumable.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Consumables/Health Potion")]
+public class HealthConsumable : ConsumableItem
+{
+    [Header("Potion Effects")]
+    public int healthRestoreAmount;
+    public bool isFlask; // Is this the main regenerating flask?
+
+    public override void Use(PlayerManager playerManager)
+    {
+        Debug.Log($"Using {itemName}. Restoring {healthRestoreAmount} health.");
+        PlayerStats playerStats = playerManager.GetComponent<PlayerStats>();
+        if (playerStats != null)
+        {
+            playerStats.Heal(healthRestoreAmount);
+        }
+    }
+}
+
+
+--- END FILE: Items\Consumables\HealthConsumable.cs ---
+
+--- START FILE: Items\Consumables\StaminaBuffConsumable.cs ---
+
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Items/Consumables/Stamina Buff")]
+public class StaminaBuffConsumable : ConsumableItem
+{
+    [Header("Buff Effects")]
+    public float staminaRegenBonus = 15f; // Extra regen per second
+    public float buffDuration = 30f;      // How long the buff lasts
+
+    public override void Use(PlayerManager playerManager)
+    {
+        Debug.Log($"Using {itemName}. Applying stamina buff for {buffDuration}s.");
+        PlayerStats playerStats = playerManager.GetComponent<PlayerStats>();
+        if (playerStats != null)
+        {
+            playerStats.ApplyStaminaBuff(staminaRegenBonus, buffDuration, this);
+        }
+    }
+}
+
+
+--- END FILE: Items\Consumables\StaminaBuffConsumable.cs ---
 
 --- START FILE: Player Controls\ICommand.cs ---
 
@@ -4388,8 +5527,17 @@ public class InputHandler : MonoBehaviour
     // D-Pad for Quick Slots
     public static event Action DPadLeftButtonPressed;
     public static event Action DPadRightButtonPressed;
-    //public static event Action DPadUpButtonPressed;
-    //public static event Action DPadDownButtonPressed;
+    public static event Action DPadUpButtonPressed;
+    public static event Action DPadDownButtonPressed;
+
+    // UI Events
+    public static event Action<Vector2> UINavigatePerformed;
+    public static event Action UISubmitPressed;
+    public static event Action UICancelPressed;
+    public static event Action UIContextMenuPressed;
+    public static event Action UITabLeftPressed;
+    public static event Action UITabRightPressed;
+
 
     PlayerControls inputActions;
 
@@ -4398,6 +5546,9 @@ public class InputHandler : MonoBehaviour
         inputActions ??= new PlayerControls();
         inputActions.Enable();
         SubscribeInputEventsToHandlers();
+
+        // Start with gameplay map enabled by default
+        SwitchToActionMap(inputActions.PlayerActions);
     }
 
     private void OnDisable()
@@ -4425,10 +5576,51 @@ public class InputHandler : MonoBehaviour
         inputActions.PlayerActions.Crouch.performed += _ => CrouchButtonPressed?.Invoke();
         inputActions.PlayerActions.Options.performed += _ => OptionsButtonPressed?.Invoke();
 
-
         // Player Quick Slots
         inputActions.PlayerQuickSlots.DPadLeft.performed += _ => DPadLeftButtonPressed?.Invoke();
         inputActions.PlayerQuickSlots.DPadRight.performed += _ => DPadRightButtonPressed?.Invoke();
+        inputActions.PlayerQuickSlots.DPadUp.performed += _ => DPadUpButtonPressed?.Invoke();
+        inputActions.PlayerQuickSlots.DPadDown.performed += _ => DPadDownButtonPressed?.Invoke();
+
+        // UI Map
+        inputActions.UI.Navigate.performed += ctx => UINavigatePerformed?.Invoke(ctx.ReadValue<Vector2>());
+        inputActions.UI.Submit.performed += _ => UISubmitPressed?.Invoke();
+        inputActions.UI.Cancel.performed += _ => UICancelPressed?.Invoke();
+        inputActions.UI.ContextMenu.performed += _ => UIContextMenuPressed?.Invoke();
+        inputActions.UI.TabLeft.performed += _ => UITabLeftPressed?.Invoke();
+        inputActions.UI.TabRight.performed += _ => UITabRightPressed?.Invoke();
+    }
+
+    public void SwitchToActionMap(InputActionMap actionMap)
+    {
+        if (!actionMap.enabled)
+        {
+            inputActions.PlayerMovement.Disable();
+            inputActions.PlayerActions.Disable();
+            inputActions.PlayerQuickSlots.Disable();
+            inputActions.UI.Disable();
+
+            actionMap.Enable();
+            Debug.Log($"Switched to Action Map: {actionMap.name}");
+        }
+    }
+
+    // Public methods for UIManager to call
+    public void EnableGameplayInput()
+    {
+        inputActions.UI.Disable();
+        inputActions.PlayerMovement.Enable();
+        inputActions.PlayerActions.Enable();
+        inputActions.PlayerQuickSlots.Enable();
+    }
+
+    public void EnableUIInput()
+    {
+        CameraMovementPerformed?.Invoke(new Vector2()); // reset camera movement
+        inputActions.PlayerMovement.Disable();
+        inputActions.PlayerActions.Disable();
+        inputActions.PlayerQuickSlots.Disable();
+        inputActions.UI.Enable();
     }
 }
 
@@ -4805,7 +5997,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""fbee9133-7773-4705-9063-d0b8db8561d3"",
-                    ""path"": ""<Gamepad>/buttonSouth"",
+                    ""path"": ""<Gamepad>/rightTrigger"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -5056,6 +6248,299 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""isPartOfComposite"": false
                 }
             ]
+        },
+        {
+            ""name"": ""UI"",
+            ""id"": ""be33a4d8-df6e-447c-ae37-b59abd6c119e"",
+            ""actions"": [
+                {
+                    ""name"": ""Navigate"",
+                    ""type"": ""Value"",
+                    ""id"": ""777e10b4-69db-4b39-96c2-973cf52828ea"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""Submit"",
+                    ""type"": ""Button"",
+                    ""id"": ""61d6fc84-6289-4cf2-9bce-452558bbb5a9"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Cancel"",
+                    ""type"": ""Button"",
+                    ""id"": ""735e9137-4b39-46b5-b6a8-b58eacb0cfc1"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ContextMenu"",
+                    ""type"": ""Button"",
+                    ""id"": ""e7a54d5a-dcf4-44bd-bf55-009680fc8638"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TabLeft"",
+                    ""type"": ""Button"",
+                    ""id"": ""71a70533-5c96-4726-9f5c-84e19da3d26c"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""TabRight"",
+                    ""type"": ""Button"",
+                    ""id"": ""7275cb8f-5b21-462f-9b45-bc5923b99911"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                }
+            ],
+            ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""efb1b5e9-a508-4cc7-b92f-d922ff9cecd8"",
+                    ""path"": ""<Gamepad>/dpad"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""WASD"",
+                    ""id"": ""f47a6f8a-5059-44db-8f36-0055e41cd3c2"",
+                    ""path"": ""2DVector"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""up"",
+                    ""id"": ""2825bef7-ac1f-4e26-850d-4a56fcbbdc7f"",
+                    ""path"": ""<Keyboard>/w"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""down"",
+                    ""id"": ""1d482ae1-61b0-4349-903b-23b39b1d73bf"",
+                    ""path"": ""<Keyboard>/s"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""left"",
+                    ""id"": ""e7b3cd85-c745-41c8-8973-02c0e0f1704d"",
+                    ""path"": ""<Keyboard>/a"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""right"",
+                    ""id"": ""cad61297-5182-4435-8723-8d4fe0dc07a2"",
+                    ""path"": ""<Keyboard>/d"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""Arrows"",
+                    ""id"": ""521443f5-ddb4-4dab-9be6-4347f1e00c5d"",
+                    ""path"": ""2DVector"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""up"",
+                    ""id"": ""99bf5a9d-9960-4f6c-bc6e-7991f4c1ae05"",
+                    ""path"": ""<Keyboard>/upArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""down"",
+                    ""id"": ""7fdb03ed-788d-451a-94a5-23719cf25b29"",
+                    ""path"": ""<Keyboard>/downArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""left"",
+                    ""id"": ""440fcb5a-2ea6-410f-b9b8-942cec4abc4e"",
+                    ""path"": ""<Keyboard>/leftArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""right"",
+                    ""id"": ""41966502-675f-4fcf-9c71-ea9670c4d1de"",
+                    ""path"": ""<Keyboard>/rightArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Navigate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7058a4e5-7aa6-4dc5-938a-58665f87df77"",
+                    ""path"": ""<Gamepad>/buttonSouth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Submit"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4bafa090-faf3-4d40-9a68-e483edfab337"",
+                    ""path"": ""<Keyboard>/enter"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Submit"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""f97625bd-5a18-48c5-be55-3619754084ce"",
+                    ""path"": ""<Gamepad>/buttonEast"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cancel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4a44cb41-d44a-4136-958d-7a7f9c11d38a"",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cancel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""77327856-fdb3-4a86-8547-61c24fff53bc"",
+                    ""path"": ""<Gamepad>/buttonWest"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ContextMenu"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2a1432d8-76e8-4edf-a9c8-a7323c682617"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ContextMenu"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c1bffed5-a31b-49c6-95a3-6d9915c9f860"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TabLeft"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""1da49102-9f31-4c5a-851c-a7a9d072d46e"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TabLeft"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c7739eb3-463f-423c-ad60-3eb9ec3f6798"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TabRight"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""5897b472-1b4e-4dc5-afb7-009eda7cee82"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""TabRight"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                }
+            ]
         }
     ],
     ""controlSchemes"": []
@@ -5083,6 +6568,14 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_PlayerQuickSlots_DPadDown = m_PlayerQuickSlots.FindAction("D-Pad Down", throwIfNotFound: true);
         m_PlayerQuickSlots_DPadLeft = m_PlayerQuickSlots.FindAction("D-Pad Left", throwIfNotFound: true);
         m_PlayerQuickSlots_DPadRight = m_PlayerQuickSlots.FindAction("D-Pad Right", throwIfNotFound: true);
+        // UI
+        m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
+        m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
+        m_UI_Submit = m_UI.FindAction("Submit", throwIfNotFound: true);
+        m_UI_Cancel = m_UI.FindAction("Cancel", throwIfNotFound: true);
+        m_UI_ContextMenu = m_UI.FindAction("ContextMenu", throwIfNotFound: true);
+        m_UI_TabLeft = m_UI.FindAction("TabLeft", throwIfNotFound: true);
+        m_UI_TabRight = m_UI.FindAction("TabRight", throwIfNotFound: true);
     }
 
     ~@PlayerControls()
@@ -5090,6 +6583,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         UnityEngine.Debug.Assert(!m_PlayerMovement.enabled, "This will cause a leak and performance issues, PlayerControls.PlayerMovement.Disable() has not been called.");
         UnityEngine.Debug.Assert(!m_PlayerActions.enabled, "This will cause a leak and performance issues, PlayerControls.PlayerActions.Disable() has not been called.");
         UnityEngine.Debug.Assert(!m_PlayerQuickSlots.enabled, "This will cause a leak and performance issues, PlayerControls.PlayerQuickSlots.Disable() has not been called.");
+        UnityEngine.Debug.Assert(!m_UI.enabled, "This will cause a leak and performance issues, PlayerControls.UI.Disable() has not been called.");
     }
 
     public void Dispose()
@@ -5397,6 +6891,92 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         }
     }
     public PlayerQuickSlotsActions @PlayerQuickSlots => new PlayerQuickSlotsActions(this);
+
+    // UI
+    private readonly InputActionMap m_UI;
+    private List<IUIActions> m_UIActionsCallbackInterfaces = new List<IUIActions>();
+    private readonly InputAction m_UI_Navigate;
+    private readonly InputAction m_UI_Submit;
+    private readonly InputAction m_UI_Cancel;
+    private readonly InputAction m_UI_ContextMenu;
+    private readonly InputAction m_UI_TabLeft;
+    private readonly InputAction m_UI_TabRight;
+    public struct UIActions
+    {
+        private @PlayerControls m_Wrapper;
+        public UIActions(@PlayerControls wrapper) { m_Wrapper = wrapper; }
+        public InputAction @Navigate => m_Wrapper.m_UI_Navigate;
+        public InputAction @Submit => m_Wrapper.m_UI_Submit;
+        public InputAction @Cancel => m_Wrapper.m_UI_Cancel;
+        public InputAction @ContextMenu => m_Wrapper.m_UI_ContextMenu;
+        public InputAction @TabLeft => m_Wrapper.m_UI_TabLeft;
+        public InputAction @TabRight => m_Wrapper.m_UI_TabRight;
+        public InputActionMap Get() { return m_Wrapper.m_UI; }
+        public void Enable() { Get().Enable(); }
+        public void Disable() { Get().Disable(); }
+        public bool enabled => Get().enabled;
+        public static implicit operator InputActionMap(UIActions set) { return set.Get(); }
+        public void AddCallbacks(IUIActions instance)
+        {
+            if (instance == null || m_Wrapper.m_UIActionsCallbackInterfaces.Contains(instance)) return;
+            m_Wrapper.m_UIActionsCallbackInterfaces.Add(instance);
+            @Navigate.started += instance.OnNavigate;
+            @Navigate.performed += instance.OnNavigate;
+            @Navigate.canceled += instance.OnNavigate;
+            @Submit.started += instance.OnSubmit;
+            @Submit.performed += instance.OnSubmit;
+            @Submit.canceled += instance.OnSubmit;
+            @Cancel.started += instance.OnCancel;
+            @Cancel.performed += instance.OnCancel;
+            @Cancel.canceled += instance.OnCancel;
+            @ContextMenu.started += instance.OnContextMenu;
+            @ContextMenu.performed += instance.OnContextMenu;
+            @ContextMenu.canceled += instance.OnContextMenu;
+            @TabLeft.started += instance.OnTabLeft;
+            @TabLeft.performed += instance.OnTabLeft;
+            @TabLeft.canceled += instance.OnTabLeft;
+            @TabRight.started += instance.OnTabRight;
+            @TabRight.performed += instance.OnTabRight;
+            @TabRight.canceled += instance.OnTabRight;
+        }
+
+        private void UnregisterCallbacks(IUIActions instance)
+        {
+            @Navigate.started -= instance.OnNavigate;
+            @Navigate.performed -= instance.OnNavigate;
+            @Navigate.canceled -= instance.OnNavigate;
+            @Submit.started -= instance.OnSubmit;
+            @Submit.performed -= instance.OnSubmit;
+            @Submit.canceled -= instance.OnSubmit;
+            @Cancel.started -= instance.OnCancel;
+            @Cancel.performed -= instance.OnCancel;
+            @Cancel.canceled -= instance.OnCancel;
+            @ContextMenu.started -= instance.OnContextMenu;
+            @ContextMenu.performed -= instance.OnContextMenu;
+            @ContextMenu.canceled -= instance.OnContextMenu;
+            @TabLeft.started -= instance.OnTabLeft;
+            @TabLeft.performed -= instance.OnTabLeft;
+            @TabLeft.canceled -= instance.OnTabLeft;
+            @TabRight.started -= instance.OnTabRight;
+            @TabRight.performed -= instance.OnTabRight;
+            @TabRight.canceled -= instance.OnTabRight;
+        }
+
+        public void RemoveCallbacks(IUIActions instance)
+        {
+            if (m_Wrapper.m_UIActionsCallbackInterfaces.Remove(instance))
+                UnregisterCallbacks(instance);
+        }
+
+        public void SetCallbacks(IUIActions instance)
+        {
+            foreach (var item in m_Wrapper.m_UIActionsCallbackInterfaces)
+                UnregisterCallbacks(item);
+            m_Wrapper.m_UIActionsCallbackInterfaces.Clear();
+            AddCallbacks(instance);
+        }
+    }
+    public UIActions @UI => new UIActions(this);
     public interface IPlayerMovementActions
     {
         void OnMovement(InputAction.CallbackContext context);
@@ -5423,6 +7003,15 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         void OnDPadLeft(InputAction.CallbackContext context);
         void OnDPadRight(InputAction.CallbackContext context);
     }
+    public interface IUIActions
+    {
+        void OnNavigate(InputAction.CallbackContext context);
+        void OnSubmit(InputAction.CallbackContext context);
+        void OnCancel(InputAction.CallbackContext context);
+        void OnContextMenu(InputAction.CallbackContext context);
+        void OnTabLeft(InputAction.CallbackContext context);
+        void OnTabRight(InputAction.CallbackContext context);
+    }
 }
 
 
@@ -5440,6 +7029,7 @@ public class PlayerLocomotion : MonoBehaviour
     private Transform playerTransform;
     private PlayerManager playerManager;
     private PlayerAnimator playerAnimator;
+    private PlayerStats playerStats;
 
     public new Rigidbody rigidbody;
 
@@ -5459,6 +7049,11 @@ public class PlayerLocomotion : MonoBehaviour
     [Header("Falling Stats")]
     [SerializeField] private float customGravity = 25f;
     [SerializeField] private float maxFallSpeed = 50f;
+
+    [Header("Stamina Costs")]
+    [SerializeField] private float dodgeStaminaCost = 10f;
+    [SerializeField] private float jumpStaminaCost = 8f;
+    [SerializeField] private float sprintTickStaminaCost = 8f;
 
     //[SerializeField] private float lockOnMovementForwardMultiplier = 0.125f;
     //[SerializeField] private float lockOnDodgeForwardMultiplier = 0.9f;
@@ -5491,6 +7086,7 @@ public class PlayerLocomotion : MonoBehaviour
         playerTransform = transform;
         rigidbody = GetComponent<Rigidbody>();
         playerManager = GetComponent<PlayerManager>();
+        playerStats = GetComponent<PlayerStats>();
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
 
         if (cameraController == null) Debug.LogError("CameraController not assigned on PlayerLocomotion!", this);
@@ -5500,6 +7096,8 @@ public class PlayerLocomotion : MonoBehaviour
 
         if (playerManager == null) Debug.LogError("PlayerManager not found on this GameObject!", this);
         else playerAnimator.IsGrounded = true;
+
+        if (playerStats == null) Debug.LogError("PlayerStats not found on this GameObject!", this);
 
         rigidbody.useGravity = false; // We use custom gravity
     }
@@ -5523,6 +7121,26 @@ public class PlayerLocomotion : MonoBehaviour
         if (playerAnimator.IsInAir)
         {
             inAirTimer += Time.deltaTime;
+        }
+
+        if (playerManager.isSprinting && playerAnimator.IsGrounded)
+        {
+            if (playerStats.currentStamina > 0)
+            {
+                float staminaToConsumeThisFrame = sprintTickStaminaCost * Time.deltaTime;
+                // ConsumeStamina will handle setting it to 0 if it overdrafts
+                playerStats.ConsumeStamina(staminaToConsumeThisFrame);
+
+                // If after consumption, stamina is 0, stop sprinting.
+                if (playerStats.currentStamina <= 0)
+                {
+                    playerManager.isSprinting = false;
+                }
+            }
+            else
+            {
+                playerManager.isSprinting = false;
+            }
         }
     }
 
@@ -5738,6 +7356,8 @@ public class PlayerLocomotion : MonoBehaviour
 
     private void PerformDodge()
     {
+        playerStats.ConsumeStamina(dodgeStaminaCost);
+
         playerManager.charAnimManager.IsInMidAction = true; // Player is busy
         playerAnimator.IsDodging = true;
 
@@ -5882,6 +7502,9 @@ public class PlayerLocomotion : MonoBehaviour
         {
             return;
         }
+
+        playerStats.ConsumeStamina(jumpStaminaCost);
+
         if (playerAnimator.IsCrouching)
         {
             playerManager.ToggleCrouchState();
@@ -6123,7 +7746,7 @@ public class DamagePlayer : MonoBehaviour
 
         if (playerStats != null )
         {
-            playerStats.TakeDamange(damage);
+            playerStats.TakeDamange(damage, transform);
         }
     }
 }
@@ -6154,19 +7777,332 @@ public class FollowTarget : MonoBehaviour
 
 --- END FILE: Testing\FollowTarget.cs ---
 
+--- START FILE: UI\BuffIconUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class BuffIconUI : MonoBehaviour
+{
+    [SerializeField] private Image buffIcon;
+    [SerializeField] private TMP_Text buffNameText;
+    [SerializeField] private TMP_Text durationText;
+
+    public void SetBuff(ActiveBuffInfo buffInfo)
+    {
+        if (buffIcon != null) buffIcon.sprite = buffInfo.BuffIcon;
+        if (buffNameText != null) buffNameText.text = buffInfo.BuffName;
+        if (durationText != null)
+        {
+            // Show duration, rounding up to nearest second for display
+            durationText.text = Mathf.CeilToInt(buffInfo.RemainingDuration).ToString();
+        }
+    }
+}
+
+
+--- END FILE: UI\BuffIconUI.cs ---
+
+--- START FILE: UI\CurrencyUI.cs ---
+
+using UnityEngine;
+using TMPro;
+
+public class CurrencyUI : MonoBehaviour
+{
+    [SerializeField] private TMP_Text currencyText;
+    [SerializeField] private PlayerStats playerStats;
+
+    private void Awake()
+    {
+        if (currencyText == null)
+        {
+            currencyText = GetComponent<TMP_Text>();
+        }
+        if (currencyText == null)
+        {
+            Debug.LogError("CurrencyUI: TextMeshPro component not assigned or found!", this);
+            enabled = false;
+        }
+        if (playerStats == null)
+        {
+            Debug.LogError("Player Stats is not assigned for Currency UI", this);
+        }
+    }
+
+    private void OnEnable()
+    {
+        PlayerStats.OnCurrencyChanged += UpdateCurrencyText;
+
+        if (playerStats != null)
+        {
+            UpdateCurrencyText(playerStats.currentCurrency);
+        }
+    }
+
+    private void OnDisable()
+    {
+        PlayerStats.OnCurrencyChanged -= UpdateCurrencyText;
+    }
+
+    private void UpdateCurrencyText(int newAmount)
+    {
+        currencyText.text = newAmount.ToString();
+    }
+}
+
+
+--- END FILE: UI\CurrencyUI.cs ---
+
+--- START FILE: UI\EnemyHealthBarUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+
+public class EnemyHealthBarUI : MonoBehaviour
+{
+    [SerializeField] private Slider healthSlider;
+    private Transform cameraToFace;
+    private EnemyStats enemyStats;
+
+    public void Initialize(EnemyStats stats)
+    {
+        enemyStats = stats;
+        if (healthSlider == null) healthSlider = GetComponentInChildren<Slider>();
+
+        if (enemyStats != null)
+        {
+            // Subscribe to the health changed event
+            enemyStats.OnHealthChanged += UpdateHealthBar;
+            // Also subscribe to death event to properly hide/destroy itself
+            enemyStats.OnDeathEvent += HandleDeath;
+        }
+
+        // Find the main camera
+        if (Camera.main != null) cameraToFace = Camera.main.transform;
+
+        // Start with the health bar hidden
+        gameObject.SetActive(false);
+    }
+
+    private void LateUpdate()
+    {
+        // Make the health bar always face the camera
+        if (cameraToFace != null)
+        {
+            transform.LookAt(transform.position + cameraToFace.rotation * Vector3.forward,
+                             cameraToFace.rotation * Vector3.up);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (enemyStats != null)
+        {
+            enemyStats.OnHealthChanged -= UpdateHealthBar;
+            enemyStats.OnDeathEvent -= HandleDeath;
+        }
+    }
+
+    private void UpdateHealthBar(int currentHealth, int maxHealth)
+    {
+        if (healthSlider.maxValue != maxHealth)
+        {
+            healthSlider.maxValue = maxHealth;
+        }
+        healthSlider.value = currentHealth;
+
+        // If health is not full, it means damage has been taken.
+        if (currentHealth < maxHealth && !gameObject.activeInHierarchy)
+        {
+            gameObject.SetActive(true);
+        }
+    }
+
+    private void HandleDeath()
+    {
+        gameObject.SetActive(false);
+        Destroy(gameObject, 1f); // Destroy after a short delay to avoid errors
+    }
+
+    public void SetVisibility(bool isVisible)
+    {
+        // Only show if health is not full
+        if (isVisible && enemyStats != null && enemyStats.currentHealth < enemyStats.maxHealth)
+        {
+            gameObject.SetActive(true);
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
+    }
+}
+
+--- END FILE: UI\EnemyHealthBarUI.cs ---
+
+--- START FILE: UI\EquipmentSlotUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.EventSystems;
+
+public enum EquipmentSlotCategory { RightHand, LeftHand, Armor, Head, Body, Hands, Legs, Talisman, Consumable }
+
+public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandler
+{
+    [Header("Slot Info")]
+    public EquipmentSlotCategory slotCategory;
+    public int slotIndex; // 0-2 for RightHand, 0-3 for Talisman, etc.
+
+    [Header("UI References")]
+    [SerializeField] private Image icon;
+    [SerializeField] private TMP_Text itemNameText;
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private ItemInfoPanelUI itemInfoPanel;
+
+    private Item currentItem;
+
+    public void UpdateSlot(Item item)
+    {
+        currentItem = item;
+        if (currentItem != null && currentItem.itemIcon != null)
+        {
+            icon.sprite = currentItem.itemIcon;
+            icon.enabled = true;
+            if (itemNameText != null) itemNameText.text = currentItem.name;
+        }
+        else
+        {
+            icon.sprite = null;
+            icon.enabled = false;
+            if (itemNameText != null) itemNameText.text = "";
+        }
+    }
+
+    public void OnSlotClicked()
+    {
+        uiManager.ShowInventoryForSelection(this);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayItemInfo(currentItem);
+        }
+    }
+
+    // For controller navigation
+    public void OnSelect(BaseEventData eventData)
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayItemInfo(currentItem);
+        }
+    }
+}
+
+
+--- END FILE: UI\EquipmentSlotUI.cs ---
+
 --- START FILE: UI\EquipmentWindowUI.cs ---
 
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EquipmentWindowUI : MonoBehaviour
 {
-    [SerializeField] private HandEquipmentSlotUI[] handEquipmentSlotsUI;
+    [Header("Core References")]
+    [SerializeField] private PlayerInventory playerInventory;
+    [SerializeField] private ItemInfoPanelUI itemInfoPanel;
+    [SerializeField] private UIManager uiManager;
 
-    public void LoadWeaponOnEquipementScreen(PlayerInventory playerInventory)
+    [Header("Slot Containers")]
+    [SerializeField] private List<EquipmentSlotUI> rightHandSlots = new ();
+    // [SerializeField] private List<EquipmentSlotUI> leftHandSlots = new ();
+    [SerializeField] private EquipmentSlotUI headArmorSlot;
+    [SerializeField] private EquipmentSlotUI bodyArmorSlot;
+    [SerializeField] private EquipmentSlotUI handArmorSlot;
+    [SerializeField] private EquipmentSlotUI legArmorSlot;
+    [SerializeField] private List<EquipmentSlotUI> talismanSlots = new ();
+    [SerializeField] private List<EquipmentSlotUI> consumableSlots = new ();
+
+    private void OnEnable()
     {
-        foreach (var slot in handEquipmentSlotsUI)
+        // Subscribe to the event when the window becomes active
+        PlayerInventory.OnEquipmentUpdated += RefreshAllSlots;
+
+        // Immediately hide the info panel when this window is shown
+        if (itemInfoPanel != null)
         {
-            slot.AddItem(playerInventory.GetItemFromEquipSlot(slot.equipSlotType));
+            itemInfoPanel.ClearPanel();
+        }
+
+        // Immediately populate with current equipment state
+        RefreshAllSlots();
+    }
+
+    private void OnDisable()
+    {
+        // Unsubscribe when the window is hidden to prevent unnecessary updates
+        PlayerInventory.OnEquipmentUpdated -= RefreshAllSlots;
+    }
+
+    public void RefreshAllSlots()
+    {
+        if (playerInventory == null) return;
+
+        // --- Right Hand Weapon Slots ---
+        for (int i = 0; i < rightHandSlots.Count; i++)
+        {
+            if (i < playerInventory.rightHandWeaponSlots.Length)
+            {
+                rightHandSlots[i].UpdateSlot(playerInventory.rightHandWeaponSlots[i]);
+            }
+            else // UI has more slots than inventory logic supports, hide extra
+            {
+                rightHandSlots[i].UpdateSlot(null);
+            }
+        }
+
+        // --- Armor Slots ---
+        headArmorSlot?.UpdateSlot(playerInventory.headArmor);
+        bodyArmorSlot?.UpdateSlot(playerInventory.bodyArmor);
+        handArmorSlot?.UpdateSlot(playerInventory.handArmor);
+        legArmorSlot?.UpdateSlot(playerInventory.legArmor);
+
+        // --- Talisman Slots ---
+        for (int i = 0; i < talismanSlots.Count; i++)
+        {
+            if (i < playerInventory.talismanSlots.Length)
+            {
+                talismanSlots[i].UpdateSlot(playerInventory.talismanSlots[i]);
+            }
+            else
+            {
+                talismanSlots[i].UpdateSlot(null);
+            }
+        }
+
+        // --- Consumable Slots ---
+        for (int i = 0; i < consumableSlots.Count; i++)
+        {
+            if (consumableSlots[i] != null) // Check the UI slot exists
+            {
+                if (i < playerInventory.consumableQuickSlots.Count)
+                {
+                    InventorySlot inventorySlot = playerInventory.consumableQuickSlots[i];
+                    // Pass the item from the slot, which can be null if the slot is empty
+                    consumableSlots[i].UpdateSlot(inventorySlot?.item);
+                }
+                else
+                {
+                    consumableSlots[i].UpdateSlot(null);
+                }
+            }
         }
     }
 }
@@ -6185,7 +8121,7 @@ public class HandEquipmentSlotUI : MonoBehaviour
     [SerializeField] private Image icon;
     private Item item;
 
-    public EquipSlotType equipSlotType;
+    //public EquipSlotType equipSlotType;
 
 
     public void AddItem(Item newItem)
@@ -6206,7 +8142,7 @@ public class HandEquipmentSlotUI : MonoBehaviour
 
     public void SelectSlot()
     {
-        uiManager.currentSelectedSlotType = equipSlotType;
+        //uiManager.currentSelectedSlotType = equipSlotType;
     }
 }
 
@@ -6242,29 +8178,591 @@ public class InteractableUI : MonoBehaviour
 
 --- END FILE: UI\InteractableUI.cs ---
 
+--- START FILE: UI\InventorySlotUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+
+public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandler
+{
+    [SerializeField] private Image icon;
+    [SerializeField] private TMP_Text quantityText;
+    [SerializeField] private GameObject equippedIndicator; // A small dot/image
+
+    private InventorySlot heldSlotData;
+    private InventoryWindowUI parentWindow;
+
+    public void Initialize(InventorySlot slotData, InventoryWindowUI parent)
+    {
+        heldSlotData = slotData;
+        parentWindow = parent;
+
+        icon.sprite = slotData.item.itemIcon;
+        icon.enabled = true;
+
+        // Show quantity text only if stackable (quantity > 1)
+        if (quantityText != null)
+        {
+            if (slotData.item is ConsumableItem)
+            {
+                quantityText.text = slotData.quantity.ToString();
+                quantityText.gameObject.SetActive(true);
+            }
+            else
+            {
+                quantityText.gameObject.SetActive(false);
+            }
+        }
+
+        if (equippedIndicator != null) equippedIndicator.SetActive(false);
+    }
+
+    public Item GetItem() => heldSlotData?.item;
+    public InventorySlot GetSlotData() => heldSlotData;
+
+    public void SetEquipped(bool isEquipped)
+    {
+        if (equippedIndicator != null) equippedIndicator.SetActive(isEquipped);
+    }
+
+    // For mouse hover
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        parentWindow?.OnSlotSelected(this);
+    }
+
+    // For controller navigation
+    public void OnSelect(BaseEventData eventData)
+    {
+        parentWindow?.OnSlotSelected(this);
+    }
+
+    // Called by an EventTrigger component for Right-Click or a Button component for Submit
+    public void OnInteract()
+    {
+        parentWindow?.OnSlotInteracted(this);
+    }
+}
+
+--- END FILE: UI\InventorySlotUI.cs ---
+
+--- START FILE: UI\InventoryWindowUI.cs ---
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
+using UnityEngine;
+
+public class InventoryWindowUI : MonoBehaviour
+{
+    [SerializeField] private PlayerInventory playerInventory;
+    [SerializeField] private Transform itemGridParent;
+    [SerializeField] private GameObject inventorySlotPrefab;
+    [SerializeField] private GameObject unequipSlotPrefab;
+    [SerializeField] private ItemInfoPanelUI itemInfoPanel;
+    [SerializeField] private ItemInteractionFooterUI interactionFooter;
+    // [SerializeField] private ItemContextMenuUI contextMenu;
+
+    [Header("Tab Management")]
+    [SerializeField] private GameObject tabsContainer; // The parent GameObject of your tab buttons
+    [SerializeField] private List<TabButtonUI> tabButtons = new List<TabButtonUI>();
+
+    // --- Selection Mode State ---
+    private bool isInSelectionMode = false;
+    private EquipmentSlotCategory selectionCategory;
+    private int selectionSlotIndex;
+
+    private int currentTabIndex = 0; // 0=Weapons, 1=Armor, 2=Talismans, 3=Consumables
+    private EquipmentSlotCategory equipmentTypeFilter;
+
+    private void Awake()
+    {
+        interactionFooter?.Initialize(this);
+    }
+
+    private void OnEnable()
+    {
+        PlayerInventory.OnInventoryUpdated += RefreshUI; // Refresh if inventory changes
+        PlayerInventory.OnEquipmentUpdated += RefreshUI; // Also refresh on equip changes to update dots
+        InputHandler.UITabLeftPressed += SwitchToPreviousTab;
+        InputHandler.UITabRightPressed += SwitchToNextTab;
+
+        // Immediately hide the info panel when this window is shown
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.ClearPanel();
+        }
+        interactionFooter?.Hide();
+
+        RefreshUI(); // Initial population
+    }
+
+    private void OnDisable()
+    {
+        PlayerInventory.OnInventoryUpdated -= RefreshUI;
+        PlayerInventory.OnEquipmentUpdated += RefreshUI;
+        InputHandler.UITabLeftPressed -= SwitchToPreviousTab;
+        InputHandler.UITabRightPressed -= SwitchToNextTab;
+    }
+
+    public void SwitchToNextTab() => SwitchTab(1);
+    private void SwitchToPreviousTab() => SwitchTab(-1);
+
+    private void SwitchTab(int direction)
+    {
+        currentTabIndex += direction;
+        if (currentTabIndex > 3) currentTabIndex = 0;
+        if (currentTabIndex < 0) currentTabIndex = 3;
+
+        SetCurrentTab(currentTabIndex);
+    }
+
+    public void SetCurrentTab(int tabIndex)
+    {
+        if (tabIndex < 0 || tabIndex >= tabButtons.Count) return;
+
+        currentTabIndex = tabIndex;
+        RefreshUI();
+    }
+
+    private void UpdateTabButtonVisuals()
+    {
+        for (int i = 0; i < tabButtons.Count; i++)
+        {
+            if (tabButtons[i] != null)
+            {
+                tabButtons[i].SetActiveState(i == currentTabIndex);
+            }
+        }
+    }
+
+    public void OpenInSelectionMode(EquipmentSlotCategory category, int slotIndex)
+    {
+        isInSelectionMode = true;
+        selectionCategory = category;
+        selectionSlotIndex = slotIndex;
+
+        // Disable tab switching
+        if (tabsContainer != null) tabsContainer.SetActive(false);
+        InputHandler.UITabLeftPressed -= SwitchToPreviousTab;
+        InputHandler.UITabRightPressed -= SwitchToNextTab;
+
+        // Force to the correct tab for the item type
+        currentTabIndex = GetTabIndexForCategory(category);
+        equipmentTypeFilter = category;
+
+        // Refresh the UI to show only the filtered items
+        RefreshUI();
+    }
+
+    public void ExitSelectionMode()
+    {
+        isInSelectionMode = false;
+
+        // Re-enable tab switching
+        if (tabsContainer != null) tabsContainer.SetActive(true);
+        InputHandler.UITabLeftPressed += SwitchToPreviousTab;
+        InputHandler.UITabRightPressed += SwitchToNextTab;
+    }
+
+    public void RefreshUI()
+    {
+        if (!gameObject.activeInHierarchy) return;
+
+        UpdateTabButtonVisuals();
+
+        // Clear existing slots
+        foreach (Transform child in itemGridParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        if (isInSelectionMode)
+        {
+            Item itemInTargetSlot = playerInventory.GetItemInSlot(selectionCategory, selectionSlotIndex);
+            if (itemInTargetSlot != null) // Only show unequip if the slot isn't already empty
+            {
+                // Instantiate the dedicated unequip prefab
+                GameObject unequipGO = Instantiate(unequipSlotPrefab, itemGridParent);
+                UnequipSlotUI unequipSlotUI = unequipGO.GetComponent<UnequipSlotUI>();
+                if (unequipSlotUI != null)
+                {
+                    unequipSlotUI.Initialize(this);
+                }
+            }
+        }
+
+        // Populate based on current tab
+        IEnumerable<InventorySlot> slotsToDisplay = currentTabIndex switch
+        {
+            0 => playerInventory.weaponsInventory,
+            1 => playerInventory.armorInventory,
+            2 => playerInventory.talismanInventory,
+            3 => playerInventory.consumableInventory,
+            _ => null
+        };
+
+        if (currentTabIndex == 1 && isInSelectionMode)
+        {
+            ArmorType typeToFilter = SlotCategoryToArmorType(selectionCategory);
+            slotsToDisplay = playerInventory.armorInventory.Where(slot => (slot.item as ArmorItem)?.armorType == typeToFilter).ToList();
+        }
+
+        PopulateGrid(slotsToDisplay);
+    }
+
+    private Func<InventorySlot, bool> ItemIsOfArmorType(ArmorType armorType)
+    {
+        return slot => (slot.item as ArmorItem).armorType == armorType;
+    }
+
+    private ArmorType SlotCategoryToArmorType(EquipmentSlotCategory slotCategory)
+    {
+        return slotCategory switch
+        {
+            EquipmentSlotCategory.Head => ArmorType.Head,
+            EquipmentSlotCategory.Body => ArmorType.Body,
+            EquipmentSlotCategory.Legs => ArmorType.Legs,
+            EquipmentSlotCategory.Hands => ArmorType.Hands,
+            _ => (ArmorType)(-1)
+        };
+    }
+
+    private void PopulateGrid(IEnumerable<InventorySlot> slots)
+    {
+        foreach (var slotData in slots)
+        {
+            GameObject slotGO = Instantiate(inventorySlotPrefab, itemGridParent);
+            InventorySlotUI slotUI = slotGO.GetComponent<InventorySlotUI>();
+            if (slotUI != null)
+            {
+                slotUI.Initialize(slotData, this); // Pass the whole InventorySlot
+                slotUI.SetEquipped(playerInventory.IsItemEquipped(slotData.item));
+            }
+        }
+    }
+
+    public void OnSlotSelected(InventorySlotUI slot)
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayItemInfo(slot.GetItem());
+        }
+    }
+
+    public void OnUnequipSlotSelected()
+    {
+        if (itemInfoPanel != null)
+        {
+            itemInfoPanel.DisplayUnequipInfo();
+        }
+    }
+
+    public void OnSlotInteracted(InventorySlotUI slot)
+    {
+        if (isInSelectionMode)
+        {
+            playerInventory.EquipItem(slot.GetItem(), selectionCategory, selectionSlotIndex);
+            CloseWindowAndReturnToEquipment();
+        }
+        else
+        {
+            interactionFooter?.ShowOptionsForItem(slot.GetItem());
+        }
+    }
+
+    public void OnUseItem(ConsumableItem item)
+    {
+        if (item != null)
+        {
+            // Find the corresponding inventory slot to pass to UseConsumable
+            InventorySlot slotToUse = playerInventory.consumableInventory.FirstOrDefault(s => s.item == item);
+            if (slotToUse != null)
+            {
+                playerInventory.UseConsumable(slotToUse);
+            }
+        }
+    }
+
+    public void OnDropItem(Item item)
+    {
+        if (item != null)
+        {
+            playerInventory.DropItem(item);
+        }
+    }
+
+    public void OnUnequipSlotInteracted()
+    {
+        if (isInSelectionMode)
+        {
+            playerInventory.UnequipItemFromSlot(selectionCategory, selectionSlotIndex);
+            CloseWindowAndReturnToEquipment();
+        }
+    }
+
+    private void CloseWindowAndReturnToEquipment()
+    {
+        gameObject.SetActive(false);
+        FindObjectOfType<UIManager>().OpenEquipmentWindow();
+        ExitSelectionMode();
+    }
+
+    private int GetTabIndexForCategory(EquipmentSlotCategory category)
+    {
+        return category switch
+        {
+            EquipmentSlotCategory.RightHand => 0,  // Weapons
+            EquipmentSlotCategory.Armor
+                or EquipmentSlotCategory.Head
+                or EquipmentSlotCategory.Body
+                or EquipmentSlotCategory.Hands
+                or EquipmentSlotCategory.Legs => 1,// Armor
+            EquipmentSlotCategory.Talisman => 2,   // Talismans
+            EquipmentSlotCategory.Consumable => 3, // Consumables
+            // Add LeftHand case later
+            _ => 0,
+        };
+    }
+}
+
+
+--- END FILE: UI\InventoryWindowUI.cs ---
+
+--- START FILE: UI\ItemInfoPanelUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class ItemInfoPanelUI : MonoBehaviour
+{
+    [SerializeField] private Image itemIcon;
+    [SerializeField] private TMP_Text itemNameText;
+    [SerializeField] private TMP_Text itemDescriptionText;
+    [SerializeField] private TMP_Text itemStatsText;
+
+    public void DisplayItemInfo(Item item)
+    {
+        if (item != null)
+        {
+            gameObject.SetActive(true);
+            itemNameText.text = item.itemName;
+            itemDescriptionText.text = item.itemDescription;
+            itemStatsText.text = item.GetItemStatsText();
+            if (itemIcon != null)
+            {
+                itemIcon.sprite = item.itemIcon;
+                itemIcon.enabled = true;
+            }
+        }
+        else
+        {
+            ClearPanel();
+        }
+    }
+
+    public void DisplayUnequipInfo()
+    {
+        gameObject.SetActive(true);
+        itemNameText.text = "Unequip";
+        itemDescriptionText.text = "Remove the item from this slot.";
+        itemStatsText.text = "";
+        if (itemIcon != null)
+        {
+            itemIcon.sprite = null;
+            itemIcon.enabled = false;
+        }
+    }
+
+    public void ClearPanel()
+    {
+        itemNameText.text = "";
+        itemDescriptionText.text = "";
+        itemStatsText.text = "";
+        if (itemIcon != null)
+        {
+            itemIcon.sprite = null;
+            itemIcon.enabled = false;
+        }
+        gameObject.SetActive(false);
+    }
+}
+
+
+--- END FILE: UI\ItemInfoPanelUI.cs ---
+
+--- START FILE: UI\ItemInteractionFooterUI.cs ---
+
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ItemInteractionFooterUI : MonoBehaviour
+{
+    [SerializeField] private Button useButton;
+    [SerializeField] private Button dropButton;
+
+    private InventoryWindowUI inventoryWindow;
+    private Item currentSelectedItem;
+
+    public void Initialize(InventoryWindowUI parentWindow)
+    {
+        inventoryWindow = parentWindow;
+        useButton.onClick.AddListener(OnUseClicked);
+        dropButton.onClick.AddListener(OnDropClicked);
+    }
+
+    public void ShowOptionsForItem(Item item)
+    {
+        currentSelectedItem = item;
+        if (item == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        gameObject.SetActive(true);
+
+        // Show/hide USE button
+        useButton.gameObject.SetActive(item is ConsumableItem);
+
+        // Show/hide DROP button
+        dropButton.gameObject.SetActive(item.isDroppable);
+
+        // Set the first active button as the selected object for controller navigation
+        if (useButton.gameObject.activeInHierarchy)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(useButton.gameObject);
+        }
+        else if (dropButton.gameObject.activeInHierarchy)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(dropButton.gameObject);
+        }
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+        currentSelectedItem = null;
+    }
+
+    private void OnUseClicked()
+    {
+        inventoryWindow?.OnUseItem(currentSelectedItem as ConsumableItem);
+        Hide();
+    }
+
+    private void OnDropClicked()
+    {
+        inventoryWindow?.OnDropItem(currentSelectedItem);
+        Hide();
+    }
+
+    private void OnDestroy()
+    {
+        useButton.onClick.RemoveAllListeners();
+        dropButton.onClick.RemoveAllListeners();
+    }
+}
+
+
+--- END FILE: UI\ItemInteractionFooterUI.cs ---
+
 --- START FILE: UI\QuickSlotsUI.cs ---
 
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class QuickSlotsUI : MonoBehaviour
 {
-    [SerializeField] Image leftWeaponIcon;
-    [SerializeField] Image rightWeaponIcon;
+    [SerializeField] private PlayerInventory playerInventory;
+    [Header("Weapon Slot")]
+    [SerializeField] private Image rightWeaponIcon;
+    // [SerializeField] Image leftWeaponIcon; // For shield later
 
-    public void UpdateWeaponQuickSlotsUI(WeaponItem weapon, bool isLeft)
+    [Header("Consumable Slots")]
+    [SerializeField] private Image currentConsumableIcon;
+    [SerializeField] private TMP_Text currentConsumableQuantity;
+    [SerializeField] private Image nextConsumableIcon;
+
+    private void Awake()
     {
-        var weaponIcon = isLeft ? leftWeaponIcon : rightWeaponIcon;
+        if (playerInventory == null) Debug.LogError("Inventory reference not set for Quick Slots UI");
+        PlayerInventory.OnEquipmentUpdated += RefreshAllSlots;
+        PlayerInventory.OnInventoryUpdated += RefreshAllSlots;
+    }
 
-        if (weapon.itemIcon != null)
+    private void OnDestroy()
+    {
+        PlayerInventory.OnEquipmentUpdated -= RefreshAllSlots;
+        PlayerInventory.OnInventoryUpdated += RefreshAllSlots;
+    }
+
+    public void RefreshAllSlots()
+    {
+        if (playerInventory == null) return;
+
+        UpdateEquippedWeaponUI(playerInventory.EquippedRightWeapon);
+        UpdateConsumableUI();
+    }
+
+    private void UpdateEquippedWeaponUI(WeaponItem equippedWeapon)
+    {
+        WeaponItem weaponToShow = equippedWeapon ?? playerInventory.unarmedWeaponData;
+
+        if (weaponToShow != null && !weaponToShow.isUnarmed && weaponToShow.itemIcon != null)
         {
-            weaponIcon.sprite = weapon.itemIcon;
-            weaponIcon.enabled = true;
+            rightWeaponIcon.sprite = weaponToShow.itemIcon;
+            rightWeaponIcon.enabled = true;
         }
         else
         {
-            weaponIcon.sprite = null;
-            weaponIcon.enabled = false;
+            rightWeaponIcon.sprite = null;
+            rightWeaponIcon.enabled = false;
+        }
+    }
+
+    private void UpdateConsumableUI()
+    {
+        InventorySlot currentSlot = playerInventory.CurrentConsumableSlot;
+        InventorySlot nextSlot = playerInventory.NextConsumableSlot;
+
+        // --- Update Current Consumable Slot (D-Pad Up) ---
+        if (currentSlot != null && currentSlot.item != null)
+        {
+            currentConsumableIcon.sprite = currentSlot.item.itemIcon;
+            currentConsumableIcon.enabled = true;
+
+            if (currentConsumableQuantity != null)
+            {
+                currentConsumableQuantity.text = currentSlot.quantity.ToString();
+                currentConsumableQuantity.enabled = true;
+            }
+        }
+        else
+        {
+            // No consumable equipped
+            currentConsumableIcon.sprite = null;
+            currentConsumableIcon.enabled = false;
+            if (currentConsumableQuantity != null) currentConsumableQuantity.enabled = false;
+        }
+
+        // --- Update Next Consumable Slot (D-Pad Down) ---
+        // Hide the "next" icon if there's only one or zero items to cycle through
+        if (nextSlot != null && nextSlot.item != null && playerInventory.consumableQuickSlots.Count > 1)
+        {
+            nextConsumableIcon.sprite = nextSlot.item.itemIcon;
+            nextConsumableIcon.enabled = true;
+        }
+        else
+        {
+            nextConsumableIcon.sprite = null;
+            nextConsumableIcon.enabled = false;
         }
     }
 }
@@ -6301,108 +8799,300 @@ public class StatUIBar : MonoBehaviour
 
 --- END FILE: UI\StatUIBar.cs ---
 
+--- START FILE: UI\StatusWindowUI.cs ---
+
+using UnityEngine;
+using TMPro;
+using System.Collections.Generic;
+
+public class StatusWindowUI : MonoBehaviour
+{
+    [Header("Core References")]
+    [SerializeField] private PlayerStats playerStats;
+    [SerializeField] private PlayerInventory playerInventory;
+
+    [Header("Stat Text Fields")]
+    [SerializeField] private TMP_Text healthText;
+    [SerializeField] private TMP_Text staminaText;
+    [SerializeField] private TMP_Text staminaRegenText;
+    [SerializeField] private TMP_Text attackPowerText;
+    [SerializeField] private TMP_Text defenseText;
+
+    [Header("Buffs Display")]
+    [SerializeField] private Transform buffsContainer;
+    [SerializeField] private GameObject buffIconPrefab; // Prefab for displaying a single buff
+
+    [Header("Display Refresh")]
+    [SerializeField] private float refreshRate = 1.0f;
+    private float refreshTimer = 0.0f;
+
+    private void OnEnable()
+    {
+        // Find references if not assigned
+        if (playerStats == null) playerStats = FindObjectOfType<PlayerStats>();
+        if (playerInventory == null) playerInventory = FindObjectOfType<PlayerInventory>();
+
+        RefreshAllStats();
+    }
+
+    private void Update()
+    {
+        refreshTimer += Time.deltaTime;
+        if (refreshTimer >= refreshRate)
+        {
+            refreshTimer = 0.0f;
+            RefreshAllStats();
+        }
+    }
+
+    public void RefreshAllStats()
+    {
+        if (playerStats == null || playerInventory == null)
+        {
+            Debug.LogError("StatusWindowUI: Missing PlayerStats or PlayerInventory reference!");
+            return;
+        }
+
+        // Update Main Stats
+        healthText.text = $"{playerStats.currentHealth} / {playerStats.maxHealth}";
+        staminaText.text = $"{(int)playerStats.currentStamina} / {(int)playerStats.maxStamina}";
+        staminaRegenText.text = playerStats.FinalStaminaRegen.ToString("F1"); // One decimal place
+
+        // Attack Power
+        attackPowerText.text = playerStats.TotalAttackPower.ToString();
+
+        defenseText.text = playerStats.TotalDefense.ToString();
+
+        // Update Buffs
+        UpdateBuffsDisplay();
+    }
+
+    private void UpdateBuffsDisplay()
+    {
+        // Clear old buff icons
+        foreach (Transform child in buffsContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Get active buffs and create UI elements for them
+        List<ActiveBuffInfo> activeBuffs = playerStats.GetActiveBuffs();
+        foreach (var buffInfo in activeBuffs)
+        {
+            GameObject buffGO = Instantiate(buffIconPrefab, buffsContainer);
+            BuffIconUI buffUI = buffGO.GetComponent<BuffIconUI>();
+            if (buffUI != null)
+            {
+                buffUI.SetBuff(buffInfo);
+            }
+        }
+    }
+}
+
+
+--- END FILE: UI\StatusWindowUI.cs ---
+
+--- START FILE: UI\TabButtonUI.cs ---
+
+using UnityEngine;
+
+public class TabButtonUI : MonoBehaviour
+{
+    [SerializeField] private GameObject activeSprite;
+    [SerializeField] private GameObject inactiveSprite;
+
+    private void Awake()
+    {
+        if (activeSprite == null) Debug.LogWarning($"Active Sprite for Inventory Tab [{gameObject.name}]");
+        if (inactiveSprite == null) Debug.LogWarning($"Inactive Sprite for Inventory Tab [{gameObject.name}]");
+    }
+
+    public void SetActiveState(bool isActive)
+    {
+        activeSprite.SetActive(isActive);
+        inactiveSprite.SetActive(!isActive);
+    }
+}
+
+--- END FILE: UI\TabButtonUI.cs ---
+
 --- START FILE: UI\UIManager.cs ---
 
 using UnityEngine;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("Core References")]
+    [SerializeField] private InputHandler inputHandler;
     [SerializeField] private PlayerInventory playerInventory;
-    [SerializeField] private EquipmentWindowUI equipmentWindow;
 
     [Header("UI Windows")]
-    [SerializeField] private GameObject HUDInterface;
+    [SerializeField] private GameObject hudWindow;
+    [SerializeField] private GameObject mainMenuWindow; // Loadout, Inventory, Options buttons
+    [SerializeField] private GameObject equipmentWindow;
+    [SerializeField] private GameObject inventoryWindow;
     [SerializeField] private GameObject optionsWindow;
-    [SerializeField] private GameObject weaponInventoryWindow;
-    [SerializeField] private GameObject equipementInventoryWindow;
+    [SerializeField] private GameObject itemInfoWindow;
+    [SerializeField] private InventoryWindowUI inventoryWindowUI;
+    [SerializeField] private GameObject statusWindow;
 
-    [Header("Weapon Inventory")]
-    [SerializeField] private Transform weaponInventorySlotsParent;
-    [SerializeField] private GameObject weaponInventorySlotPrefab;
+    public bool IsMenuOpen { get; private set; }
 
-    private WeaponInventorySlot[] weaponInventorySlots;
-
-    public EquipSlotType currentSelectedSlotType;
-
-    private void Start()
+    private void Awake()
     {
-        weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-        equipmentWindow.LoadWeaponOnEquipementScreen(playerInventory);
+        if (inputHandler == null) inputHandler = FindObjectOfType<InputHandler>();
+        if (inventoryWindowUI == null) inventoryWindowUI = inventoryWindow.GetComponent<InventoryWindowUI>();
     }
 
     private void OnEnable()
     {
-        InputHandler.OptionsButtonPressed += HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed += ToggleMainMenu;
+        InputHandler.UICancelPressed += HandleCancel; // Listen for UI cancel to close menu
     }
 
     private void OnDisable()
     {
-        InputHandler.OptionsButtonPressed -= HandleOptionsButtonPressed;
+        InputHandler.OptionsButtonPressed -= ToggleMainMenu;
+        InputHandler.UICancelPressed -= HandleCancel;
     }
 
-    private void HandleOptionsButtonPressed()
+    public void ToggleMainMenu()
     {
-        bool isHUDActive = HUDInterface.activeSelf;
+        IsMenuOpen = !IsMenuOpen;
 
-        ToggleHUDInterface(!isHUDActive);
-        ToggleOptionsWindow(isHUDActive);
-
-        // ESQ pressed while HUD active - prepare the UI for the Inventory
-        if (isHUDActive)
+        if (IsMenuOpen)
         {
-            UpdateUI();
+            OpenMainMenu();
         }
-        // ESQ pressed while in inventory - close all windows
         else
         {
-            CloseAllInventoryWindows();
+            CloseAllMenus();
         }
     }
 
-    public void ToggleOptionsWindow(bool windowStatus)
+    private void OpenMainMenu()
     {
-        optionsWindow.SetActive(windowStatus);
+        hudWindow.SetActive(false);
+        mainMenuWindow.SetActive(true);
+
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        statusWindow.SetActive(false);
+
+        //Time.timeScale = 0f; // Pause game
+        inputHandler.EnableUIInput();
+        Cursor.lockState = CursorLockMode.None; // Re-lock cursor
+        Cursor.visible = true;
+        // TODO: Select the first button in mainMenuWindow for controller navigation
     }
 
-    public void ToggleHUDInterface(bool windowStatus)
+    public void CloseAllMenus()
     {
-        HUDInterface.SetActive(windowStatus);
+        IsMenuOpen = false;
+        hudWindow.SetActive(true);
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(false);
+        inventoryWindow.SetActive(false);
+        optionsWindow.SetActive(false);
+        itemInfoWindow.SetActive(false);
+        statusWindow.SetActive(false);
+
+        inventoryWindowUI?.ExitSelectionMode();
+
+        //Time.timeScale = 1f; // Resume game
+        inputHandler.EnableGameplayInput();
+        Cursor.lockState = CursorLockMode.Locked; // Re-lock cursor
+        Cursor.visible = false;
     }
 
-    private void UpdateUI()
+    private void HandleCancel()
     {
-        #region Weapon Inventory Slots
-        for (int i = 0; i < weaponInventorySlots.Length; i++)
+        // If any sub-menu is open (like filtered inventory), close it first.
+        // If only the main menu is open, then close everything.
+        if (IsMenuOpen)
         {
-            if (i < playerInventory.weaponsInventory.Count)
-            {
-                if (weaponInventorySlots.Length < playerInventory.weaponsInventory.Count)
-                {
-                    Instantiate(weaponInventorySlotPrefab, weaponInventorySlotsParent);
-                    weaponInventorySlots = weaponInventorySlotsParent.GetComponentsInChildren<WeaponInventorySlot>();
-                }
-
-                weaponInventorySlots[i].AddItem(playerInventory.weaponsInventory[i]);
-            }
-            else
-            {
-                weaponInventorySlots[i].ClearInventorySlot();
-            }
+            // Add more complex logic here if you have deeper menus
+            CloseAllMenus();
         }
-        #endregion
     }
 
-    private void CloseAllInventoryWindows()
+    public void ShowInventoryForSelection(EquipmentSlotUI clickedSlot)
     {
-        currentSelectedSlotType = 0;
+        if (inventoryWindowUI == null) return;
 
-        weaponInventoryWindow.SetActive(false);
-        equipementInventoryWindow.SetActive(false);
+        // Hide other windows
+        equipmentWindow.SetActive(false);
+
+        // Tell the inventory window to open in selection mode
+        inventoryWindowUI.OpenInSelectionMode(clickedSlot.slotCategory, clickedSlot.slotIndex);
+
+        // Show the inventory window
+        inventoryWindow.SetActive(true);
+    }
+
+    // --- Methods to be called by main menu buttons ---
+    public void OpenEquipmentWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        equipmentWindow.SetActive(true);
+    }
+
+    public void OpenInventoryWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        inventoryWindow.SetActive(true);
+    }
+
+    public void OpenOptionsWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        optionsWindow.SetActive(true);
+    }
+
+    public void OpenStatusWindow()
+    {
+        mainMenuWindow.SetActive(false);
+        statusWindow.SetActive(true);
     }
 }
 
 
 --- END FILE: UI\UIManager.cs ---
+
+--- START FILE: UI\UnequipSlotUI.cs ---
+
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class UnequipSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandler
+{
+    private InventoryWindowUI parentWindow;
+
+    public void Initialize(InventoryWindowUI parent)
+    {
+        parentWindow = parent;
+    }
+
+    // Called by a Button component's OnClick() event
+    public void OnUnequipClicked()
+    {
+        parentWindow?.OnUnequipSlotInteracted();
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        parentWindow?.OnUnequipSlotSelected();
+    }
+
+    public void OnSelect(BaseEventData eventData)
+    {
+        parentWindow?.OnUnequipSlotSelected();
+    }
+}
+
+
+--- END FILE: UI\UnequipSlotUI.cs ---
 
 --- START FILE: UI\WeaponInventorySlot.cs ---
 
@@ -6438,15 +9128,15 @@ public class WeaponInventorySlot : MonoBehaviour
 
     public void EquipItem()
     {
-        playerInventory.weaponsInventory.Add((WeaponItem)playerInventory.GetItemFromEquipSlot(uiManager.currentSelectedSlotType));
-        playerInventory.SetItemFromEquipSlot(uiManager.currentSelectedSlotType, weaponItem);
-        playerInventory.weaponsInventory.Remove(weaponItem);
+        //playerInventory.weaponsInventory.Add((WeaponItem)playerInventory.GetItemFromEquipSlot(uiManager.currentSelectedSlotType));
+        //playerInventory.SetItemFromEquipSlot(uiManager.currentSelectedSlotType, weaponItem);
+        //playerInventory.weaponsInventory.Remove(weaponItem);
 
-        weaponSlotManager.LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
-        weaponSlotManager.LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
+        //weaponSlotManager.LoadWeaponOnSlot(playerInventory.RightHandWeapon, false);
+        //weaponSlotManager.LoadWeaponOnSlot(playerInventory.LeftHandWeapon, true);
 
-        equipmentWindowUI.LoadWeaponOnEquipementScreen(playerInventory);
-        uiManager.currentSelectedSlotType = 0;
+        //equipmentWindowUI.LoadWeaponOnEquipementScreen(playerInventory);
+        //uiManager.currentSelectedSlotType = 0;
     }
 }
 

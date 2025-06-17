@@ -1,49 +1,93 @@
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class QuickSlotsUI : MonoBehaviour
 {
-    [SerializeField] Image rightWeaponIcon;
+    [SerializeField] private PlayerInventory playerInventory;
+    [Header("Weapon Slot")]
+    [SerializeField] private Image rightWeaponIcon;
     // [SerializeField] Image leftWeaponIcon; // For shield later
 
-    private void OnEnable()
+    [Header("Consumable Slots")]
+    [SerializeField] private Image currentConsumableIcon;
+    [SerializeField] private TMP_Text currentConsumableQuantity;
+    [SerializeField] private Image nextConsumableIcon;
+
+    private void Awake()
     {
-        PlayerInventory.OnEquippedWeaponChanged += UpdateEquippedWeaponUI;
-        // If you have access to PlayerInventory at start, you can do an initial update
-        // PlayerInventory inv = FindObjectOfType<PlayerInventory>();
-        // if(inv) UpdateEquippedWeaponUI(inv.EquippedWeapon);
+        if (playerInventory == null) Debug.LogError("Inventory reference not set for Quick Slots UI");
+        PlayerInventory.OnEquipmentUpdated += RefreshAllSlots;
+        PlayerInventory.OnInventoryUpdated += RefreshAllSlots;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        PlayerInventory.OnEquippedWeaponChanged -= UpdateEquippedWeaponUI;
+        PlayerInventory.OnEquipmentUpdated -= RefreshAllSlots;
+        PlayerInventory.OnInventoryUpdated += RefreshAllSlots;
+    }
+
+    public void RefreshAllSlots()
+    {
+        if (playerInventory == null) return;
+
+        UpdateEquippedWeaponUI(playerInventory.EquippedRightWeapon);
+        UpdateConsumableUI();
     }
 
     private void UpdateEquippedWeaponUI(WeaponItem equippedWeapon)
     {
-        if (equippedWeapon != null && !equippedWeapon.isUnarmed && equippedWeapon.itemIcon != null)
+        WeaponItem weaponToShow = equippedWeapon ?? playerInventory.unarmedWeaponData;
+
+        if (weaponToShow != null && !weaponToShow.isUnarmed && weaponToShow.itemIcon != null)
         {
-            rightWeaponIcon.sprite = equippedWeapon.itemIcon;
+            rightWeaponIcon.sprite = weaponToShow.itemIcon;
             rightWeaponIcon.enabled = true;
         }
         else
         {
-            // Optionally show a "fist" icon for unarmed, or just disable
-            if (equippedWeapon != null && equippedWeapon.isUnarmed && equippedWeapon.itemIcon != null)
-            {
-                rightWeaponIcon.sprite = equippedWeapon.itemIcon;
-                rightWeaponIcon.enabled = true;
-            }
-            else
-            {
-                rightWeaponIcon.sprite = null;
-                rightWeaponIcon.enabled = false;
-            }
+            rightWeaponIcon.sprite = null;
+            rightWeaponIcon.enabled = false;
         }
     }
 
-    public void RefreshAllQuickSlots(PlayerInventory playerInventory)
+    private void UpdateConsumableUI()
     {
-        UpdateEquippedWeaponUI(playerInventory.EquippedWeapon);
+        InventorySlot currentSlot = playerInventory.CurrentConsumableSlot;
+        InventorySlot nextSlot = playerInventory.NextConsumableSlot;
+
+        // --- Update Current Consumable Slot (D-Pad Up) ---
+        if (currentSlot != null && currentSlot.item != null)
+        {
+            currentConsumableIcon.sprite = currentSlot.item.itemIcon;
+            currentConsumableIcon.enabled = true;
+
+            if (currentConsumableQuantity != null)
+            {
+                currentConsumableQuantity.text = currentSlot.quantity.ToString();
+                currentConsumableQuantity.enabled = true;
+            }
+        }
+        else
+        {
+            // No consumable equipped
+            currentConsumableIcon.sprite = null;
+            currentConsumableIcon.enabled = false;
+            if (currentConsumableQuantity != null) currentConsumableQuantity.enabled = false;
+        }
+
+        // --- Update Next Consumable Slot (D-Pad Down) ---
+        // Hide the "next" icon if there's only one or zero items to cycle through
+        if (nextSlot != null && nextSlot.item != null && playerInventory.consumableQuickSlots.Count > 1)
+        {
+            nextConsumableIcon.sprite = nextSlot.item.itemIcon;
+            nextConsumableIcon.enabled = true;
+        }
+        else
+        {
+            nextConsumableIcon.sprite = null;
+            nextConsumableIcon.enabled = false;
+        }
     }
 }
