@@ -347,9 +347,31 @@ public class CameraController : MonoBehaviour
 
     private void HandleTargetDied()
     {
-        // Target died, try to find a new one automatically or clear lock-on
-        // For now, just clear it. Could implement auto-switch later.
-        ClearLockOn(true); // Preserve orientation
+        Debug.Log($"Lock-on target has died. Finding a new target.");
+
+        // The current target is dead, so it's effectively null. Unsubscribe just in case.
+        if (_currentLockOnTarget != null)
+        {
+            _currentLockOnTarget.OnDeath -= HandleTargetDied;
+        }
+
+        _currentLockOnTarget = null; // Clear the reference to the dead target
+
+        // Find the next best target currently in view
+        CharacterManager newTarget = FindBestTargetInView();
+
+        if (newTarget != null)
+        {
+            // If a new valid target is found, switch to it immediately.
+            Debug.Log($"Auto-switching lock-on to new target: {newTarget.name}");
+            SetLockOn(newTarget);
+        }
+        else
+        {
+            // If no other targets are available, clear the lock-on completely.
+            Debug.Log("No other targets found. Clearing lock-on.");
+            ClearLockOn(true); // 'true' to preserve camera orientation seamlessly
+        }
     }
 
     private bool IsTargetEffectivelyVisible(CharacterManager target)
@@ -366,9 +388,8 @@ public class CameraController : MonoBehaviour
             return false;
         }
 
-        RaycastHit hit;
         // Linecast from camera to target. If it hits something that isn't the target, it's obstructed.
-        if (Physics.Linecast(viewOrigin, targetPoint, out hit, obstructionLayers, QueryTriggerInteraction.Ignore))
+        if (Physics.Linecast(viewOrigin, targetPoint, out RaycastHit hit, obstructionLayers, QueryTriggerInteraction.Ignore))
         {
             if (hit.transform.root != target.transform.root) // Check root in case target has complex hierarchy
             {
@@ -388,7 +409,7 @@ public class CameraController : MonoBehaviour
         foreach (var col in colliders)
         {
             CharacterManager potentialTarget = col.GetComponent<CharacterManager>();
-            if (potentialTarget == null || !potentialTarget.lockOnTransform || potentialTarget == playerTransform.GetComponent<CharacterManager>() || !potentialTarget.isActiveAndEnabled)
+            if (potentialTarget == null || potentialTarget.IsDead || !potentialTarget.lockOnTransform || potentialTarget == playerTransform.GetComponent<CharacterManager>() || !potentialTarget.isActiveAndEnabled)
                 continue;
 
             Vector3 directionToTarget = potentialTarget.lockOnTransform.position - cameraActualTransform.position;

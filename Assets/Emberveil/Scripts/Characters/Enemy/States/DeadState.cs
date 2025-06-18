@@ -3,12 +3,14 @@ using UnityEngine;
 public class DeadState : IEnemyState
 {
     private EnemyManager manager;
-    private float despawnTimer = 5f;
+    private readonly float despawnCooldown = 5f;
+    private float despawnTimer;
 
     public void Enter(EnemyManager manager)
     {
         this.manager = manager;
         Debug.Log($"{manager.name} entered DeadState.");
+        despawnTimer = despawnCooldown;
 
         manager.CurrentTarget = null; // No longer has a target
         manager.Senses.ForceLoseTarget(); // Ensure senses are cleared
@@ -53,6 +55,7 @@ public class DeadState : IEnemyState
 
     public void Exit()
     {
+        manager.EnemyAnimator.SetBool("isDead", false);
         // Cleanup if needed before destroy, but usually handled by OnDestroy()
     }
 }

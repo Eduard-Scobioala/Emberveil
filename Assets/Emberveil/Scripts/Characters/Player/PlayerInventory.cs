@@ -10,6 +10,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
 
     [Header("Core References")]
     [SerializeField] private WeaponSlotManager weaponSlotManager;
+    [SerializeField] private PlayerEquipmentManager playerEquipmentManager;
     [SerializeField] public WeaponItem unarmedWeaponData;
 
     // --- Equipped Items ---
@@ -47,6 +48,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
     private void Awake()
     {
         if (weaponSlotManager == null) weaponSlotManager = GetComponentInChildren<WeaponSlotManager>();
+        if (playerEquipmentManager == null) Debug.LogError("PlayerInventory cannot find PlayerEquipmentManager!", this);
         if (unarmedWeaponData == null) Debug.LogError("PlayerInventory: Unarmed Weapon Data not assigned!");
 
         playerManager = GetComponent<PlayerManager>();
@@ -60,6 +62,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
     private void Start()
     {
         InitializeFlasks();
+        UpdateArmorVisuals();
         EquipWeapon(CurrentRightWeaponIndex);
         OnEquipmentUpdated?.Invoke();
     }
@@ -188,7 +191,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
             case ArmorType.Hands: handArmor = armor; break;
             case ArmorType.Legs: legArmor = armor; break;
         }
-        // TODO: Logic to visually change player model
+        UpdateArmorVisuals();
         OnEquipmentUpdated?.Invoke();
     }
 
@@ -290,6 +293,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
     public void EquipItem(Item item, EquipmentSlotCategory category, int slotIndex)
     {
         UnequipItem(item);
+        bool armorChanged = false;
         switch (category)
         {
             case EquipmentSlotCategory.RightHand:
@@ -299,10 +303,10 @@ public class PlayerInventory : MonoBehaviour, ISavable
                     if (CurrentRightWeaponIndex == slotIndex) EquipWeapon(slotIndex);
                 }
                 break;
-            case EquipmentSlotCategory.Head: if (item is ArmorItem h) headArmor = h; break;
-            case EquipmentSlotCategory.Body: if (item is ArmorItem b) bodyArmor = b; break;
-            case EquipmentSlotCategory.Hands: if (item is ArmorItem ha) handArmor = ha; break;
-            case EquipmentSlotCategory.Legs: if (item is ArmorItem l) legArmor = l; break;
+            case EquipmentSlotCategory.Head: if (item is ArmorItem h) { headArmor = h; armorChanged = true; } break;
+            case EquipmentSlotCategory.Body: if (item is ArmorItem b) { bodyArmor = b; armorChanged = true; } break;
+            case EquipmentSlotCategory.Hands: if (item is ArmorItem ha) { handArmor = ha; armorChanged = true; } break;
+            case EquipmentSlotCategory.Legs: if (item is ArmorItem l) { legArmor = l; armorChanged = true; } break;
             case EquipmentSlotCategory.Talisman:
                 if (item is TalismanItem t && slotIndex < talismanSlots.Length) talismanSlots[slotIndex] = t;
                 break;
@@ -314,6 +318,8 @@ public class PlayerInventory : MonoBehaviour, ISavable
                 }
                 break;
         }
+
+        if (armorChanged) UpdateArmorVisuals();
         OnEquipmentUpdated?.Invoke();
     }
 
@@ -357,6 +363,7 @@ public class PlayerInventory : MonoBehaviour, ISavable
     public void UnequipItemFromSlot(EquipmentSlotCategory category, int slotIndex)
     {
         bool changed = false;
+        bool armorChanged = false;
         switch (category)
         {
             case EquipmentSlotCategory.RightHand:
@@ -373,10 +380,10 @@ public class PlayerInventory : MonoBehaviour, ISavable
             case EquipmentSlotCategory.Armor:
                 Debug.LogWarning("UnequipItemFromSlot called with generic 'Armor' category. Please specify Head, Body, etc.");
                 break;
-            case EquipmentSlotCategory.Head: if (headArmor != null) { headArmor = null; changed = true; } break;
-            case EquipmentSlotCategory.Body: if (bodyArmor != null) { bodyArmor = null; changed = true; } break;
-            case EquipmentSlotCategory.Hands: if (handArmor != null) { handArmor = null; changed = true; } break;
-            case EquipmentSlotCategory.Legs: if (legArmor != null) { legArmor = null; changed = true; } break;
+            case EquipmentSlotCategory.Head: if (headArmor != null) { headArmor = null; changed = true; armorChanged = true; } break;
+            case EquipmentSlotCategory.Body: if (bodyArmor != null) { bodyArmor = null; changed = true; armorChanged = true; } break;
+            case EquipmentSlotCategory.Hands: if (handArmor != null) { handArmor = null; changed = true; armorChanged = true; } break;
+            case EquipmentSlotCategory.Legs: if (legArmor != null) { legArmor = null; changed = true; armorChanged = true; } break;
 
             case EquipmentSlotCategory.Talisman:
                 if (slotIndex >= 0 && slotIndex < talismanSlots.Length && talismanSlots[slotIndex] != null)
@@ -394,9 +401,15 @@ public class PlayerInventory : MonoBehaviour, ISavable
                 break;
         }
 
-        if (changed)
+        if (armorChanged) UpdateArmorVisuals();
+        if (changed) OnEquipmentUpdated?.Invoke();
+    }
+
+    private void UpdateArmorVisuals()
+    {
+        if (playerEquipmentManager != null)
         {
-            OnEquipmentUpdated?.Invoke();
+            playerEquipmentManager.EquipArmor(headArmor, bodyArmor, handArmor, legArmor);
         }
     }
 
@@ -560,6 +573,16 @@ public class PlayerInventory : MonoBehaviour, ISavable
                 {
                     consumableQuickSlots[i] = null;
                 }
+            }
+
+            // After restoring all inventories, we must re-establish the reference to the flask slot.
+            _healingFlaskSlot = consumableInventory.FirstOrDefault(slot => slot?.item == healingFlaskSO);
+            if (_healingFlaskSlot == null)
+            {
+                // This case should ideally not happen if the flask is always saved,
+                // but as a fallback, re-initialize it.
+                Debug.LogWarning("Healing flask not found in saved data. Re-initializing.");
+                InitializeFlasks();
             }
 
             // --- Refresh the game state ---

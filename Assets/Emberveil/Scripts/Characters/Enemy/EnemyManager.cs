@@ -44,11 +44,14 @@ public class EnemyManager : CharacterManager, ISavable
     private EnemyHealthBarUI healthBarUI;
 
     private SavableEntity savableEntity;
+    private Transform lastAttacker;
 
     public bool IsPerformingCriticalAction => CurrentState is PerformingBackstabState;
     public bool IsReceivingCriticalHit => CurrentState is BeingBackstabbedState;
 
     public bool HasAttackActionConcluded { get; set; }
+
+    public override bool IsDead => Stats.isDead;
 
 
     protected override void Awake()
@@ -211,6 +214,11 @@ public class EnemyManager : CharacterManager, ISavable
 
     private void HandleDamageTaken(int damageAmount, DamageType type, Transform attacker)
     {
+        if (attacker != null)
+        {
+            lastAttacker = attacker;
+        }
+
         if (CurrentState == deadState || CurrentState == beingBackstabbedState) return; // Already dead or in critical hit anim
 
         // Specific handling for backstabs
@@ -233,7 +241,20 @@ public class EnemyManager : CharacterManager, ISavable
 
     private void HandleDeath()
     {
+        if (lastAttacker != null && lastAttacker.CompareTag("Player"))
+        {
+            PlayerStats playerStats = lastAttacker.GetComponent<PlayerStats>();
+            if (playerStats != null)
+            {
+                int currencyAmount = Stats.GetCurrencyReward();
+                playerStats.AddCurrency(currencyAmount);
+                Debug.Log($"{name} died and awarded {currencyAmount} currency to the player.");
+            }
+        }
+
         Stats.isDead = true;
+
+        RaiseDeath();
         SwitchState(deadState);
     }
 

@@ -19,7 +19,15 @@ MonoBehaviour:
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
     type: 3}
-  modelPrefab: {fileID: 0}
   armorType: 1
+  armorMeshes:
+  - targetBodyPartName: Torso
+    mesh: {fileID: 4300508, guid: 038320a534bd8b444b43734860d1a211, type: 3}
+  - targetBodyPartName: ArmUpperRight
+    mesh: {fileID: 4300530, guid: 038320a534bd8b444b43734860d1a211, type: 3}
+  - targetBodyPartName: ArmUpperLeft
+    mesh: {fileID: 4300570, guid: 038320a534bd8b444b43734860d1a211, type: 3}
+  - targetBodyPartName: Hips
+    mesh: {fileID: 4300756, guid: 038320a534bd8b444b43734860d1a211, type: 3}
   physicalDefense: 10
   magicDefense: 2

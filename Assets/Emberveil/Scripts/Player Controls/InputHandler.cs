@@ -118,6 +118,7 @@ public class InputHandler : MonoBehaviour
     public void EnableUIInput()
     {
         CameraMovementPerformed?.Invoke(new Vector2()); // reset camera movement
+        PlayerMovementPerformed?.Invoke(new Vector2()); // reset player movement
         inputActions.PlayerMovement.Disable();
         inputActions.PlayerActions.Disable();
         inputActions.PlayerQuickSlots.Disable();

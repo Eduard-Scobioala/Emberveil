@@ -15,6 +15,9 @@ public class EnemyStats : CharacterStats
     public float poise = 100f;
     public float currentPoise;
 
+    [Header("Rewards")]
+    [SerializeField] private int currencyReward = 50;
+
     protected void Awake()
     {
         //base.Awake();
@@ -96,5 +99,10 @@ public class EnemyStats : CharacterStats
 
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    public int GetCurrencyReward()
+    {
+        return currencyReward;
     }
 }

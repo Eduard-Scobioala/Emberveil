@@ -19,7 +19,11 @@ MonoBehaviour:
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
     type: 3}
-  modelPrefab: {fileID: 0}
   armorType: 3
+  armorMeshes:
+  - targetBodyPartName: LegRight
+    mesh: {fileID: 4300858, guid: 038320a534bd8b444b43734860d1a211, type: 3}
+  - targetBodyPartName: LegLeft
+    mesh: {fileID: 4300818, guid: 038320a534bd8b444b43734860d1a211, type: 3}
   physicalDefense: 4
   magicDefense: 1
