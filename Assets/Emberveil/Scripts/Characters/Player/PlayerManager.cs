@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,6 +21,8 @@ public class PlayerManager : CharacterManager
     public PlayerLocomotion playerLocomotion;
     public PlayerInventory playerInventory;
     public PlayerAnimator playerAnimator;
+    [SerializeField] private InputHandler inputHandler;
+    [SerializeField] private CameraController cameraController;
 
     [Header("Player Flags")]
     public bool isSprinting;
@@ -36,6 +39,7 @@ public class PlayerManager : CharacterManager
     private float pendingCommandTimer;
 
     public CharacterManager currentBackstabTarget;
+    public override bool IsDead => playerStats.isDead;
 
     protected override void Awake()
     {
@@ -159,6 +163,69 @@ public class PlayerManager : CharacterManager
         }
         base.GetBackstabbed(attacker);
     }
+
+    #region Death Handling
+
+    public void HandleDeath()
+    {
+        if (charAnimManager.IsInvulnerable) return;
+
+        StartCoroutine(DeathSequence());
+    }
+
+    private IEnumerator DeathSequence()
+    {
+        Debug.Log("Player has died. Starting death sequence.");
+
+        // Lockdown the Player
+        inputHandler.EnableUIInput();
+        playerLocomotion.StopAllMovement();
+        cameraController.StopFollowing();
+
+        // Prevent any further input or actions
+        playerAnimator.IsInvulnerable = true;
+        playerAnimator.IsDead = true;
+
+        // 1. Play death animation
+        if (!isBeingCriticallyHit)
+        {
+            playerAnimator.PlayTargetAnimation("Death_01", true);
+        }
+
+        // 2. Show the "YOU DIED" screen
+        yield return StartCoroutine(interactableUI.GetComponentInParent<UIManager>().ShowYouDiedScreen());
+
+        // 3. Wait for a few seconds
+        yield return new WaitForSeconds(4.0f);
+
+        // 4. Handle currency loss
+        playerStats.HandleDeathPenalty();
+
+        // 5. Respawn the player
+        RespawnPlayer();
+
+        // 6. Hide the "YOU DIED" screen
+        interactableUI.GetComponentInParent<UIManager>().HideYouDiedScreen();
+
+        // 7. Restore player state
+        charAnimManager.IsInvulnerable = false;
+        inputHandler.EnableGameplayInput();
+        cameraController.StartFollowing();
+    }
+
+    public void RespawnPlayer()
+    {
+        WorldManager.Instance.ResetWorldState();
+
+        playerStats.isDead = false;
+        playerAnimator.IsDead = false;
+        Debug.Log("Respawning player...");
+        SaveLoadManager.Instance.LoadGame();
+
+        playerAnimator.PlayTargetAnimation("Empty", false); // Clear any lingering animations
+    }
+
+    #endregion
 
     #region Handle Commands
     private void HandleCommand(ICommand command)

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class UIManager : MonoBehaviour
@@ -17,12 +18,21 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject statusWindow;
     [SerializeField] private GameObject levelUpWindow;
 
+    [Header("Death Screen")]
+    [SerializeField] private CanvasGroup youDiedScreenCanvasGroup;
+
     public bool IsMenuOpen { get; private set; }
 
     private void Awake()
     {
         if (inputHandler == null) inputHandler = FindObjectOfType<InputHandler>();
         if (inventoryWindowUI == null) inventoryWindowUI = inventoryWindow.GetComponent<InventoryWindowUI>();
+
+        if (youDiedScreenCanvasGroup != null)
+        {
+            youDiedScreenCanvasGroup.alpha = 0;
+            youDiedScreenCanvasGroup.gameObject.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -159,6 +169,31 @@ public class UIManager : MonoBehaviour
         inputHandler.EnableUIInput();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+    }
+
+    public IEnumerator ShowYouDiedScreen()
+    {
+        IsMenuOpen = true;
+        hudWindow.SetActive(false);
+        youDiedScreenCanvasGroup.gameObject.SetActive(true);
+
+        float fadeDuration = 2f;
+        float timer = 0;
+        while (timer < fadeDuration)
+        {
+            timer += Time.deltaTime;
+            youDiedScreenCanvasGroup.alpha = Mathf.Lerp(0, 1, timer / fadeDuration);
+            yield return null;
+        }
+        youDiedScreenCanvasGroup.alpha = 1;
+    }
+
+    public void HideYouDiedScreen()
+    {
+        youDiedScreenCanvasGroup.alpha = 0;
+        youDiedScreenCanvasGroup.gameObject.SetActive(false);
+        hudWindow.SetActive(true);
+        IsMenuOpen = false;
     }
 
     private void SaveGame()

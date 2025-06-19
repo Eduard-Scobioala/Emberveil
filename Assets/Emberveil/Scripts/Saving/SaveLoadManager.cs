@@ -11,6 +11,7 @@ public class SaveLoadManager : MonoBehaviour
     [SerializeField] private string saveFileName = "emberveil.json";
 
     private JsonSerializerSettings serializerSettings;
+    public bool ShouldSaveOnStart { get; set; } = false;
 
     private void Awake()
     {

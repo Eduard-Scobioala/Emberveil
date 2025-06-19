@@ -63,6 +63,7 @@ public class CameraController : MonoBehaviour
 
     private List<CharacterManager> _availableTargets = new List<CharacterManager>();
     private int _currentTargetIndex = -1;
+    private bool isFollowing = true;
 
     private void Awake()
     {
@@ -118,6 +119,8 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (!isFollowing) return;
+
         float dt = Time.deltaTime;
         if (dt <= 0 || playerTransform == null) return;
 
@@ -427,7 +430,6 @@ public class CameraController : MonoBehaviour
                                            .ToList();
     }
 
-
     private CharacterManager FindBestTargetInView()
     {
         RefreshAvailableTargets();
@@ -492,7 +494,6 @@ public class CameraController : MonoBehaviour
         }
     }
 
-
     private void SwitchLockOnTargetLeft()
     {
         if (IsLockedOn) SwitchLockOnTarget(-1);
@@ -503,6 +504,15 @@ public class CameraController : MonoBehaviour
         if (IsLockedOn) SwitchLockOnTarget(1);
     }
 
+    public void StopFollowing()
+    {
+        isFollowing = false;
+    }
+
+    public void StartFollowing()
+    {
+        isFollowing = true;
+    }
 
     // Gizmos for debugging
     private void OnDrawGizmosSelected()

@@ -6,8 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Emberveil/Scenes/Main Scene v1.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Emberveil/Scenes/Main Menu.unity
+    guid: 6f8c624872aa48047927669289dde8a1
+  - enabled: 1
+    path: Assets/Emberveil/Scenes/UI.unity
+    guid: 1c72a3bebe2fbdd45b1e6c3a25755f0d
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 29d9c7fa66bf2a54b87f31c5041334b7,
       type: 2}

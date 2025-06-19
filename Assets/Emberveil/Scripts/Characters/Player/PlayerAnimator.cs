@@ -49,6 +49,12 @@ public class PlayerAnimator : AnimatorManager
         set => SetAnimatorBool(value);
     }
 
+    public bool IsDead
+    {
+        get => GetAnimatorBool();
+        set => SetAnimatorBool(value);
+    }
+
     public int RollDirection
     {
         get => GetAnimatorInt();

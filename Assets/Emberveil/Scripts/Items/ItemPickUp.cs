@@ -14,10 +14,14 @@ public class ItemPickUp : Interactable, ISavable
 
     private bool hasBeenCollected = false;
     private SavableEntity savableEntity;
+    private Vector3 initialPosition;
+    private bool isInitiallyActive;
 
     private void Awake()
     {
         savableEntity = GetComponent<SavableEntity>();
+        initialPosition = transform.position;
+        isInitiallyActive = gameObject.activeSelf;
     }
 
     // Setting the item dynamically (for when dropping from inventory)
@@ -68,6 +72,18 @@ public class ItemPickUp : Interactable, ISavable
     {
         yield return new WaitForSeconds(delay);
         gameObject.SetActive(false);
+    }
+
+    public void RespawnItem()
+    {
+        if (!isOneTimePickup && isInitiallyActive)
+        {
+            hasBeenCollected = false;
+            transform.position = initialPosition;
+            GetComponent<Collider>().enabled = true;
+            foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = true;
+            gameObject.SetActive(true);
+        }
     }
 
     public override string GetItemName()

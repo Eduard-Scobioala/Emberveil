@@ -31,10 +31,6 @@ public class WeaponSlotManager : MonoBehaviour
         if (rightHandSlot == null) Debug.LogError("WeaponSlotManager: Right Hand Slot not assigned!");
     }
 
-    // No longer needs OnEnable/OnDisable for TwoHandingButtonPressed
-    // Two-handing logic would need to be re-evaluated if you want to keep it.
-    // For now, assuming single right-hand weapon focus.
-
     public void LoadWeaponOnSlot(WeaponItem weaponItem, bool isRightHand)
     {
         if (!isRightHand)

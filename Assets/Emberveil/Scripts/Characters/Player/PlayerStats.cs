@@ -264,17 +264,15 @@ public class PlayerStats : CharacterStats, ISavable
             currentHealth = 0;
             isDead = true;
 
-            playerAnimator.anim.SetBool("isDead", true);
-
-            // If not already in a critical hit (backstab), play normal death.
-            // If being critically hit, the backstab victim animation sequence will handle death.
-            if (!playerManager.isBeingCriticallyHit)
-            {
-                playerAnimator.PlayTargetAnimation("Death_01", true);
-            }
-            
-            //playerManager.RaiseDeath();
+            playerManager.HandleDeath();
         }
+    }
+
+    public void HandleDeathPenalty()
+    {
+        currentCurrency /= 2;
+        OnCurrencyChanged?.Invoke(currentCurrency);
+        Debug.Log($"Player died. Currency halved. New amount: {currentCurrency}");
     }
 
     public bool CanPerformStaminaConsumingAction()

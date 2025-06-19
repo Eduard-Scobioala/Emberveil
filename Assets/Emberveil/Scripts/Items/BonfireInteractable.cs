@@ -128,8 +128,8 @@ public class BonfireInteractable : Interactable
             playerStats.RestoreVitals();
         }
 
-        // Respawn All Enemies
-        RespawnAllEnemies();
+        // Reset the World (Enemies & Items)
+        WorldManager.Instance.ResetWorldState();
 
         // Save the Game State
         SaveLoadManager.Instance.SaveGame();
@@ -140,17 +140,6 @@ public class BonfireInteractable : Interactable
             Debug.Log("Interacting with bonfire. Vitals restored, enemies respawned, game saved. Opening menu.");
             uiManager.OpenLevelUpWindow();
         }
-    }
-
-    private void RespawnAllEnemies()
-    {
-        // Find all enemy managers in the scene and tell them to respawn.
-        var allEnemies = FindObjectsOfType<EnemyManager>(true);
-        foreach (var enemy in allEnemies)
-        {
-            enemy.RespawnEnemy();
-        }
-        Debug.Log("All enemies have been respawned.");
     }
 
     private void OnDrawGizmosSelected()

@@ -5419,7 +5419,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 491198104}
-  equipSlotType: 2
 --- !u!1 &129954241
 GameObject:
   m_ObjectHideFlags: 0
@@ -5875,7 +5874,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 490268639}
-  equipSlotType: 0
 --- !u!1 &177006038
 GameObject:
   m_ObjectHideFlags: 0
@@ -5971,7 +5969,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   anim: {fileID: 0}
-  canRotate: 0
 --- !u!1 &245743128 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: 7252bbd0415a72a4a824ced924c251a1,
@@ -6150,7 +6147,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 946321265}
-  equipSlotType: 7
 --- !u!1 &294404978
 GameObject:
   m_ObjectHideFlags: 0
@@ -6251,8 +6247,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496f9a8f74cdc5449d47e9e07b8d945, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  enemyManager: {fileID: 0}
   rightHandWeapon: {fileID: 11400000, guid: 10d55fbe45f3eaa48bca1d99de624560, type: 2}
-  leftHandWeapon: {fileID: 0}
 --- !u!1 &349524707
 GameObject:
   m_ObjectHideFlags: 0
@@ -6513,7 +6509,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 1520368339}
-  equipSlotType: 1
 --- !u!1 &399559881
 GameObject:
   m_ObjectHideFlags: 0
@@ -6961,7 +6956,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 1270562574}
-  equipSlotType: 4
 --- !u!1 &490268637
 GameObject:
   m_ObjectHideFlags: 0
@@ -9165,17 +9159,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lockOnTransform: {fileID: 5538635033512766916}
-  isInvulnerable: 0
   isBeingCriticallyHit: 0
   backstabReceiverPoint: {fileID: 7663441693016756131}
   beingBackstabbedAnimation: Enemy_Backstab_Main_Victim_01
   canBeBackstabbed: 1
   charAnimManager: {fileID: 0}
   patrolRoute: {fileID: 0}
-  defaultStoppingDistance: 1.3
   initialPosition: {x: 0, y: 0, z: 0}
   initialRotation: {x: 0, y: 0, z: 0, w: 0}
-  isPerformingNonCriticalAction: 0
+  canRepositionWhileOnCooldown: 1
+  defaultStoppingDistance: 1.3
+  isInvincibleDuringStun: 0
+  hitStunDuration: 0.1
+  healthBarPrefab: {fileID: 0}
+  healthBarAttachPoint: {fileID: 0}
 --- !u!114 &1455925455
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9204,16 +9201,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b92d3c24c2e66a40bf8dd0a91120254, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  healthLevel: 10
+  characterLevel: 1
   maxHealth: 0
   currentHealth: 0
-  staminaLevel: 10
   maxStamina: 0
   currentStamina: 0
+  baseAttackPower: 10
+  baseDefense: 2
   isDead: 0
   baseHealthAmount: 100
   poise: 100
   currentPoise: 0
+  currencyReward: 50
 --- !u!114 &1455925460
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9258,7 +9257,6 @@ MonoBehaviour:
   backstabCheckMaxDistance: 1.5
   backstabCheckMaxAngle: 45
   chanceToAttemptBackstab: 1
-  rightHandDamageCollider: {fileID: 0}
 --- !u!1 &1501720957
 GameObject:
   m_ObjectHideFlags: 0
@@ -9692,11 +9690,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 1961382045}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 1
-  isRightHandSlot: 0
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!1 &1695934020
 GameObject:
   m_ObjectHideFlags: 0
@@ -9900,7 +9893,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 1601581973}
-  equipSlotType: 3
 --- !u!1 &1746490734
 GameObject:
   m_ObjectHideFlags: 0
@@ -9954,11 +9946,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 1910893723}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 0
-  isRightHandSlot: 1
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!1 &1820094014
 GameObject:
   m_ObjectHideFlags: 0
@@ -10206,7 +10193,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 294404980}
-  equipSlotType: 6
 --- !u!1001 &1892815945
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10454,11 +10440,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb0793973b6cef84eb224aeb33a17935, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  handEquipmentSlotsUI:
-  - {fileID: 176853322}
-  - {fileID: 373468222}
-  - {fileID: 438059662}
-  - {fileID: 2051534105}
+  playerInventory: {fileID: 0}
+  itemInfoPanel: {fileID: 0}
+  uiManager: {fileID: 0}
+  rightHandSlots: []
+  headArmorSlot: {fileID: 0}
+  bodyArmorSlot: {fileID: 0}
+  handArmorSlot: {fileID: 0}
+  legArmorSlot: {fileID: 0}
+  talismanSlots: []
+  consumableSlots: []
 --- !u!1 &1926491824 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: bd39e079fffaabd4384d356e7713f050,
@@ -15693,7 +15684,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiManager: {fileID: 7756071689213757626}
   icon: {fileID: 937406306}
-  equipSlotType: 5
 --- !u!1 &2052189485
 GameObject:
   m_ObjectHideFlags: 0
@@ -15705,6 +15695,7 @@ GameObject:
   - component: {fileID: 2052189488}
   - component: {fileID: 2052189487}
   - component: {fileID: 2052189486}
+  - component: {fileID: 2052189489}
   m_Layer: 9
   m_Name: Item
   m_TagString: Interactable
@@ -15725,9 +15716,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactableInfoText: Legendary Item 2
-  weapon: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
+  itemToPickUp: {fileID: 0}
   pickUpAnimation: Pick_Up_Item
-  pickUpTime: 1
+  isOneTimePickup: 0
 --- !u!135 &2052189487
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -15765,6 +15756,19 @@ Transform:
   - {fileID: 1966264702}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2052189489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2052189485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43864924aafb0e84cbc78f0ef466f7d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uniqueIdentifier: 2b93179d-0cbb-4696-b4cb-6a5288069ac2
 --- !u!1 &2103136764
 GameObject:
   m_ObjectHideFlags: 0
@@ -15994,6 +15998,7 @@ GameObject:
   - component: {fileID: 2140602193}
   - component: {fileID: 2140602192}
   - component: {fileID: 2140602191}
+  - component: {fileID: 2140602194}
   m_Layer: 9
   m_Name: Item
   m_TagString: Interactable
@@ -16014,9 +16019,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactableInfoText: Legendary Item
-  weapon: {fileID: 11400000, guid: 1cad58a9216cd6b46a6968865ecc40c0, type: 2}
+  itemToPickUp: {fileID: 0}
   pickUpAnimation: Pick_Up_Item
-  pickUpTime: 1
+  isOneTimePickup: 0
 --- !u!135 &2140602192
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -16054,6 +16059,19 @@ Transform:
   - {fileID: 110089552}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2140602194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2140602190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43864924aafb0e84cbc78f0ef466f7d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uniqueIdentifier: 58c162ed-c090-4691-a031-079f9fe67030
 --- !u!1001 &2146078879
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16481,6 +16499,7 @@ GameObject:
   - component: {fileID: 1455925461}
   - component: {fileID: 1455925460}
   - component: {fileID: 1455925454}
+  - component: {fileID: 7781982453346794827}
   m_Layer: 11
   m_Name: Enemy Red
   m_TagString: Enemy
@@ -17590,11 +17609,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 8520819660669706013}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 0
-  isRightHandSlot: 1
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!4 &3418350107958619161
 Transform:
   m_ObjectHideFlags: 0
@@ -18478,11 +18492,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   parentOverride: {fileID: 7072293336240124581}
-  currentWeapon: {fileID: 0}
-  isLeftHandSlot: 1
-  isRightHandSlot: 0
-  isBackSlot: 0
-  currentWeaponModel: {fileID: 0}
 --- !u!4 &4956015591586093990
 Transform:
   m_ObjectHideFlags: 0
@@ -18975,8 +18984,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69cfd4bec49f32d45aab6bcc971068b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  leftWeaponIcon: {fileID: 6687544919000464270}
+  playerInventory: {fileID: 0}
   rightWeaponIcon: {fileID: 3635204318931381651}
+  currentConsumableIcon: {fileID: 0}
+  currentConsumableQuantity: {fileID: 0}
+  nextConsumableIcon: {fileID: 0}
 --- !u!222 &6083850809489667198
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -19741,15 +19753,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e20657dea2d948d494dcdbacfc829f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  inputHandler: {fileID: 0}
   playerInventory: {fileID: 1324958276}
-  equipmentWindow: {fileID: 1925299366}
-  HUDInterface: {fileID: 823381570}
+  hudWindow: {fileID: 0}
+  mainMenuWindow: {fileID: 0}
+  equipmentWindow: {fileID: 0}
+  inventoryWindow: {fileID: 0}
   optionsWindow: {fileID: 598977743}
-  weaponInventoryWindow: {fileID: 129954241}
-  equipementInventoryWindow: {fileID: 136832291}
-  weaponInventorySlotsParent: {fileID: 154137696}
-  weaponInventorySlotPrefab: {fileID: 773492918}
-  currentSelectedSlotType: 0
+  itemInfoWindow: {fileID: 0}
+  inventoryWindowUI: {fileID: 0}
+  statusWindow: {fileID: 0}
+  levelUpWindow: {fileID: 0}
+  youDiedScreenCanvasGroup: {fileID: 0}
 --- !u!136 &7781982453346794826
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -19773,6 +19788,19 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &7781982453346794827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 763249544858688550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43864924aafb0e84cbc78f0ef466f7d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uniqueIdentifier: 5edbe7b8-ff7d-4777-9457-19934f7f26a0
 --- !u!1 &7823511045258030718
 GameObject:
   m_ObjectHideFlags: 0

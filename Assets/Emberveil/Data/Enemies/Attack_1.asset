@@ -20,7 +20,7 @@ MonoBehaviour:
   maxAttackDistance: 3
   minAttackAngle: -35
   maxAttackAngle: 35
-  damage: 20
+  damage: 50
   damageType: 0
   poiseDamage: 10
   canBeParried: 1

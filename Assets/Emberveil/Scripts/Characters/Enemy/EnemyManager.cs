@@ -260,29 +260,26 @@ public class EnemyManager : CharacterManager, ISavable
 
     public void RespawnEnemy()
     {
-        if (Stats.isDead)
+        Stats.isDead = false;
+        gameObject.SetActive(true);
+        Stats.currentHealth = Stats.maxHealth;
+        transform.SetPositionAndRotation(initialPosition, initialRotation);
+
+        // Re-enable components disabled on death
+        GetComponent<Collider>().enabled = true;
+        if (lockOnTransform != null) lockOnTransform.gameObject.SetActive(true);
+
+        // Switch back to a starting state
+        if (patrolRoute != null && patrolRoute.patrolPoints.Count > 0)
         {
-            Stats.isDead = false;
-            gameObject.SetActive(true);
-            Stats.currentHealth = Stats.maxHealth;
-            transform.SetPositionAndRotation(initialPosition, initialRotation);
-
-            // Re-enable components disabled on death
-            GetComponent<Collider>().enabled = true;
-            if (lockOnTransform != null) lockOnTransform.gameObject.SetActive(true);
-
-            // Switch back to a starting state
-            if (patrolRoute != null && patrolRoute.patrolPoints.Count > 0)
-            {
-                SwitchState(patrolState);
-            }
-            else
-            {
-                SwitchState(idleState);
-            }
-
-            Debug.Log($"{name} has been respawned.");
+            SwitchState(patrolState);
         }
+        else
+        {
+            SwitchState(idleState);
+        }
+
+        Debug.Log($"{name} has been respawned.");
     }
 
     // --- Critical Action Control Methods ---

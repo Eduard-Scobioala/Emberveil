@@ -34,9 +34,6 @@ public class PlayerLocomotion : MonoBehaviour
     [SerializeField] private float jumpStaminaCost = 8f;
     [SerializeField] private float sprintTickStaminaCost = 8f;
 
-    //[SerializeField] private float lockOnMovementForwardMultiplier = 0.125f;
-    //[SerializeField] private float lockOnDodgeForwardMultiplier = 0.9f;
-
     [Header("Lock-On Movement Multipliers")]
     [SerializeField] private float lockOnStrafeSpeedMultiplier = 0.8f;
     [SerializeField] private float lockOnBackwardSpeedMultiplier = 0.6f;
@@ -590,5 +587,14 @@ public class PlayerLocomotion : MonoBehaviour
     {
         Vector3 targetVelocity = new Vector3(0, rigidbody.velocity.y, 0);
         rigidbody.velocity = Vector3.SmoothDamp(rigidbody.velocity, targetVelocity, ref rigidbodyVelocityRef, movementSmoothTime * 0.2f); // Very quick stop
+    }
+
+    public void StopAllMovement()
+    {
+        rigidbody.velocity = Vector3.zero;
+        if (playerAnimator != null)
+        {
+            playerAnimator.UpdateAnimatorValues(0, 0, false, false, false);
+        }
     }
 }
