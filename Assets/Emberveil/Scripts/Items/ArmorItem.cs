@@ -22,4 +22,9 @@ public class ArmorItem : Item
     public float physicalDefense;
     public float magicDefense;
     // TODO: Add other resistances...
+
+    public override string GetItemStatsText()
+    {
+        return $"Phys. Def: {physicalDefense} | Mag. Def: {magicDefense}";
+    }
 }

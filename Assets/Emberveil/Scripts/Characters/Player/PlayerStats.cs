@@ -49,7 +49,19 @@ public class PlayerStats : CharacterStats, ISavable
 
     public float FinalStaminaRegen => staminaRegenAmount + CurrentStaminaRegenBuff;
     public int TotalAttackPower => CalculateAttackDamage(playerManager.playerInventory.EquippedRightWeapon, PlayerAttackType.LightAttack);
-    public int TotalDefense => baseDefense; // Later this will be: baseDefense + armorDefense;
+    public int TotalDefense
+    {
+        get
+        {
+            int total = baseDefense;
+            if (playerInventory.headArmor != null) total += (int)playerInventory.headArmor.physicalDefense;
+            if (playerInventory.bodyArmor != null) total += (int)playerInventory.bodyArmor.physicalDefense;
+            if (playerInventory.handArmor != null) total += (int)playerInventory.handArmor.physicalDefense;
+            if (playerInventory.legArmor != null) total += (int)playerInventory.legArmor.physicalDefense;
+            return total;
+        }
+    }
+
 
     private float staminaRegenTimer = 0;
 

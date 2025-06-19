@@ -12,9 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8090371b9285dd9499c193b9d598493a, type: 3}
   m_Name: Body Armor
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: 21300000, guid: 2997c3c161e4039419bec8869f03ec61, type: 3}
-  itemName: Body Armor
-  itemDescription: Body Armor
+  itemIcon: {fileID: 21300000, guid: d9143f1165390ae43a18794d643ebee8, type: 3}
+  itemName: Duskforged Cavalier Body Armor
+  itemDescription: "Worn by the Eclipse Knights\u2014a brotherhood who rode at twilight,
+    hunting beasts even kings feared to name. Their armor was forged in the same
+    fires that burned their steeds\u2019 hooves to cinders. None survived the final
+    charge, yet their shells remain, hollow but heavy with purpose."
   itemStatsText: 'Physical Defence: 0 | Magical Defence: 0'
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
@@ -29,5 +32,5 @@ MonoBehaviour:
     mesh: {fileID: 4300570, guid: 038320a534bd8b444b43734860d1a211, type: 3}
   - targetBodyPartName: Hips
     mesh: {fileID: 4300756, guid: 038320a534bd8b444b43734860d1a211, type: 3}
-  physicalDefense: 10
+  physicalDefense: 2
   magicDefense: 2

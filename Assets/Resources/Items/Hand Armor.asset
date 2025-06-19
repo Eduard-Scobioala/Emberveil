@@ -12,9 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8090371b9285dd9499c193b9d598493a, type: 3}
   m_Name: Hand Armor
   m_EditorClassIdentifier: 
-  itemIcon: {fileID: 21300000, guid: 70c7347bc8fe2e84babfcbf207d5314a, type: 3}
-  itemName: Hand Armor
-  itemDescription: Hand Armor
+  itemIcon: {fileID: 21300000, guid: ef610181d881ec44e940db706fae9fc3, type: 3}
+  itemName: Duskforged Cavalier Hand Armor
+  itemDescription: "Worn by the Eclipse Knights\u2014a brotherhood who rode at twilight,
+    hunting beasts even kings feared to name. Their armor was forged in the same
+    fires that burned their steeds\u2019 hooves to cinders. None survived the final
+    charge, yet their shells remain, hollow but heavy with purpose."
   itemStatsText: 'Physical Defence: 0 | Magical Defence: 0'
   isDroppable: 1
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
@@ -29,5 +32,5 @@ MonoBehaviour:
     mesh: {fileID: 4300684, guid: 038320a534bd8b444b43734860d1a211, type: 3}
   - targetBodyPartName: HandLeft
     mesh: {fileID: 4300720, guid: 038320a534bd8b444b43734860d1a211, type: 3}
-  physicalDefense: 4
+  physicalDefense: 1
   magicDefense: 1

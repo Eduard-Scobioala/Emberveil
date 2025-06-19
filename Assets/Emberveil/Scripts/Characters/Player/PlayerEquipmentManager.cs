@@ -20,6 +20,12 @@ public class PlayerEquipmentManager : MonoBehaviour
     [Tooltip("Set the default 'naked' meshes for each body part.")]
     [SerializeField] private List<ArmorMeshData> defaultMeshes = new ();
 
+    [Header("Head & Helmet Setup")]
+    [Tooltip("The GameObject for the default head (with hair, etc.). This will be hidden when a helmet is on.")]
+    [SerializeField] private GameObject defaultHeadObject;
+    [Tooltip("The GameObject that will display helmets. It should have its own SkinnedMeshRenderer.")]
+    [SerializeField] private SkinnedMeshRenderer helmetRenderer;
+
     // Dictionaries for fast lookups at runtime.
     private Dictionary<string, SkinnedMeshRenderer> bodyPartDictionary = new ();
     private Dictionary<string, Mesh> defaultMeshDictionary = new ();
@@ -47,17 +53,42 @@ public class PlayerEquipmentManager : MonoBehaviour
 
     public void EquipArmor(ArmorItem headItem, ArmorItem bodyItem, ArmorItem handItem, ArmorItem legItem)
     {
-        // 1. Collect all the mesh data from the equipped armor items.
+        // Handle Head/Helmet Swapping
+        if (headItem != null)
+        {
+            // A helmet is equipped.
+            defaultHeadObject.SetActive(false);
+            helmetRenderer.gameObject.SetActive(true);
+
+            // Find the mesh data intended for the 'Head' part in the ArmorItem.
+            ArmorMeshData headMeshData = headItem.armorMeshes.FirstOrDefault(data => data.targetBodyPartName == "Head");
+            if (headMeshData != null && headMeshData.mesh != null)
+            {
+                helmetRenderer.sharedMesh = headMeshData.mesh;
+            }
+            else
+            {
+                // If the head item has no mesh for the 'Head', hide the helmet renderer.
+                helmetRenderer.sharedMesh = null;
+            }
+        }
+        else
+        {
+            // No helmet is equipped. Show the default head.
+            defaultHeadObject.SetActive(true);
+            helmetRenderer.gameObject.SetActive(false);
+        }
+
+        // Collect all the mesh data from the equipped armor items.
         List<ArmorMeshData> equippedMeshes = new List<ArmorMeshData>();
-        if (headItem != null) equippedMeshes.AddRange(headItem.armorMeshes);
         if (bodyItem != null) equippedMeshes.AddRange(bodyItem.armorMeshes);
         if (handItem != null) equippedMeshes.AddRange(handItem.armorMeshes);
         if (legItem != null) equippedMeshes.AddRange(legItem.armorMeshes);
 
-        // 2. Create a dictionary of the equipped meshes for easy lookup.
+        // Create a dictionary of the equipped meshes for easy lookup.
         var equippedMeshMap = equippedMeshes.ToDictionary(data => data.targetBodyPartName, data => data.mesh);
 
-        // 3. Iterate through all known body parts on the character.
+        // Iterate through all known body parts on the character.
         foreach (var part in bodyParts)
         {
             Mesh meshToApply = null;
