@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class GameLoader : MonoBehaviour
 {
+    [Header("Audio")]
+    [SerializeField] private SoundSO gameMusic;
+
     void Start()
     {
         if (SaveLoadManager.Instance == null)
@@ -22,6 +25,11 @@ public class GameLoader : MonoBehaviour
         {
             Debug.Log("GameLoader: Starting a new game (no load requested).");
             // No action needed, the game will just start with default values.
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayMusic(gameMusic);
         }
     }
 }

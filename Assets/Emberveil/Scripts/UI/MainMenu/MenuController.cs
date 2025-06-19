@@ -19,6 +19,17 @@ public class MenuController : MonoBehaviour
     [SerializeField] private GameObject comfirmationPrompt = null;
     [SerializeField] private float comfirmationPromptShowTime = 1f;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO mainMenuMusic;
+
+    private void Start()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayMusic(mainMenuMusic);
+        }
+    }
+
     public void StartNewGame()
     {
         // Delete the old save file.
