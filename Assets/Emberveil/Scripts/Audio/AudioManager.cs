@@ -54,7 +54,8 @@ public class AudioManager : MonoBehaviour
         }
 
         AudioSource source = GetAvailableSfxSource();
-        source.transform.position = Vector3.zero; // For 2D sounds
+        source.spatialBlend = 0;
+        //source.transform.position = Vector3.zero; // For 2D sounds
         sound.Play(source);
     }
 

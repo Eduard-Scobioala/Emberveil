@@ -21,6 +21,10 @@ public class UIManager : MonoBehaviour
     [Header("Death Screen")]
     [SerializeField] private CanvasGroup youDiedScreenCanvasGroup;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO clickSound;
+    private SoundEmitter soundEmitter;
+
     public bool IsMenuOpen { get; private set; }
 
     private void Awake()
@@ -32,6 +36,11 @@ public class UIManager : MonoBehaviour
         {
             youDiedScreenCanvasGroup.alpha = 0;
             youDiedScreenCanvasGroup.gameObject.SetActive(false);
+        }
+
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
         }
     }
 
@@ -63,6 +72,7 @@ public class UIManager : MonoBehaviour
 
     private void OpenMainMenu()
     {
+        PlaySoundOnClick();
         hudWindow.SetActive(false);
         mainMenuWindow.SetActive(true);
 
@@ -101,6 +111,7 @@ public class UIManager : MonoBehaviour
 
     private void HandleCancel()
     {
+        PlaySoundOnClick();
         if (levelUpWindow != null && levelUpWindow.activeSelf)
         {
             CloseAllMenus();
@@ -131,30 +142,35 @@ public class UIManager : MonoBehaviour
     // --- Methods to be called by main menu buttons ---
     public void OpenEquipmentWindow()
     {
+        PlaySoundOnClick();
         mainMenuWindow.SetActive(false);
         equipmentWindow.SetActive(true);
     }
 
     public void OpenInventoryWindow()
     {
+        PlaySoundOnClick();
         mainMenuWindow.SetActive(false);
         inventoryWindow.SetActive(true);
     }
 
     public void OpenOptionsWindow()
     {
+        PlaySoundOnClick();
         mainMenuWindow.SetActive(false);
         optionsWindow.SetActive(true);
     }
 
     public void OpenStatusWindow()
     {
+        PlaySoundOnClick();
         mainMenuWindow.SetActive(false);
         statusWindow.SetActive(true);
     }
 
     public void OpenLevelUpWindow()
     {
+        PlaySoundOnClick();
         mainMenuWindow.SetActive(false);
         hudWindow.SetActive(false);
         equipmentWindow.SetActive(false);
@@ -200,5 +216,13 @@ public class UIManager : MonoBehaviour
     {
         InputHandler.UICancelPressed -= SaveGame;
         SaveLoadManager.Instance.SaveGame();
+    }
+
+    private void PlaySoundOnClick()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(clickSound);
+        }
     }
 }

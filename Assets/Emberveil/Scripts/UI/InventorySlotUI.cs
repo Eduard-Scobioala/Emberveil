@@ -12,6 +12,19 @@ public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     private InventorySlot heldSlotData;
     private InventoryWindowUI parentWindow;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO clickSound;
+    [SerializeField] private SoundSO selectedSound;
+    private SoundEmitter soundEmitter;
+
+    private void Awake()
+    {
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+        }
+    }
+
     public void Initialize(InventorySlot slotData, InventoryWindowUI parent)
     {
         heldSlotData = slotData;
@@ -54,6 +67,7 @@ public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     // For controller navigation
     public void OnSelect(BaseEventData eventData)
     {
+        PlaySoundOnSelect();
         parentWindow?.OnSlotSelected(this);
     }
 
@@ -61,5 +75,21 @@ public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     public void OnInteract()
     {
         parentWindow?.OnSlotInteracted(this);
+    }
+
+    private void PlaySoundOnClick()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(clickSound);
+        }
+    }
+
+    private void PlaySoundOnSelect()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(selectedSound);
+        }
     }
 }

@@ -22,5 +22,6 @@ MonoBehaviour:
   itemPickupPrefab: {fileID: 8369572872233298945, guid: 70cf8c0aba213e6438ca66f91d8f1245,
     type: 3}
   useAnimation: 
+  onUseSound: {fileID: 11400000, guid: d13f60920d1bb5848a3dd55188d3f8c3, type: 2}
   healthRestoreAmount: 50
   isFlask: 0

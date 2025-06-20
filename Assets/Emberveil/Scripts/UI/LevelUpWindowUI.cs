@@ -21,12 +21,21 @@ public class LevelUpWindowUI : MonoBehaviour
     [SerializeField] private TMP_Text levelUpCostText;
     [SerializeField] private Button confirmButton;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO levelUpSound;
+    private SoundEmitter soundEmitter;
+
     private void Awake()
     {
         if (playerStats == null)  Debug.LogError("Player Stats missing on LEVEL UP window.");
         if (confirmButton != null)
         {
             confirmButton.onClick.AddListener(OnConfirmLevelUp);
+        }
+
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
         }
     }
 
@@ -78,7 +87,20 @@ public class LevelUpWindowUI : MonoBehaviour
         if (playerStats != null)
         {
             playerStats.LevelUp();
+            PlaySoundOnLevelUp();
             // The UI will automatically refresh because LevelUp triggers OnStatsRecalculated
         }
     }
+
+    #region Sounds
+
+    private void PlaySoundOnLevelUp()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(levelUpSound);
+        }
+    }
+
+    #endregion
 }

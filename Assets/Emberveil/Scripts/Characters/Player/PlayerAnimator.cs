@@ -107,7 +107,6 @@ public class PlayerAnimator : AnimatorManager
         }
     }
 
-
     public void UpdateAnimatorValues(float verticalInput, float horizontalInput, bool isSprinting, bool isCrouching, bool isLockedOn)
     {
         if (anim == null || playerManager == null || cameraController == null) return;
@@ -272,5 +271,10 @@ public class PlayerAnimator : AnimatorManager
     {
         if (weaponSlotManager != null && playerManager.playerInventory.EquippedRightWeapon != null)
             weaponSlotManager?.DrainStaminaForAttack(PlayerAttackType.JumpAttack);
+    }
+
+    public void AnimEvent_PlaySoundOnSlash()
+    {
+        playerManager.PlaySoundOnSlash();
     }
 }

@@ -14,6 +14,7 @@ public class StaminaBuffConsumable : ConsumableItem
         if (playerStats != null)
         {
             playerStats.ApplyStaminaBuff(staminaRegenBonus, buffDuration, this);
+            PlaySoundOnUse();
         }
     }
 }

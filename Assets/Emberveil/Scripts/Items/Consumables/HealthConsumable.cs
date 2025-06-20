@@ -14,6 +14,7 @@ public class HealthConsumable : ConsumableItem
         if (playerStats != null)
         {
             playerStats.Heal(healthRestoreAmount);
+            PlaySoundOnUse();
         }
     }
 }

@@ -13,6 +13,7 @@ public class CurrencyConsumable : ConsumableItem
         {
             Debug.Log($"Using {itemName}. Gained {currencyAmount} currency.");
             playerStats.AddCurrency(currencyAmount);
+            PlaySoundOnUse();
         }
     }
 }

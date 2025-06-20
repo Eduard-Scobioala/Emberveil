@@ -40,6 +40,10 @@ public class PlayerStats : CharacterStats, ISavable
     public int currentCurrency = 0;
     public static event Action<int> OnCurrencyChanged;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO gotHitSound;
+    private SoundEmitter soundEmitter;
+
     // Buffs
     public int CurrentAttackBuff { get; private set; } = 0;
     public float CurrentStaminaRegenBuff { get; private set; } = 0f;
@@ -70,6 +74,11 @@ public class PlayerStats : CharacterStats, ISavable
         playerAnimator = GetComponentInChildren<PlayerAnimator>();
         playerManager = GetComponent<PlayerManager>();
         playerInventory = GetComponent<PlayerInventory>();
+
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+        }
     }
 
     private void Start()
@@ -256,6 +265,7 @@ public class PlayerStats : CharacterStats, ISavable
             playerAnimator.IsDodging = false;
             playerAnimator.IsCrouching = false;
 
+            PlaySoundOnHit();
             playerAnimator.PlayTargetAnimation(hitAnimToPlay, false, rootMotion: true);
         }
 
@@ -500,5 +510,17 @@ public class PlayerStats : CharacterStats, ISavable
             Debug.Log($"Player state restored. Level: {characterLevel}, Position: {saveData.position}");
         }
     }
+    #endregion
+
+    #region Sounds
+
+    private void PlaySoundOnHit()
+    {
+        if(soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(gotHitSound);
+        }
+    }
+
     #endregion
 }

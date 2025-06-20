@@ -371,5 +371,15 @@ public class PlayerManager : CharacterManager
         isBeingCriticallyHit = false;
         currentBackstabTarget = null;
     }
+
+    #endregion
+
+    #region Sounds
+
+    public void PlaySoundOnSlash()
+    {
+        playerAttacker.PlaySoundOnSlash();
+    }
+
     #endregion
 }

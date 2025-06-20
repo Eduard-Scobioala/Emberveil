@@ -17,7 +17,20 @@ public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     [SerializeField] private UIManager uiManager;
     [SerializeField] private ItemInfoPanelUI itemInfoPanel;
 
+    [Header("Audio")]
+    [SerializeField] private SoundSO clickSound;
+    [SerializeField] private SoundSO selectedSound;
+    private SoundEmitter soundEmitter;
+
     private Item currentItem;
+
+    private void Awake()
+    {
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+        }
+    }
 
     public void UpdateSlot(Item item)
     {
@@ -38,6 +51,7 @@ public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
 
     public void OnSlotClicked()
     {
+        PlaySoundOnClick();
         uiManager.ShowInventoryForSelection(this);
     }
 
@@ -52,9 +66,26 @@ public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, ISelectHandl
     // For controller navigation
     public void OnSelect(BaseEventData eventData)
     {
+        PlaySoundOnSelect();
         if (itemInfoPanel != null)
         {
             itemInfoPanel.DisplayItemInfo(currentItem);
+        }
+    }
+
+    private void PlaySoundOnClick()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(clickSound);
+        }
+    }
+
+    private void PlaySoundOnSelect()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(selectedSound);
         }
     }
 }

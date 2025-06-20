@@ -16,6 +16,11 @@ public class PlayerAttacker : MonoBehaviour
     [SerializeField] private string playerBackstabAnimation = "Backstab_Main_01";
     //[SerializeField] private float playerSnapSpeed = 15f;
 
+
+    [Header("Audio")]
+    [SerializeField] private SoundSO attackSwingSound;
+
+    private SoundEmitter soundEmitter;
     private PlayerAttackType currentAttackTypePerforming = PlayerAttackType.None;
 
     private void Awake()
@@ -29,6 +34,11 @@ public class PlayerAttacker : MonoBehaviour
         if (backstabLayerMask == 0) // If not set in inspector
         {
             Debug.LogError("Backstab LayerMask not set on PlayerAttacker. Backstabs may not work.", this);
+        }
+
+        if (!TryGetComponent<SoundEmitter>(out soundEmitter))
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
         }
     }
 
@@ -185,5 +195,13 @@ public class PlayerAttacker : MonoBehaviour
         // Animation events on playerBackstabAnimation will call:
         // 1. PlayerManager.AnimEvent_ApplyBackstabDamage()
         // 2. PlayerManager.AnimEvent_FinishPerformingBackstab()
+    }
+
+    public void PlaySoundOnSlash()
+    {
+        if (soundEmitter != null)
+        {
+            soundEmitter.PlaySFX(attackSwingSound);
+        }
     }
 }

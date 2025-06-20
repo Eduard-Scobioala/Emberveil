@@ -436,3 +436,5 @@ MonoBehaviour:
   icon: {fileID: 7534053303932317361}
   quantityText: {fileID: 3602979971697095956}
   equippedIndicator: {fileID: 478558390264200089}
+  clickSound: {fileID: 11400000, guid: e9e089c51c0d47248b02e2bf6dd3ef1f, type: 2}
+  selectedSound: {fileID: 11400000, guid: d604ff0b281f39e4a819f51274d64784, type: 2}

@@ -2933,6 +2933,74 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 196981021}
   m_CullTransparentMesh: 1
+--- !u!1001 &216813755
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1582785652242340394, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_Name
+      value: AudioManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6247609786488648408, guid: 074cbded71088bb4892d120e03b3a2db,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 074cbded71088bb4892d120e03b3a2db, type: 3}
 --- !u!1 &223077867
 GameObject:
   m_ObjectHideFlags: 0
@@ -6350,6 +6418,7 @@ MonoBehaviour:
   defenseStatRow: {fileID: 1858939674}
   levelUpCostText: {fileID: 889294811}
   confirmButton: {fileID: 1481762795}
+  levelUpSound: {fileID: 11400000, guid: e416cc6dfb7e93449bcbe2f12ad6ff80, type: 2}
 --- !u!1 &678256108
 GameObject:
   m_ObjectHideFlags: 0
@@ -15695,7 +15764,7 @@ Transform:
   m_GameObject: {fileID: 1592750371}
   serializedVersion: 2
   m_LocalRotation: {x: 0.4422012, y: -0.4687386, z: -0.49119282, w: 0.5860647}
-  m_LocalPosition: {x: 0.08401871, y: 84.85046, z: -1.2541771}
+  m_LocalPosition: {x: 0.08401871, y: 84.85046, z: -1.254189}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -31708,6 +31777,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2048
   playerBackstabAnimation: Backstab_Main_01
+  attackSwingSound: {fileID: 11400000, guid: 3488aee9c30f0354c97204c68fb6f328, type: 2}
 --- !u!54 &2730497146148689794
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -34688,6 +34758,7 @@ MonoBehaviour:
   statusWindow: {fileID: 318317559}
   levelUpWindow: {fileID: 664060919}
   youDiedScreenCanvasGroup: {fileID: 786083230}
+  clickSound: {fileID: 11400000, guid: e9e089c51c0d47248b02e2bf6dd3ef1f, type: 2}
 --- !u!136 &7781982453346794826
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -35080,6 +35151,7 @@ MonoBehaviour:
   staminaRegenAmount: 50
   staminaRegenDelay: 1
   currentCurrency: 1000
+  gotHitSound: {fileID: 11400000, guid: b3793a7ea0198aa4cbd6c04a14cc2c9b, type: 2}
 --- !u!224 &8853890635597132374
 RectTransform:
   m_ObjectHideFlags: 0
@@ -35281,3 +35353,4 @@ SceneRoots:
   - {fileID: 1218406386798442191}
   - {fileID: 1305322972}
   - {fileID: 261955995}
+  - {fileID: 216813755}

@@ -225,6 +225,10 @@ MonoBehaviour:
   slotIndex: 0
   icon: {fileID: 766648010742323722}
   itemNameText: {fileID: 0}
+  uiManager: {fileID: 0}
+  itemInfoPanel: {fileID: 0}
+  clickSound: {fileID: 11400000, guid: e9e089c51c0d47248b02e2bf6dd3ef1f, type: 2}
+  selectedSound: {fileID: 11400000, guid: d604ff0b281f39e4a819f51274d64784, type: 2}
 --- !u!1 &7230961723993975519
 GameObject:
   m_ObjectHideFlags: 0
